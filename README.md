@@ -16,7 +16,7 @@ Super fast CUDA-Neural-Network Trainer for my chess engine Astra.
 
 ### Clone Repository
 ```bash
-git https://github.com/h1me01/Astra-Trainer.git
+git clone https://github.com/h1me01/Astra-Trainer.git
 cd Astra-Trainer
 ```
 
