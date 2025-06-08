@@ -1,0 +1,17 @@
+# IDE and Editor directories
+.vs/
+.vscode/
+
+# Build directories
+build/
+build-debug/
+build-release/
+
+# Documentation
+notes.md
+
+# Build system files
+makefile
+
+# Executable/binary files
+Astra-Trainer
