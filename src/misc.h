@@ -33,6 +33,20 @@
         }                                                                                                              \
     }
 
+inline std::string getActivationName(int type) {
+    // clang-format off
+    switch(type) 
+    {
+    case 0: return "Linear";
+    case 1: return "ReLU";
+    case 2: return "CReLU";
+    case 3: return "SCReLU";
+    case 4: return "Sigmoid";
+    default: return "Unknown";
+    }
+    // clang-format on
+}
+
 inline std::string formatNumber(float num) {
     std::ostringstream oss;
     oss << num;

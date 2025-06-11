@@ -20,6 +20,8 @@ class FeatureTransformer : public LayerBase {
 
   public:
     FeatureTransformer(int input_size, bool init_uniformly = true) : input_size(input_size) {
+        name = "FeatureTransformer";
+
         weights = Tensor(size, input_size);
         if(init_uniformly)
             weights.initUniformly();
@@ -121,6 +123,10 @@ class FeatureTransformer : public LayerBase {
         }
     }
 
+    ActivationType getActivationType() const override {
+        return act_type;
+    }
+
     int getOutputSize() const override {
         return 2 * size;
     }
@@ -131,16 +137,5 @@ class FeatureTransformer : public LayerBase {
 
     std::vector<Tensor *> getTunables() override {
         return {&weights, &biases};
-    }
-
-    std::string getInfo() override {
-        const std::string activationStrings[] = {"Linear", "ReLU", "CReLU", "SCReLU", "Sigmoid"};
-
-        std::stringstream info;
-        info << "FeatureTransformer(";
-        info << "input_size=" << std::to_string(getInputSize());
-        info << ", output_size=" << std::to_string(size);
-        info << ", activation=" << activationStrings[act_type] << ")\n";
-        return info.str();
     }
 };

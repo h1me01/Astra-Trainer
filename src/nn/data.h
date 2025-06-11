@@ -269,6 +269,9 @@ class Tensor {
     DenseMatrix values;
     DenseMatrix gradients;
 
+    float min_val = std::numeric_limits<float>::lowest();
+    float max_val = std::numeric_limits<float>::max();
+
   public:
     Tensor(int num_rows, int num_cols)
         : values(DenseMatrix{num_rows, num_cols}), gradients(DenseMatrix{num_rows, num_cols}) {
@@ -332,6 +335,19 @@ class Tensor {
             }
 
         fwrite(data.hostAddress(), sizeof(T), data.size(), f);
+    }
+
+    void clamp(float min_val, float max_val) {
+        this->min_val = min_val;
+        this->max_val = max_val;
+    }
+
+    float min() const {
+        return min_val;
+    }
+
+    float max() const {
+        return max_val;
     }
 
     DenseMatrix &getValues() {

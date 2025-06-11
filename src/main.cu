@@ -11,11 +11,10 @@ int main() {
     // get training data
     vector<string> files = fetchFilesFromPath(root_path + "/training_data");
 
-    // init network
     // clang-format off
     Network network
     (
-        600,   // epochs
+        5,   // epochs
         16384, // batch size
         6104,  // batches per epoch
         50,    // save rate
@@ -51,7 +50,7 @@ int main() {
 
     // optim.setDecay(0.01);
     optim.setLRScheduler(&lr_scheduler);
-    optim.clampWeights(-1.99, 1.99); // weights range [-1.99, 1.99]
+    optim.clampWeights(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
     network.setOptimizer(&optim);
 
@@ -73,6 +72,12 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
+
+    // if you don't want to clamp all weights & biases
+    // you can do it individually by doing this:
+    // layer.getTunables()[0]->clamp(-1.99, 1.99); // weights
+    // layer.getTunables()[1]->clamp(-1.99, 1.99); // biases
+
     auto ft = FeatureTransformer<1024, CReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Sigmoid>(&ft);
 

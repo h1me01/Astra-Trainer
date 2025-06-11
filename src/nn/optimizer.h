@@ -25,8 +25,8 @@ class Optimizer {
 
     float decay = 0.0f;
 
-    float min_weights = std::numeric_limits<float>::lowest();
-    float max_weights = std::numeric_limits<float>::max();
+    float min_val = -1;
+    float max_val = -1;
 
     LRScheduler *scheduler = nullptr;
 
@@ -40,8 +40,13 @@ class Optimizer {
 
     void init(std::vector<LayerBase *> layers) {
         for(LayerBase *l : layers)
-            for(auto *t : l->getTunables())
+            for(auto *t : l->getTunables()) {
+                if(min_val != -1)
+                    t->clamp(min_val, t->max());
+                if(max_val != -1)
+                    t->clamp(t->min(), max_val);
                 tunables.push_back(t);
+            }
         initBuffers();
     }
 
@@ -55,8 +60,8 @@ class Optimizer {
     }
 
     void clampWeights(float min, float max) {
-        min_weights = min;
-        max_weights = max;
+        this->min_val = min;
+        this->max_val = max;
     }
 
     void setLRScheduler(LRScheduler *scheduler) {
@@ -82,8 +87,6 @@ class Optimizer {
         info << ", eps=" << formatNumber(eps);
         if(decay != 0.0f)
             info << ", decay=" << formatNumber(decay);
-        info << ", min_weights=" << min_weights;
-        info << ", max_weights=" << max_weights;
         if(scheduler != nullptr)
             info << ", scheduler=" << scheduler->getInfo();
         info << ")";
@@ -128,8 +131,8 @@ struct Adam : Optimizer {
                 beta2,
                 eps,
                 _decay,
-                min_weights,
-                max_weights,
+                tunables[i]->min(),
+                tunables[i]->max(),
                 grad_scale,
                 values.size()
             );
@@ -179,8 +182,8 @@ class RAdam : public Optimizer {
                 beta2,
                 eps,
                 _decay,
-                min_weights,
-                max_weights,
+                tunables[i]->min(),
+                tunables[i]->max(),
                 grad_scale,
                 N_sma_threshold,
                 step,
@@ -250,8 +253,8 @@ class Ranger : public Optimizer {
                 beta2,
                 eps,
                 _decay,
-                min_weights,
-                max_weights,
+                tunables[i]->min(),
+                tunables[i]->max(),
                 grad_scale,
                 alpha,
                 k,

@@ -19,6 +19,8 @@ class FullyConnected : public LayerBase {
 
   public:
     FullyConnected(LayerBase *previous, bool init_uniformly = true) {
+        name = "FullyConnected";
+
         this->previous = previous;
         int input_size = previous->getOutputSize();
 
@@ -31,12 +33,25 @@ class FullyConnected : public LayerBase {
 
     void forward() override {
         Tensor &inputs = previous->getDenseOutput();
-        affine(weights.getValues(), biases.getValues(), inputs.getValues(), dense_output.getValues(), act_type);
+        // clang-format off
+        affine
+        (
+            weights.getValues(), 
+            biases.getValues(), 
+            inputs.getValues(), 
+            dense_output.getValues(), 
+            act_type
+        );
+        // clang-format on
     }
 
     void backprop() override {
         Tensor &inputs = previous->getDenseOutput();
         affine_bp(weights, biases, inputs, dense_output, act_type);
+    }
+
+    ActivationType getActivationType() const override {
+        return act_type;
     }
 
     int getOutputSize() const override {
@@ -49,16 +64,5 @@ class FullyConnected : public LayerBase {
 
     std::vector<Tensor *> getTunables() override {
         return {&weights, &biases};
-    }
-
-    std::string getInfo() override {
-        const std::string activationStrings[] = {"Linear", "ReLU", "CReLU", "SCReLU", "Sigmoid"};
-
-        std::stringstream info;
-        info << "FullyConnected(";
-        info << "input_size=" << std::to_string(getInputSize());
-        info << ", output_size=" << std::to_string(size);
-        info << ", activation=" << activationStrings[act_type] << ")\n";
-        return info.str();
     }
 };
