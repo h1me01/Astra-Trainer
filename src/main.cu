@@ -50,7 +50,7 @@ int main() {
 
     // optim.setDecay(0.01);
     optim.setLRScheduler(&lr_scheduler);
-    optim.clampWeights(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
+    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
     network.setOptimizer(&optim);
 
@@ -75,8 +75,8 @@ int main() {
 
     // if you don't want to clamp all weights & biases
     // you can do it individually by doing this:
-    // layer.getTunables()[0]->clamp(-1.99, 1.99); // weights
-    // layer.getTunables()[1]->clamp(-1.99, 1.99); // biases
+    // layer.clampWeights(-1.99, 1.99);
+    // layer.clampBiases(-1.99, 1.99);
 
     auto ft = FeatureTransformer<1024, CReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Sigmoid>(&ft);

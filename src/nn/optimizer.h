@@ -59,7 +59,7 @@ class Optimizer {
         this->decay = decay;
     }
 
-    void clampWeights(float min, float max) {
+    void clamp(float min, float max) {
         this->min_val = min;
         this->max_val = max;
     }

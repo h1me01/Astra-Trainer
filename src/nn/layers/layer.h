@@ -27,6 +27,14 @@ class LayerBase {
         return dense_output;
     }
 
+    void clampWeights(float min, float max) {
+        getTunables()[0]->clamp(min, max);
+    }
+
+    void clampBiases(float min, float max) {
+        getTunables()[1]->clamp(min, max);
+    }
+
     virtual ActivationType getActivationType() const = 0;
 
     virtual int getOutputSize() const = 0;
