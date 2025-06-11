@@ -14,7 +14,7 @@ int main() {
     // clang-format off
     Network network
     (
-        5,   // epochs
+        600,   // epochs
         16384, // batch size
         6104,  // batches per epoch
         50,    // save rate
@@ -75,8 +75,8 @@ int main() {
 
     // if you don't want to clamp all weights & biases
     // you can do it individually by doing this:
-    // layer.clampWeights(-1.99, 1.99);
-    // layer.clampBiases(-1.99, 1.99);
+    // - layer.clampWeights(-1.99, 1.99);
+    // - layer.clampBiases(-1.99, 1.99);
 
     auto ft = FeatureTransformer<1024, CReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Sigmoid>(&ft);
