@@ -151,7 +151,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
             log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
             std::string suffix = epoch == Epochs ? "final" : std::to_string(epoch);
-            saveWeights(new_folder_path.str() + "/checkpoint-" + suffix);
+            saveCheckpoint(new_folder_path.str() + "/checkpoint-" + suffix);
         }
 
         optim->updateLR(epoch);

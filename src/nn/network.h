@@ -84,7 +84,7 @@ class Network {
             layers[i]->backprop();
     }
 
-    void saveWeights(const std::string &path) {
+    void saveCheckpoint(const std::string &path) {
         ASSERT(quantFunc != nullptr);
 
         // create directory if it doesn't exist

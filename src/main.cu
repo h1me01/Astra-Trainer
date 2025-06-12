@@ -77,7 +77,7 @@ int main() {
     // - layer.clampWeights(-1.99, 1.99);
     // - layer.clampBiases(-1.99, 1.99);
 
-    auto ft = FeatureTransformer<64, CReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<1024, CReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -97,7 +97,7 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_7/final/weights.bin");
+    // network.loadWeights(output_path + "/training_6/weights-epoch150.net");
     // clang-format off
     network.train(
         files,
