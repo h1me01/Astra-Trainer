@@ -25,7 +25,7 @@ int main() {
     // clang-format on
 
     // init loss
-    MPELoss loss(2.5); // 2.5 = power
+    MPELoss<Sigmoid> loss(2.5); // 2.5 = power
     network.setLoss(&loss);
 
     // init optim
@@ -79,7 +79,7 @@ int main() {
     // - layer.clampBiases(-1.99, 1.99);
 
     auto ft = FeatureTransformer<1024, CReLU>(getBucketSize(king_bucket) * 768);
-    auto fc = FullyConnected<1, Sigmoid>(&ft);
+    auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
 

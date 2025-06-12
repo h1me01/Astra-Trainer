@@ -10,8 +10,6 @@ class Loss {
     Array<float> loss;
 
   public:
-    float scalar = 1;
-
     Loss() : loss(1) {}
 
     virtual void apply(const DenseMatrix &target, Tensor &output) = 0;
@@ -28,6 +26,7 @@ class Loss {
     }
 };
 
+template <ActivationType act_type> //
 struct MPELoss : Loss {
   private:
     float power;
@@ -55,16 +54,18 @@ struct MPELoss : Loss {
             output_g.devAddress(), 
             loss.devAddress(), 
             power, 
+            act_type,
             output_v.size()
         );
         // clang-format on
     }
 
     std::string getInfo() {
-        return "MPELoss(power=" + formatNumber(power) + ")";
+        return "MPELoss<" + getActivationName(act_type) + ">(power=" + formatNumber(power) + ")";
     }
 };
 
+template <ActivationType act_type> //
 struct MSELoss : Loss {
     MSELoss() : Loss() {}
 
@@ -87,12 +88,13 @@ struct MSELoss : Loss {
             output_v.devAddress(), 
             output_g.devAddress(), 
             loss.devAddress(), 
+            act_type,
             output_v.size()
         );
         // clang-format on
     }
 
     std::string getInfo() {
-        return "MSELoss()";
+        return "MSELoss<" + getActivationName(act_type) + ">()";
     }
 };

@@ -180,8 +180,7 @@ class Network {
         DenseMatrix &output = getOutput().getValues();
         output.devToHost();
 
-        float pred = output(0);
-        return std::log(pred / (1.0 - pred)) * OutputScalar;
+        return output(0) * OutputScalar;
     }
 
     void setLoss(Loss *loss) {
