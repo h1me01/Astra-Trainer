@@ -54,6 +54,9 @@ inline std::string formatNumber(float num) {
 }
 
 inline int getBucketSize(const std::array<int, 64> &king_bucket) {
+    if(king_bucket.empty())
+        return 1;
+
     int max_value = king_bucket[0];
     for(size_t i = 1; i < king_bucket.size(); ++i)
         if(king_bucket[i] > max_value)

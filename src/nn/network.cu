@@ -65,9 +65,23 @@ void Network::fill(std::vector<DataEntry> &ds) {
     nstm_features.hostToDev();
 }
 
-void Network::train(std::vector<std::string> &files, std::string output_path) {
+void Network::train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name) {
     init();
     printInfo();
+
+    if(checkpoint_name.empty()) {
+        std::cout << "No checkpoint path provided, training from scratch.\n";
+    } else {
+        std::cout << "Loading checkpoint from " << checkpoint_name << " ..." << std::endl;
+        const std::string checkpoint_path = output_path + "/" + checkpoint_name;
+        if(!std::filesystem::exists(checkpoint_path)) {
+            std::cerr << "Checkpoint path does not exist: " << checkpoint_path << "\n";
+            return;
+        }
+
+        loadWeights(checkpoint_path + "/weights.bin");
+        optim->load(checkpoint_path);
+    }
 
     // init dataloader
     FeaturedBatchStream dataloader(files, 4, BatchSize, false);
@@ -133,13 +147,13 @@ void Network::train(std::vector<std::string> &files, std::string output_path) {
         printf("time = %3ds", (int) elapsed / 1000);
         std::cout << std::endl;
 
-        if(epoch % SaveRate == 0) {
+        if(epoch % SaveRate == 0 || epoch == Epochs) {
             log.write({std::to_string(epoch), std::to_string(epoch_loss)});
-            saveWeights(new_folder_path.str() + "/weights-epoch" + std::to_string(epoch) + ".net");
+
+            std::string suffix = epoch == Epochs ? "final" : std::to_string(epoch);
+            saveWeights(new_folder_path.str() + "/checkpoint-" + suffix);
         }
 
         optim->updateLR(epoch);
     }
-
-    destroyCublas();
 }

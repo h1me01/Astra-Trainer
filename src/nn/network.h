@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <functional>
 #include <vector>
 
 #include "../dataloader/dataloader.h"
@@ -32,11 +33,12 @@ class Network {
 
     DenseMatrix targets;
 
+    std::function<void(FILE *)> quantFunc;
+
     void init() {
         ASSERT(optim != nullptr && loss != nullptr);
         ASSERT(!layers.empty());
-
-        createCublas();
+        ASSERT(quantFunc != nullptr);
 
         optim->init(layers);
         for(LayerBase *l : layers)
@@ -57,7 +59,6 @@ class Network {
         info << "Optimizer: " << optim->getInfo() << std::endl;
 
         info << "\n============================= Network Architecture =============================\n\n";
-
         info << "King Bucket: " << std::endl;
         for(size_t i = 0; i < king_bucket.size(); ++i) {
             info << " " << king_bucket[i];
@@ -68,6 +69,7 @@ class Network {
         info << "\nHidden Layers:" << std::endl;
         for(LayerBase *l : layers)
             info << " - " << l->getInfo();
+        info << "\n";
 
         std::cout << info.str();
     }
@@ -82,28 +84,57 @@ class Network {
             layers[i]->backprop();
     }
 
-    void saveWeights(const std::string &file) {
-        std::ofstream f(file, std::ios::binary);
+    void saveWeights(const std::string &path) {
+        ASSERT(quantFunc != nullptr);
 
-        if(!f.is_open())
-            throw std::runtime_error("Failed to open file " + file + " for writing");
-
+        // create directory if it doesn't exist
         try {
+            std::filesystem::create_directories(path);
+        } catch(const std::filesystem::filesystem_error &e) {
+            throw std::runtime_error("Failed to create directory " + path + ": " + e.what());
+        }
+
+        // save weights
+        try {
+            const std::string file = path + "/weights.bin";
+            FILE *f = fopen(file.c_str(), "wb");
+            if(!f)
+                throw std::runtime_error("Failed to write weights to " + file);
+
             for(LayerBase *l : layers) {
                 for(Tensor *t : l->getTunables()) {
                     DenseMatrix &weights = t->getValues();
                     weights.devToHost();
 
-                    f.write(reinterpret_cast<const char *>(weights.hostAddress()), weights.size() * sizeof(float));
-                    if(!f.good())
+                    int written = fwrite(weights.hostAddress(), sizeof(float), weights.size(), f);
+                    if(written != weights.size())
                         throw std::runtime_error("Error writing weights to file");
                 }
             }
 
-            std::cout << "Saved weights to " << file << std::endl;
+            fclose(f);
         } catch(const std::exception &e) {
-            throw std::runtime_error("Failed to save weights to " + file + ": " + e.what());
+            throw std::runtime_error(std::string("Failed to save weights: ") + e.what());
         }
+
+        // save quantized weights
+        try {
+            FILE *f = fopen((path + "/qweights.net").c_str(), "wb");
+            if(!f)
+                throw std::runtime_error("Failed to write quantized weights");
+
+            quantFunc(f);
+
+            fclose(f);
+        } catch(const std::exception &e) {
+            throw std::runtime_error(std::string("Failed to save quantized weights: ") + e.what());
+        }
+
+        // save optimizer state
+        if(optim != nullptr)
+            optim->save(path);
+
+        std::cout << "Saved checkpoint" << std::endl;
     }
 
     int index(PieceType pt, Color pc, Square psq, Square ksq, Color view);
@@ -130,13 +161,19 @@ class Network {
         OutputScalar = output_scalar;
         StartLambda = start_lambda;
         EndLambda = end_lambda;
+
+        createCublas();
     }
 
-    void loadWeights(const std::string &filename) {
-        std::ifstream f(filename, std::ios::binary);
+    ~Network() {
+        destroyCublas();
+    }
+
+    void loadWeights(const std::string &file) {
+        std::ifstream f(file, std::ios::binary);
 
         if(!f.is_open())
-            throw std::runtime_error("Failed to open file " + filename);
+            throw std::runtime_error("Failed to open file " + file);
 
         try {
             for(LayerBase *l : layers) {
@@ -153,9 +190,9 @@ class Network {
                 }
             }
 
-            std::cout << "Loaded weights from " << filename << std::endl;
+            std::cout << "Loaded weights from " << file << std::endl;
         } catch(const std::exception &e) {
-            throw std::runtime_error("Failed to load weights from " + filename + ": " + e.what());
+            throw std::runtime_error("Failed to load weights from " + file + ": " + e.what());
         }
     }
 
@@ -173,7 +210,6 @@ class Network {
 
         fill(ds);
         forward();
-        destroyCublas();
 
         LayerBase *output_layer = layers.back();
 
@@ -181,6 +217,11 @@ class Network {
         output.devToHost();
 
         return output(0) * OutputScalar;
+    }
+
+    template <typename Func> //
+    void setQuantizationScheme(Func &&func) {
+        quantFunc = std::forward<Func>(func);
     }
 
     void setLoss(Loss *loss) {
@@ -213,5 +254,5 @@ class Network {
         return layers;
     }
 
-    void train(std::vector<std::string> &files, std::string output_path);
+    void train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name = "");
 };

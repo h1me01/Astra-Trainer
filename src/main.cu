@@ -4,7 +4,6 @@ using namespace std;
 
 int main() {
     const string root_path = "D:/Astra-Data";
-    const string output_path = root_path + "/nn_output";
 
     cout << "================================= Training Data ================================\n\n";
 
@@ -78,14 +77,34 @@ int main() {
     // - layer.clampWeights(-1.99, 1.99);
     // - layer.clampBiases(-1.99, 1.99);
 
-    auto ft = FeatureTransformer<1024, CReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<64, CReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
 
-    // load weights (if needed)
-    // network.loadWeights(output_path + "/training_6/weights-epoch600.net");
-    network.train(files, output_path);
+    // setup quantization scheme
+
+    network.setQuantizationScheme([&](FILE *f) {
+        const int q1 = 255;
+        const int q2 = 64;
+
+        ft.getTunables()[0]->quantize<int16_t>(f, q1, true); // weights
+        ft.getTunables()[1]->quantize<int16_t>(f, q1);       // biases
+        fc.getTunables()[0]->quantize<int16_t>(f, q2);       // weights
+        fc.getTunables()[1]->quantize<int16_t>(f, q1 * q2);  // biases
+    });
+
+    const string output_path = root_path + "/nn_output";
+
+    // load weights only (if needed)
+    // network.loadWeights(output_path + "/training_7/final/weights.bin");
+    // clang-format off
+    network.train(
+        files,
+        output_path
+        //,"training_7/checkpoint-50" // load checkpoint (if needed)
+    );
+    // clang-format on
 
     cout << "\n================================ Testing Network ===============================\n\n";
 
@@ -98,30 +117,6 @@ int main() {
         cout << "FEN: " << fen << endl;
         cout << "Eval: " << network.predict(fen) << endl;
     }
-
-    cout << "\n============================== Quantizing Weights ==============================\n\n";
-
-    const int q1 = 255;
-    const int q2 = 64;
-
-    try {
-        FILE *f = fopen((output_path + "/qweights.net").c_str(), "wb");
-        if(!f) {
-            cerr << "Error: Could not open file for writing: " << output_path + "/qweights.net" << endl;
-            return 1;
-        }
-
-        ft.getTunables()[0]->quantize<int16_t>(f, q1, true); // weights
-        ft.getTunables()[1]->quantize<int16_t>(f, q1);       // biases
-        fc.getTunables()[0]->quantize<int16_t>(f, q2);       // weights
-        fc.getTunables()[1]->quantize<int16_t>(f, q1 * q2);  // biases
-        fclose(f);
-    } catch(const std::exception &e) {
-        cerr << "Error during quantization: " << e.what() << endl;
-        return 1;
-    }
-
-    cout << "Quantized weights saved to " << output_path + "/qweights.net" << endl;
 
     cout << "\n=================================== Finished ===================================\n";
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 #include "../kernel/kernel.h"
@@ -15,6 +16,7 @@ class Optimizer {
 
     std::vector<Array<float>> momentum{};
     std::vector<Array<float>> velocity{};
+    std::vector<Array<float>> slow_buffer{}; // used by ranger
 
     int step = 0;
 
@@ -66,6 +68,67 @@ class Optimizer {
 
     void setLRScheduler(LRScheduler *scheduler) {
         this->scheduler = scheduler;
+    }
+
+    void load(const std::string &path) {
+        std::string state_path = path + "/state";
+        if(!std::filesystem::exists(state_path)) {
+            throw std::runtime_error("Optimizer state path does not exist: " + state_path);
+        }
+
+        auto loadFile = [&](const std::string &filename, std::vector<Array<float>> &buffers, const std::string &name) {
+            std::ifstream f(filename, std::ios::binary);
+            if(!f.is_open())
+                throw std::runtime_error("Failed to open file " + filename);
+
+            for(size_t i = 0; i < buffers.size(); i++) {
+                f.read(reinterpret_cast<char *>(buffers[i].hostAddress()), buffers[i].size() * sizeof(float));
+                if(f.gcount() != static_cast<std::streamsize>(buffers[i].size() * sizeof(float))) {
+                    throw std::runtime_error("Error: insufficient data read for " + name + ". Expected " +
+                                             std::to_string(buffers[i].size()) + " floats");
+                }
+                buffers[i].hostToDev();
+            }
+        };
+
+        try {
+            loadFile(state_path + "/momentum.bin", momentum, "momentum");
+            loadFile(state_path + "/velocity.bin", velocity, "velocity");
+            if(!slow_buffer.empty())
+                loadFile(state_path + "/slow_buffer.bin", slow_buffer, "slow_buffer");
+        } catch(const std::exception &e) {
+            throw std::runtime_error("Failed to load optimizer state from " + state_path + ": " + e.what());
+        }
+
+        std::cout << "Loaded optimizer state from " << path << std::endl;
+    }
+
+    void save(const std::string &path) {
+        std::string state_path = path + "/state";
+        std::filesystem::create_directories(state_path);
+
+        auto saveFile = [&](const std::string &filename, std::vector<Array<float>> &buffers) {
+            std::ofstream f(filename, std::ios::binary);
+            if(!f.is_open()) {
+                throw std::runtime_error("Failed to open file " + filename + " for writing");
+            }
+
+            for(auto &buffer : buffers) {
+                buffer.devToHost();
+                f.write(reinterpret_cast<const char *>(buffer.hostAddress()), buffer.size() * sizeof(float));
+                if(!f.good())
+                    throw std::runtime_error("Error writing to file " + filename);
+            }
+        };
+
+        try {
+            saveFile(state_path + "/momentum.bin", momentum);
+            saveFile(state_path + "/velocity.bin", velocity);
+            if(!slow_buffer.empty())
+                saveFile(state_path + "/slow_buffer.bin", slow_buffer);
+        } catch(const std::exception &e) {
+            throw std::runtime_error("Failed to save optimizer state to " + state_path + ": " + e.what());
+        }
     }
 
     virtual void initBuffers() {
@@ -204,8 +267,6 @@ class Ranger : public Optimizer {
     int k = 6;
     int N_sma_threshold = 6;
 
-    std::vector<Array<float>> slow_buffer{};
-
   public:
     Ranger(float lr = 0.001, float beta1 = 0.95, float beta2 = 0.999, float eps = 1e-5)
         : Optimizer(lr, beta1, beta2, eps) {
@@ -258,7 +319,7 @@ class Ranger : public Optimizer {
                 grad_scale,
                 alpha,
                 k,
-                 N_sma_threshold,
+                N_sma_threshold,
                 step,
                 values.size()
             );
