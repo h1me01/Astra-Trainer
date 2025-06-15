@@ -125,7 +125,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
 
             if(batch == BatchesPerEpoch || timer.isTimeReached(1000)) {
                 printf("\repoch/batch = %3d/%4d, ", epoch, batch);
-                printf("pos/s = %7d, ", (int) round(1000.0f * BatchSize * batch / elapsed));
+                printf("pos/sec = %7d, ", (int) round(1000.0f * BatchSize * batch / elapsed));
                 printf("time = %3ds", (int) elapsed / 1000);
                 std::cout << std::flush;
             }

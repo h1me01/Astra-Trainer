@@ -61,7 +61,7 @@ class Network {
         info << "\n============================= Network Architecture =============================\n\n";
         info << "King Bucket: " << std::endl;
         for(size_t i = 0; i < king_bucket.size(); ++i) {
-            info << " " << king_bucket[i];
+            info << std::setw(3) << king_bucket[i];
             if((i + 1) % 8 == 0)
                 info << "\n";
         }
