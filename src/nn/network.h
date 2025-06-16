@@ -17,7 +17,6 @@ class Network {
     int BatchSize;
     int BatchesPerEpoch;
     int SaveRate;
-    int epoch;
 
     float OutputScalar;
     float StartLambda;
@@ -139,7 +138,7 @@ class Network {
 
     int index(PieceType pt, Color pc, Square psq, Square ksq, Color view);
 
-    void fill(std::vector<DataEntry> &ds);
+    void fill(std::vector<DataEntry> &ds, float lambda);
 
   public:
     // clang-format off
@@ -172,8 +171,10 @@ class Network {
     void loadWeights(const std::string &file) {
         std::ifstream f(file, std::ios::binary);
 
-        if(!f.is_open())
-            throw std::runtime_error("Failed to open file " + file);
+        // check if the file exists
+        if(!f) {
+            throw std::runtime_error("File " + file + " does not exist");
+        }
 
         try {
             for(LayerBase *l : layers) {
@@ -208,7 +209,7 @@ class Network {
 
         std::vector<DataEntry> ds{e};
 
-        fill(ds);
+        fill(ds, 1);
         forward();
 
         LayerBase *output_layer = layers.back();

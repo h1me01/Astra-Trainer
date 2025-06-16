@@ -1,6 +1,33 @@
 #include "../misc.h"
 #include "network.h"
 
+// helper
+
+int parseEpochFromCheckpoint(const std::string &checkpoint_name) {
+    size_t dash_pos = checkpoint_name.find_last_of('-');
+    if(dash_pos == std::string::npos) {
+        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0.\n";
+        return 0;
+    }
+
+    std::string epoch_str = checkpoint_name.substr(dash_pos + 1);
+    if(epoch_str == "final") {
+        std::cout << "Loading from final checkpoint, starting new training cycle.\n";
+        return 0;
+    }
+
+    try {
+        int parsed_epoch = std::stoi(epoch_str);
+        std::cout << "Resuming from epoch " << parsed_epoch << std::endl;
+        return parsed_epoch;
+    } catch(...) {
+        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0.\n";
+        return 0;
+    }
+}
+
+// network class
+
 int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     int _psq = int(psq);
     int _ksq = int(ksq);
@@ -17,7 +44,7 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     return _psq + _pt * 64 + (_pc != _view) * 64 * 6 + ksIndex * 768;
 }
 
-void Network::fill(std::vector<DataEntry> &ds) {
+void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     SparseBatch &sparse_inputs = layers[0]->getSparseBatch();
 
     const int max_entries = sparse_inputs.maxEntries();
@@ -54,8 +81,7 @@ void Network::fill(std::vector<DataEntry> &ds) {
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / OutputScalar));
         float wdl_target = (ds[i].result + 1) / 2.0f;
 
-        float actual_lambda = StartLambda + (EndLambda - StartLambda) * (epoch / float(Epochs));
-        targets(i) = actual_lambda * score_target + (1.0f - actual_lambda) * wdl_target;
+        targets(i) = lambda * score_target + (1.0f - lambda) * wdl_target;
     }
 
     // upload to device
@@ -69,18 +95,43 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
     init();
     printInfo();
 
+    std::string training_folder;
+    Logger log;
+    int epoch;
+
     if(checkpoint_name.empty()) {
         std::cout << "No checkpoint path provided, training from scratch.\n";
+
+        int next_training_index = getNextTrainingIndex(output_path);
+        std::stringstream new_folder_path;
+        new_folder_path << output_path << "/training_" << next_training_index;
+        training_folder = new_folder_path.str();
+
+        std::filesystem::create_directory(training_folder);
+        std::cout << "Created folder: " << training_folder << std::endl;
+
+        log.open(training_folder + "/loss.csv", false);
+        log.write({"epoch", "training_loss"});
+
+        epoch = 0;
     } else {
         std::cout << "Loading checkpoint from " << checkpoint_name << " ..." << std::endl;
         const std::string checkpoint_path = output_path + "/" + checkpoint_name;
+
         if(!std::filesystem::exists(checkpoint_path)) {
-            std::cerr << "Checkpoint path does not exist: " << checkpoint_path << "\n";
+            std::cerr << "Checkpoint path does not exist: " << checkpoint_path << std::endl;
             return;
         }
 
         loadWeights(checkpoint_path + "/weights.bin");
         optim->load(checkpoint_path);
+        std::cout << std::endl;
+
+        epoch = parseEpochFromCheckpoint(checkpoint_name);
+        training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
+
+        std::cout << "Using existing folder: " << training_folder << std::endl;
+        log.open(training_folder + "/loss.csv", true);
     }
 
     // init dataloader
@@ -88,17 +139,8 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
 
     std::cout << "\n=============================== Training Network ===============================\n\n";
 
-    // add new folder to output path
-    int next_training_index = getNextTrainingIndex(output_path);
-
-    std::stringstream new_folder_path;
-    new_folder_path << output_path << "/training_" << next_training_index;
-
-    std::filesystem::create_directory(new_folder_path.str());
-    std::cout << "Created folder: " << new_folder_path.str() << "\n\n";
-
-    // save network info
-    std::ofstream info_file(new_folder_path.str() + "/info.txt");
+    // save/update network info
+    std::ofstream info_file(training_folder + "/info.txt");
     if(info_file.is_open()) {
         info_file << info.str();
         info_file << dataloader.getInfo() << "\n";
@@ -108,17 +150,16 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
         return;
     }
 
-    Logger log{new_folder_path.str() + "/loss.csv"};
-    log.write({"epoch", "training_loss"});
-
     Timer timer;
-    for(epoch = 1; epoch <= Epochs; epoch++) {
+    for(epoch = epoch + 1; epoch <= Epochs; epoch++) {
         timer.start();
         loss->reset();
 
+        float lambda = StartLambda + (EndLambda - StartLambda) * (epoch / float(Epochs));
+
         for(int batch = 1; batch <= BatchesPerEpoch; batch++) {
             auto ds = dataloader.next();
-            fill(ds);
+            fill(ds, lambda);
 
             timer.stop();
             auto elapsed = timer.getElapsedTime();
@@ -143,15 +184,15 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
 
         printf("\repoch/batch = %3d/%4d, ", epoch, BatchesPerEpoch);
         printf("loss = %1.8f, ", epoch_loss);
-        printf("pos/s = %7d, ", (int) round(1000.0f * BatchSize * BatchesPerEpoch / elapsed));
+        printf("pos/sec = %7d, ", (int) round(1000.0f * BatchSize * BatchesPerEpoch / elapsed));
         printf("time = %3ds", (int) elapsed / 1000);
         std::cout << std::endl;
 
-        if(epoch % SaveRate == 0 || epoch == Epochs) {
-            log.write({std::to_string(epoch), std::to_string(epoch_loss)});
+        log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
+        if(epoch % SaveRate == 0 || epoch == Epochs) {
             std::string suffix = epoch == Epochs ? "final" : std::to_string(epoch);
-            saveCheckpoint(new_folder_path.str() + "/checkpoint-" + suffix);
+            saveCheckpoint(training_folder + "/checkpoint-" + suffix);
         }
 
         optim->updateLR(epoch);

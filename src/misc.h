@@ -106,12 +106,25 @@ inline int getNextTrainingIndex(const std::string &output_path) {
 
 class Logger {
   public:
+    Logger() {}
+
     Logger(std::string path) {
-        file = std::ofstream(path);
+        file = std::ofstream(path, std::ios::app);
+    }
+
+    void open(std::string path, bool append = false) {
+        if(file.is_open())
+            file.close();
+
+        if(append)
+            file = std::ofstream(path, std::ios::app);
+        else
+            file = std::ofstream(path);
     }
 
     ~Logger() {
-        file.close();
+        if(file.is_open())
+            file.close();
     }
 
     void write(std::initializer_list<std::string> args) {
@@ -122,6 +135,7 @@ class Logger {
         }
 
         file << std::endl;
+        file.flush();
     }
 
   private:

@@ -16,7 +16,7 @@ int main() {
         600,   // epochs
         16384, // batch size
         6104,  // batches per epoch
-        50,    // save rate
+        25,    // save rate
         400,   // output scalar
         1.0,   // start lambda
         1.0    // end lambda
@@ -42,12 +42,12 @@ int main() {
     // clang-format off
     StepDecay lr_scheduler
     (
-        200, // step size
+        160, // step size
         0.1  // gamma
     );
     // clang-format on
 
-    // optim.setDecay(0.01);
+    optim.setDecay(0.01);
     optim.setLRScheduler(&lr_scheduler);
     optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
@@ -97,12 +97,12 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_6/weights-epoch150.net");
+    // network.loadWeights(output_path + "/training_6/checkpoint-100/weights.bin");
     // clang-format off
     network.train(
         files,
         output_path
-        //,"training_7/checkpoint-50" // load checkpoint (if needed)
+        ,"training_6/checkpoint-500" // load checkpoint (if needed)
     );
     // clang-format on
 
