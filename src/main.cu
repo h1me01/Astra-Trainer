@@ -77,7 +77,7 @@ int main() {
     // - layer.clampWeights(-1.99, 1.99);
     // - layer.clampBiases(-1.99, 1.99);
 
-    auto ft = FeatureTransformer<1536, CReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -102,7 +102,7 @@ int main() {
     network.train(
         files,
         output_path
-        ,"training_6/checkpoint-500" // load checkpoint (if needed)
+        //,"training_7/checkpoint-500" // load checkpoint (if needed)
     );
     // clang-format on
 

@@ -1,9 +1,5 @@
+#include "../util.h"
 #include "optimizer.h"
-#include <iostream>
-
-__device__ float clamp(float x, float min, float max) {
-    return fmaxf(min, fminf(x, max));
-}
 
 // clang-format off
 __global__ void adam_kernel
