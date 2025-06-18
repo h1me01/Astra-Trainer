@@ -52,6 +52,13 @@ class Optimizer {
         initBuffers();
     }
 
+    void lrFromEpoch(int epoch) {
+        if(scheduler == nullptr)
+            return;
+        for(int i = 1; i <= epoch; i++)
+            updateLR(i);
+    }
+
     void updateLR(int epoch) {
         if(scheduler != nullptr)
             lr = scheduler->getLR(epoch, lr);
@@ -129,6 +136,10 @@ class Optimizer {
         } catch(const std::exception &e) {
             throw std::runtime_error("Failed to save optimizer state to " + state_path + ": " + e.what());
         }
+    }
+
+    float getLR() const {
+        return lr;
     }
 
     virtual void initBuffers() {

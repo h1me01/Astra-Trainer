@@ -36,21 +36,15 @@ using DataEntry = binpack::TrainingDataEntry;
 using DataEntryReader = binpack::CompressedTrainingDataEntryParallelReader;
 
 inline std::function<bool(const DataEntry &)> skipPredicate = [](const DataEntry &e) {
-    static constexpr int VALUE_NONE = 32002;
-
-    auto do_wld_skip = [&]() {
-        std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
-        auto &prng = rng::get_thread_local_rng();
-        return distrib(prng);
-    };
-
-    if(e.score == VALUE_NONE)
+    if(e.score == 32002) // value none
         return true;
-    if(e.ply <= 20)
+    if(e.ply < 20)
+        return true;
+    if(e.move.type != MoveType::Normal)
+        return true;
+    if(std::abs(e.score) > 10000)
         return true;
     if(e.isCapturingMove() || e.isInCheck())
-        return true;
-    if(do_wld_skip())
         return true;
 
     return false;

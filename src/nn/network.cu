@@ -18,7 +18,6 @@ int parseEpochFromCheckpoint(const std::string &checkpoint_name) {
 
     try {
         int parsed_epoch = std::stoi(epoch_str);
-        std::cout << "Resuming from epoch " << parsed_epoch << std::endl;
         return parsed_epoch;
     } catch(...) {
         std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0.\n";
@@ -128,6 +127,11 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
         std::cout << std::endl;
 
         epoch = parseEpochFromCheckpoint(checkpoint_name);
+        optim->lrFromEpoch(epoch);
+
+        if(epoch > 0)
+            std::cout << "Resuming from epoch " << epoch << " with learning rate " << optim->getLR() << std::endl;
+
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
 
         std::cout << "Using existing folder: " << training_folder << std::endl;
@@ -135,7 +139,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
     }
 
     // init dataloader
-    FeaturedBatchStream dataloader(files, 4, BatchSize, false);
+    FeaturedBatchStream dataloader(files, ThreadCount, BatchSize, false);
 
     std::cout << "\n=============================== Training Network ===============================\n\n";
 

@@ -17,6 +17,7 @@ class Network {
     int BatchSize;
     int BatchesPerEpoch;
     int SaveRate;
+    int ThreadCount; // dataloader thread count
 
     float OutputScalar;
     float StartLambda;
@@ -147,6 +148,7 @@ class Network {
         int batch_size = 16384,
         int batches_per_epoch = 6104,
         int save_rate = 10,
+        int thread_count = 2,
         float output_scalar = 400,
         float start_lambda = 0.7,
         float end_lambda = 0.8
@@ -157,6 +159,7 @@ class Network {
         BatchSize = batch_size;
         BatchesPerEpoch = batches_per_epoch;
         SaveRate = save_rate;
+        ThreadCount = thread_count;
         OutputScalar = output_scalar;
         StartLambda = start_lambda;
         EndLambda = end_lambda;
