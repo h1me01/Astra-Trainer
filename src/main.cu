@@ -13,7 +13,7 @@ int main() {
     // clang-format off
     Network network
     (
-        200,   // epochs
+        600,   // epochs
         16384, // batch size
         6104,  // batches per epoch
         100,   // save rate

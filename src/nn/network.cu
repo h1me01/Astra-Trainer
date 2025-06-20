@@ -109,8 +109,8 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
         std::filesystem::create_directory(training_folder);
         std::cout << "Created folder: " << training_folder << std::endl;
 
-        log.open(training_folder + "/loss.csv", false);
-        log.write({"epoch", "training_loss"});
+        log.open(training_folder + "/log.txt", false);
+        log.write({"epoch", "loss"});
 
         epoch = 0;
     } else {
@@ -135,7 +135,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
 
         std::cout << "Using existing folder: " << training_folder << std::endl;
-        log.open(training_folder + "/loss.csv", true);
+        log.open(training_folder + "/log.txt", true);
     }
 
     // init dataloader
