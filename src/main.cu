@@ -10,43 +10,34 @@ int main() {
     // get training data
     vector<string> files = fetchFilesFromPath(root_path + "/training_data");
 
-    // clang-format off
-    Network network
-    (
-        600,   // epochs
-        16384, // batch size
-        6104,  // batches per epoch
-        100,   // save rate
-        1,     // thread count for dataloader
-        400,   // output scalar
-        1.0,   // start lambda
-        1.0    // end lambda
+    Network network( //
+        600,         // epochs
+        16384,       // batch size
+        6104,        // batches per epoch
+        100,         // save rate
+        1,           // thread count for dataloader
+        400,         // output scalar
+        1.0,         // start lambda
+        1.0          // end lambda
     );
-    // clang-format on
 
     // init loss
     MPELoss<Sigmoid> loss(2.5); // 2.5 = power
     network.setLoss(&loss);
 
     // init optim
-    // clang-format off
-    Adam optim
-    (
-        0.001, // lr
-        0.9,   // beta1
-        0.999, // beta2
-        1e-8   // epsilon
+    Adam optim( //
+        0.001,  // lr
+        0.9,    // beta1
+        0.999,  // beta2
+        1e-8    // epsilon
     );
-    // clang-format on
 
     // init learning rate scheduler
-    // clang-format off
-    StepDecay lr_scheduler
-    (
-        160, // step size
-        0.1  // gamma
+    StepDecay lr_scheduler( //
+        160,                // step size
+        0.1                 // gamma
     );
-    // clang-format on
 
     optim.setDecay(0.01);
     optim.setLRScheduler(&lr_scheduler);
@@ -55,19 +46,16 @@ int main() {
     network.setOptimizer(&optim);
 
     // init king bucket (if needed)
-    // clang-format off
-    array<int, 64> king_bucket = 
-    {
-        0, 1, 2, 3, 3, 2, 1, 0,
-        4, 5, 6, 7, 7, 6, 5, 4,
-        8, 8, 9, 9, 9, 9, 8, 8,
-        10,10,10,10,10,10,10,10,
-        10,10,10,10,10,10,10,10,
-        11,11,11,11,11,11,11,11,
-        11,11,11,11,11,11,11,11,
-        11,11,11,11,11,11,11,11,
+    array<int, 64> king_bucket = {
+        0,  1,  2,  3,  3,  2,  1,  0,  //
+        4,  5,  6,  7,  7,  6,  5,  4,  //
+        8,  8,  9,  9,  9,  9,  8,  8,  //
+        10, 10, 10, 10, 10, 10, 10, 10, //
+        10, 10, 10, 10, 10, 10, 10, 10, //
+        11, 11, 11, 11, 11, 11, 11, 11, //
+        11, 11, 11, 11, 11, 11, 11, 11, //
+        11, 11, 11, 11, 11, 11, 11, 11, //
     };
-    // clang-format on
 
     network.setKingBucket(king_bucket);
 
@@ -99,13 +87,11 @@ int main() {
 
     // load weights only (if needed)
     // network.loadWeights(output_path + "/training_6/checkpoint-100/weights.bin");
-    // clang-format off
-    network.train(
-        files,
-        output_path
+    network.train(  //
+        files,      //
+        output_path //
         //,"training_3/checkpoint-final" // load checkpoint (if needed)
     );
-    // clang-format on
 
     cout << "\n================================ Testing Network ===============================\n\n";
 

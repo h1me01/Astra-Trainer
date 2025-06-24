@@ -1,24 +1,21 @@
 #include "../util.h"
 #include "optimizer.h"
 
-// clang-format off
-__global__ void adam_kernel
-(
-    float *vals, 
-    float *grads, 
-    float *moms, 
-    float *vels, 
-    const float lr, 
+__global__ void adam_kernel( //
+    float *vals,
+    float *grads,
+    float *moms,
+    float *vels,
+    const float lr,
     const float beta1,
-    const float beta2, 
-    const float eps, 
-    const float decay, 
+    const float beta2,
+    const float eps,
+    const float decay,
     const float min_val,
-    const float max_val, 
-    const float grad_scale, 
-    const int size
+    const float max_val,
+    const float grad_scale,
+    const int size //
 ) {
-    // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;
@@ -41,26 +38,23 @@ __global__ void adam_kernel
 }
 
 // https://github.com/LiyuanLucasLiu/RAdam/blob/master/radam/radam.py
-// clang-format off
-__global__ void radam_kernel
-(
-    float *vals, 
-    float *grads, 
-    float *moms, 
-    float *vels, 
-    const float lr, 
+__global__ void radam_kernel( //
+    float *vals,
+    float *grads,
+    float *moms,
+    float *vels,
+    const float lr,
     const float beta1,
-    const float beta2, 
-    const float eps, 
-    const float decay, 
+    const float beta2,
+    const float eps,
+    const float decay,
     const float min_val,
-    const float max_val, 
-    const float grad_scale, 
-    const int N_sma_threshold, 
+    const float max_val,
+    const float grad_scale,
+    const int N_sma_threshold,
     const int step,
-    const int size
+    const int size //
 ) {
-    // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;
@@ -100,29 +94,26 @@ __global__ void radam_kernel
 }
 
 // https://github.com/official-stockfish/nnue-pytorch/blob/master/ranger.py
-// clang-format off
-__global__ void ranger_kernel
-(
-    float *vals, 
-    float *grads, 
-    float *moms, 
-    float *vels, 
-    float *slow_buffer, 
+__global__ void ranger_kernel( //
+    float *vals,
+    float *grads,
+    float *moms,
+    float *vels,
+    float *slow_buffer,
     const float lr,
-    const float beta1, 
-    const float beta2, 
-    const float eps, 
+    const float beta1,
+    const float beta2,
+    const float eps,
     const float decay,
-    const float min_val, 
-    const float max_val, 
-    const float grad_scale, 
+    const float min_val,
+    const float max_val,
+    const float grad_scale,
     const float alpha,
-    const int k, 
-    const int N_sma_threshold, 
-    const int step, 
-    const int size
+    const int k,
+    const int N_sma_threshold,
+    const int step,
+    const int size //
 ) {
-    // clang-format on
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;

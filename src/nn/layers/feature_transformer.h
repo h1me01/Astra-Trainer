@@ -54,23 +54,19 @@ class FeatureTransformer : public LayerBase {
         for(auto &feature : features) {
             ASSERT(feature.devAddress())
 
-            // clang-format off
-            sparse_affine_kernel<<<grid, block_size>>>
-            (
-                weights_v.devAddress(), 
+            sparse_affine_kernel<<<grid, block_size>>>( //
+                weights_v.devAddress(),
                 biases_v.devAddress(),
                 activated_v.devAddress(),
-                pre_activated.devAddress(), 
+                pre_activated.devAddress(),
                 feature.devAddress(),
                 feature_sizes.devAddress(),
-                weights_v.numRows(), 
-                activated_v.numRows(), 
-                i * size, 
+                weights_v.numRows(),
+                activated_v.numRows(),
+                i * size,
                 batch_size,
-                max_entries, 
-                act_type
-            );
-            // clang-format on
+                max_entries,
+                act_type);
 
             i++;
         }
@@ -102,23 +98,19 @@ class FeatureTransformer : public LayerBase {
         for(auto &feature : features) {
             ASSERT(feature.devAddress());
 
-            // clang-format off
-            sparse_affine_bp_kernel<<<grid, block_size>>>
-            (
+            sparse_affine_bp_kernel<<<grid, block_size>>>( //
                 activated_g.devAddress(),
-                pre_activated.devAddress(), 
-                weights_g.devAddress(), 
+                pre_activated.devAddress(),
+                weights_g.devAddress(),
                 biases_g.devAddress(),
-                feature.devAddress(), 
+                feature.devAddress(),
                 feature_sizes.devAddress(),
-                weights_g.numRows(), 
+                weights_g.numRows(),
                 activated_g.numRows(),
                 i * size,
-                batch_size, 
-                max_entries, 
-                act_type
-            );
-            // clang-format on
+                batch_size,
+                max_entries,
+                act_type);
 
             i++;
         }

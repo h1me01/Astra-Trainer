@@ -46,18 +46,14 @@ struct MPELoss : Loss {
         constexpr int block_size = 1024;
         dim3 grid(std::ceil((float) output_v.size() / block_size));
 
-        // clang-format off
-        mpe_kernel<<<grid, block_size>>>
-        (
-            targets.devAddress(), 
-            output_v.devAddress(), 
-            output_g.devAddress(), 
-            loss.devAddress(), 
-            power, 
+        mpe_kernel<<<grid, block_size>>>( //
+            targets.devAddress(),
+            output_v.devAddress(),
+            output_g.devAddress(),
+            loss.devAddress(),
+            power,
             act_type,
-            output_v.size()
-        );
-        // clang-format on
+            output_v.size());
     }
 
     std::string getInfo() {
@@ -81,17 +77,13 @@ struct MSELoss : Loss {
         constexpr int block_size = 1024;
         dim3 grid(std::ceil((float) output_v.size() / block_size));
 
-        // clang-format off
-        mse_kernel<<<grid, block_size>>>
-        (
-            targets.devAddress(), 
-            output_v.devAddress(), 
-            output_g.devAddress(), 
-            loss.devAddress(), 
+        mse_kernel<<<grid, block_size>>>( //
+            targets.devAddress(),
+            output_v.devAddress(),
+            output_g.devAddress(),
+            loss.devAddress(),
             act_type,
-            output_v.size()
-        );
-        // clang-format on
+            output_v.size());
     }
 
     std::string getInfo() {

@@ -18,17 +18,14 @@ void destroyCublas() {
 }
 
 // AFFINE
-// clang-format off
-__global__ void add_biases_kernel
-(
-    const float *biases_v, 
+__global__ void add_biases_kernel( //
+    const float *biases_v,
     float *activated_v,
     float *prev_activated_v,
-    const int r, 
+    const int r,
     const int c,
-    const ActivationType act_type
+    const ActivationType act_type //
 ) {
-    // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
         return;
@@ -41,15 +38,13 @@ __global__ void add_biases_kernel
     activated_v[idx] = activate(weighted_sum, act_type);
 }
 
-// clang-format off
-void affine
-(
-    DenseMatrix &weights_v, 
-    DenseMatrix &biases_v, 
-    DenseMatrix &inputs_v, 
+void affine( //
+    DenseMatrix &weights_v,
+    DenseMatrix &biases_v,
+    DenseMatrix &inputs_v,
     DenseMatrix &activated_v,
     DenseMatrix &pre_activated,
-    const ActivationType act_type
+    const ActivationType act_type //
 ) {
     // clang-format on
     ASSERT(activated_v.numRows() == biases_v.numRows() && biases_v.numCols() == 1);
@@ -65,52 +60,43 @@ void affine
            pre_activated.devAddress());
 
     // compute dot product
-    // clang-format off
-    cublasSgemm
-    (
-        CUBLAS_HANDLE,          // handle
-        CUBLAS_OP_N,            // transa
-        CUBLAS_OP_N,            // transb
-        pre_activated.numRows(),     // m
-        pre_activated.numCols(),     // n
-        weights_v.numCols(),    // k
-        &alpha,                 // alpha
-        weights_v.devAddress(), // A
-        weights_v.numRows(),    // lda
-        inputs_v.devAddress(),  // B
-        inputs_v.numRows(),     // ldb
-        &beta,                  // beta
-        pre_activated.devAddress(),  // C
-        pre_activated.numRows()      // ldc
+    cublasSgemm(                    //
+        CUBLAS_HANDLE,              // handle
+        CUBLAS_OP_N,                // transa
+        CUBLAS_OP_N,                // transb
+        pre_activated.numRows(),    // m
+        pre_activated.numCols(),    // n
+        weights_v.numCols(),        // k
+        &alpha,                     // alpha
+        weights_v.devAddress(),     // A
+        weights_v.numRows(),        // lda
+        inputs_v.devAddress(),      // B
+        inputs_v.numRows(),         // ldb
+        &beta,                      // beta
+        pre_activated.devAddress(), // C
+        pre_activated.numRows()     // ldc
     );
-    // clang-format on
 
     // add biases to dot product
     dim3 grid(std::ceil((float) activated_v.size() / block_size));
 
-    // clang-format off
-    add_biases_kernel<<<grid, block_size>>>
-    (
-        biases_v.devAddress(), 
-        activated_v.devAddress(), 
+    add_biases_kernel<<<grid, block_size>>>( //
+        biases_v.devAddress(),
+        activated_v.devAddress(),
         pre_activated.devAddress(),
         activated_v.numRows(),
-        activated_v.numCols(), 
-        act_type
-    );
-    // clang-format on
+        activated_v.numCols(),
+        act_type);
 }
 
 // AFFINE BP
-// clang-format off
-__global__ void update_biases_grad_kernel
-(
-    const float *pre_activated_v, 
-    float *activated_g, 
-    float *biases_g, 
+__global__ void update_biases_grad_kernel( //
+    const float *pre_activated_v,
+    float *activated_g,
+    float *biases_g,
     const int r,
-    const int c, 
-    const ActivationType act_type
+    const int c,
+    const ActivationType act_type //
 ) {
     // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -128,15 +114,13 @@ __global__ void update_biases_grad_kernel
     atomicAdd(&biases_g[neuron_idx], grad);
 }
 
-// clang-format off
-void affine_bp
-(
-    Tensor &weights, 
-    Tensor &biases, 
-    Tensor &inputs, 
+void affine_bp( //
+    Tensor &weights,
+    Tensor &biases,
+    Tensor &inputs,
     Tensor &activated,
     DenseMatrix &prev_activated,
-    const ActivationType act_type
+    const ActivationType act_type //
 ) {
     // clang-format on
     const DenseMatrix &weights_v = weights.getValues();
@@ -167,57 +151,47 @@ void affine_bp
 
     // update biases gradient
     dim3 grid(std::ceil((float) activated_g.size() / block_size));
-    // clang-format off
-    update_biases_grad_kernel<<<grid, block_size>>>
-    (
-        prev_activated.devAddress(), 
-        activated_g.devAddress(), 
+    update_biases_grad_kernel<<<grid, block_size>>>( //
+        prev_activated.devAddress(),
+        activated_g.devAddress(),
         biases_g.devAddress(),
-        activated_g.numRows(), 
-        activated_g.numCols(), 
-        act_type
-    );
-    // clang-format on
+        activated_g.numRows(),
+        activated_g.numCols(),
+        act_type);
 
     // update weights gradient
-    // clang-format off
-    cublasSgemm
-    (
-        CUBLAS_HANDLE,          // handle
-        CUBLAS_OP_N,            // transa
-        CUBLAS_OP_T,            // transb
-        weights_g.numRows(),    // m
-        weights_g.numCols(),    // n
-        activated_g.numCols(),     // k
-        &alpha,                 // alpha
-        activated_g.devAddress(),  // A
-        activated_g.numRows(),     // lda
-        inputs_v.devAddress(),  // B
-        inputs_v.numRows(),     // ldb
-        &beta,                  // beta
-        weights_g.devAddress(), // C
-        weights_g.numRows()     // ldc
+    cublasSgemm(                  //
+        CUBLAS_HANDLE,            // handle
+        CUBLAS_OP_N,              // transa
+        CUBLAS_OP_T,              // transb
+        weights_g.numRows(),      // m
+        weights_g.numCols(),      // n
+        activated_g.numCols(),    // k
+        &alpha,                   // alpha
+        activated_g.devAddress(), // A
+        activated_g.numRows(),    // lda
+        inputs_v.devAddress(),    // B
+        inputs_v.numRows(),       // ldb
+        &beta,                    // beta
+        weights_g.devAddress(),   // C
+        weights_g.numRows()       // ldc
     );
-    // clang-format on
 
     // calculates delta for the layer before this one as well
-    // clang-format off
-    cublasSgemm
-    (
-        CUBLAS_HANDLE,          // handle
-        CUBLAS_OP_T,            // transa
-        CUBLAS_OP_N,            // transb
-        inputs_g.numRows(),     // m
-        inputs_g.numCols(),     // n
-        weights_v.numRows(),    // k
-        &alpha,                 // alpha
-        weights_v.devAddress(), // A
-        weights_v.numRows(),    // lda
-        activated_g.devAddress(),  // B
-        activated_g.numRows(),     // ldb
-        &beta,                  // beta
-        inputs_g.devAddress(),  // C
-        inputs_g.numRows()      // ldc
+    cublasSgemm(                  //
+        CUBLAS_HANDLE,            // handle
+        CUBLAS_OP_T,              // transa
+        CUBLAS_OP_N,              // transb
+        inputs_g.numRows(),       // m
+        inputs_g.numCols(),       // n
+        weights_v.numRows(),      // k
+        &alpha,                   // alpha
+        weights_v.devAddress(),   // A
+        weights_v.numRows(),      // lda
+        activated_g.devAddress(), // B
+        activated_g.numRows(),    // ldb
+        &beta,                    // beta
+        inputs_g.devAddress(),    // C
+        inputs_g.numRows()        // ldc
     );
-    // clang-format on
 }

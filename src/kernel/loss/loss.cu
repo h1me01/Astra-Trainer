@@ -1,17 +1,14 @@
 #include "loss.h"
 
-// clang-format off
-__global__ void mpe_kernel
-(
-    const float *targets, 
-    const float *output_v, 
-    float *output_g, 
-    float *loss, 
+__global__ void mpe_kernel( //
+    const float *targets,
+    const float *output_v,
+    float *output_g,
+    float *loss,
     const float power,
     const ActivationType act_type,
-    const int size
+    const int size //
 ) {
-    // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;
@@ -26,17 +23,14 @@ __global__ void mpe_kernel
     atomicAdd(loss, powf(abs_diff, power));
 }
 
-// clang-format off
-__global__ void mse_kernel
-(
-    const float *targets, 
-    const float *output_v, 
-    float *output_g, 
-    float *loss, 
+__global__ void mse_kernel( //
+    const float *targets,
+    const float *output_v,
+    float *output_g,
+    float *loss,
     const ActivationType act_type,
-    const int size
+    const int size //
 ) {
-    // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;

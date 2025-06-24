@@ -193,12 +193,10 @@ struct Adam : Optimizer {
 
             dim3 grid(std::ceil((float) values.size() / block_size));
 
-            // clang-format off
-            adam_kernel<<<grid, block_size>>>
-            (
+            adam_kernel<<<grid, block_size>>>( //
                 values.devAddress(),
                 gradients.devAddress(),
-                momentum[i].devAddress(),   
+                momentum[i].devAddress(),
                 velocity[i].devAddress(),
                 lr,
                 beta1,
@@ -208,9 +206,7 @@ struct Adam : Optimizer {
                 tunables[i]->min(),
                 tunables[i]->max(),
                 grad_scale,
-                values.size()
-            );
-            // clang-format on
+                values.size());
         }
     }
 };
@@ -244,9 +240,7 @@ class RAdam : public Optimizer {
 
             dim3 grid(std::ceil((float) values.size() / block_size));
 
-            // clang-format off
-            radam_kernel<<<grid, block_size>>>
-            (
+            radam_kernel<<<grid, block_size>>>( //
                 values.devAddress(),
                 gradients.devAddress(),
                 momentum[i].devAddress(),
@@ -261,9 +255,7 @@ class RAdam : public Optimizer {
                 grad_scale,
                 N_sma_threshold,
                 step,
-                values.size()
-            );
-            // clang-format on
+                values.size());
         }
     }
 
@@ -312,9 +304,7 @@ class Ranger : public Optimizer {
 
             dim3 grid(std::ceil((float) values.size() / block_size));
 
-            // clang-format off
-            ranger_kernel<<<grid, block_size>>>
-            (
+            ranger_kernel<<<grid, block_size>>>( //
                 values.devAddress(),
                 gradients.devAddress(),
                 momentum[i].devAddress(),
@@ -332,9 +322,7 @@ class Ranger : public Optimizer {
                 k,
                 N_sma_threshold,
                 step,
-                values.size()
-            );
-            // clang-format on
+                values.size());
         }
     }
 
