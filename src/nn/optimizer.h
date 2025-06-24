@@ -162,7 +162,7 @@ class Optimizer {
         if(decay != 0.0f)
             info << ", decay=" << formatNumber(decay);
         if(scheduler != nullptr)
-            info << ", scheduler=" << scheduler->getInfo();
+            info << ", sched=" << scheduler->getInfo();
         info << ")";
         return info.str();
     }
