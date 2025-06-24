@@ -131,7 +131,7 @@ class Logger {
         for(auto i = args.begin(); i != args.end(); ++i) {
             if(i != args.begin())
                 file << ",";
-            file << "\"" << *i << "\"";
+            file << *i;
         }
 
         file << std::endl;

@@ -128,7 +128,7 @@ class FeatureTransformer : public LayerBase {
         return input_size;
     }
 
-    std::vector<Tensor *> getTunables() override {
+    std::vector<Tensor *> getParams() override {
         return {&weights, &biases};
     }
 };

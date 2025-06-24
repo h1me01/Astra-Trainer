@@ -103,7 +103,7 @@ class Network {
                 throw std::runtime_error("Failed to write weights to " + file);
 
             for(LayerBase *l : layers) {
-                for(Tensor *t : l->getTunables()) {
+                for(Tensor *t : l->getParams()) {
                     DenseMatrix &weights = t->getValues();
                     weights.devToHost();
 
@@ -182,7 +182,7 @@ class Network {
 
         try {
             for(LayerBase *l : layers) {
-                for(Tensor *t : l->getTunables()) {
+                for(Tensor *t : l->getParams()) {
                     DenseMatrix &weights = t->getValues();
 
                     f.read(reinterpret_cast<char *>(weights.hostAddress()), weights.size() * sizeof(float));

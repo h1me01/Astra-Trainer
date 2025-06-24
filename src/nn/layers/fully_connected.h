@@ -65,7 +65,7 @@ class FullyConnected : public LayerBase {
         return previous->getOutputSize();
     }
 
-    std::vector<Tensor *> getTunables() override {
+    std::vector<Tensor *> getParams() override {
         return {&weights, &biases};
     }
 };

@@ -77,20 +77,20 @@ int main() {
         const int q1 = 255;
         const int q2 = 64;
 
-        ft.getTunables()[0]->quantize<int16_t>(f, q1, true); // weights
-        ft.getTunables()[1]->quantize<int16_t>(f, q1);       // biases
-        fc.getTunables()[0]->quantize<int16_t>(f, q2);       // weights
-        fc.getTunables()[1]->quantize<int16_t>(f, q1 * q2);  // biases
+        ft.getParams()[0]->quantize<int16_t>(f, q1, true); // weights
+        ft.getParams()[1]->quantize<int16_t>(f, q1);       // biases
+        fc.getParams()[0]->quantize<int16_t>(f, q2);       // weights
+        fc.getParams()[1]->quantize<int16_t>(f, q1 * q2);  // biases
     });
 
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
     // network.loadWeights(output_path + "/training_6/checkpoint-100/weights.bin");
-    network.train(  //
-        files,      //
-        output_path //
-        //,"training_3/checkpoint-final" // load checkpoint (if needed)
+    network.train(                  //
+        files,                      //
+        output_path,                //
+        "training_4/checkpoint-100" // load checkpoint (if needed)
     );
 
     cout << "\n================================ Testing Network ===============================\n\n";

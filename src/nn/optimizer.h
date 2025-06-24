@@ -42,7 +42,7 @@ class Optimizer {
 
     void init(std::vector<LayerBase *> layers) {
         for(LayerBase *l : layers)
-            for(auto *t : l->getTunables()) {
+            for(auto *t : l->getParams()) {
                 if(min_val != -1)
                     t->clamp(min_val, t->max());
                 if(max_val != -1)

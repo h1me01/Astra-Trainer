@@ -31,11 +31,11 @@ class LayerBase {
     }
 
     void clampWeights(float min, float max) {
-        getTunables()[0]->clamp(min, max);
+        getParams()[0]->clamp(min, max);
     }
 
     void clampBiases(float min, float max) {
-        getTunables()[1]->clamp(min, max);
+        getParams()[1]->clamp(min, max);
     }
 
     virtual ActivationType getActivationType() const = 0;
@@ -43,7 +43,7 @@ class LayerBase {
     virtual int getOutputSize() const = 0;
     virtual int getInputSize() const = 0;
 
-    virtual std::vector<Tensor *> getTunables() = 0;
+    virtual std::vector<Tensor *> getParams() = 0;
 
     virtual void forward() = 0;
     virtual void backprop() = 0;
@@ -55,7 +55,7 @@ class LayerBase {
         info << "input_size=" << std::to_string(getInputSize());
         info << ", output_size=" << std::to_string(getOutputSize()) << ")\n";
 
-        const std::vector<Tensor *> &tunables = getTunables();
+        const std::vector<Tensor *> &tunables = getParams();
         if(!tunables.empty()) {
             int i = 0;
             for(const Tensor *t : tunables) {
