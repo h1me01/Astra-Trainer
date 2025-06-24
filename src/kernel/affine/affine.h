@@ -18,6 +18,6 @@ void affine_bp( //
     Tensor &weights,
     Tensor &biases,
     Tensor &inputs,
-    Tensor &output,
+    Tensor &activated,
     DenseMatrix &prev_activated,
     const ActivationType act_type);

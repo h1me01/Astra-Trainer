@@ -34,13 +34,13 @@ int main() {
     );
 
     // init learning rate scheduler
-    StepDecay lr_scheduler( //
-        160,                // step size
-        0.1                 // gamma
+    StepDecay lr_sched( //
+        160,            // step size
+        0.1             // gamma
     );
 
     optim.setDecay(0.01);
-    optim.setLRScheduler(&lr_scheduler);
+    optim.setLRScheduler(&lr_sched);
     optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
     network.setOptimizer(&optim);
