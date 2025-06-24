@@ -37,13 +37,14 @@ class FeatureTransformer : public LayerBase {
 
         const DenseMatrix &weights_v = weights.getValues();
         const DenseMatrix &biases_v = biases.getValues();
-        DenseMatrix &output_v = dense_output.getValues();
+        DenseMatrix &activated_v = activated.getValues();
 
-        ASSERT(batch_size == output_v.numCols());
+        ASSERT(batch_size == activated_v.numCols());
 
-        ASSERT(weights_v.devAddress() && //
-               biases_v.devAddress() &&  //
-               output_v.devAddress() &&  //
+        ASSERT(weights_v.devAddress() &&     //
+               biases_v.devAddress() &&      //
+               activated_v.devAddress() &&   //
+               pre_activated.devAddress() && //
                feature_sizes.devAddress());
 
         constexpr int block_size = 128;
@@ -58,11 +59,12 @@ class FeatureTransformer : public LayerBase {
             (
                 weights_v.devAddress(), 
                 biases_v.devAddress(),
-                output_v.devAddress(), 
+                activated_v.devAddress(),
+                pre_activated.devAddress(), 
                 feature.devAddress(),
                 feature_sizes.devAddress(),
                 weights_v.numRows(), 
-                output_v.numRows(), 
+                activated_v.numRows(), 
                 i * size, 
                 batch_size,
                 max_entries, 
@@ -83,15 +85,14 @@ class FeatureTransformer : public LayerBase {
         DenseMatrix &weights_g = weights.getGradients();
         DenseMatrix &biases_g = biases.getGradients();
 
-        const DenseMatrix &output_v = dense_output.getValues();
-        const DenseMatrix &output_g = dense_output.getGradients();
+        const DenseMatrix &activated_g = activated.getGradients();
 
-        ASSERT(output_g.numCols() == batch_size);
+        ASSERT(activated_g.numCols() == batch_size);
 
-        ASSERT(weights_g.devAddress() && //
-               biases_g.devAddress() &&  //
-               output_g.devAddress() &&  //
-               output_v.devAddress() &&  //
+        ASSERT(weights_g.devAddress() &&     //
+               biases_g.devAddress() &&      //
+               activated_g.devAddress() &&   //
+               pre_activated.devAddress() && //
                feature_sizes.devAddress());
 
         constexpr int block_size = 128;
@@ -104,14 +105,14 @@ class FeatureTransformer : public LayerBase {
             // clang-format off
             sparse_affine_bp_kernel<<<grid, block_size>>>
             (
-                output_v.devAddress(), 
-                output_g.devAddress(),
+                activated_g.devAddress(),
+                pre_activated.devAddress(), 
                 weights_g.devAddress(), 
                 biases_g.devAddress(),
                 feature.devAddress(), 
                 feature_sizes.devAddress(),
                 weights_g.numRows(), 
-                output_g.numRows(),
+                activated_g.numRows(),
                 i * size,
                 batch_size, 
                 max_entries, 

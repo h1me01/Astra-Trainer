@@ -19,8 +19,8 @@ int main() {
         100,   // save rate
         1,     // thread count for dataloader
         400,   // output scalar
-        0.7,   // start lambda
-        0.8    // end lambda
+        1.0,   // start lambda
+        1.0    // end lambda
     );
     // clang-format on
 
@@ -78,7 +78,7 @@ int main() {
     // - layer.clampWeights(-1.99, 1.99);
     // - layer.clampBiases(-1.99, 1.99);
 
-    auto ft = FeatureTransformer<1536, CReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -103,7 +103,7 @@ int main() {
     network.train(
         files,
         output_path
-        //,"training_5/checkpoint-final" // load checkpoint (if needed)
+        //,"training_3/checkpoint-final" // load checkpoint (if needed)
     );
     // clang-format on
 

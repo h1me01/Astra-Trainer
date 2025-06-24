@@ -22,20 +22,23 @@ void destroyCublas() {
 __global__ void add_biases_kernel
 (
     const float *biases_v, 
-    float *output_v, 
-    const int num_rows, 
-    const int num_cols,
+    float *activated_v,
+    float *prev_activated_v,
+    const int r, 
+    const int c,
     const ActivationType act_type
 ) {
     // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= num_rows * num_cols)
+    if(idx >= r * c)
         return;
 
-    int neuron_idx = idx / num_cols;
+    int neuron_idx = idx / c;
 
-    float weighted_sum = output_v[idx] + biases_v[neuron_idx];
-    output_v[idx] = activate(weighted_sum, act_type);
+    float weighted_sum = prev_activated_v[idx] + biases_v[neuron_idx];
+
+    prev_activated_v[idx] = weighted_sum;
+    activated_v[idx] = activate(weighted_sum, act_type);
 }
 
 // clang-format off
@@ -44,20 +47,22 @@ void affine
     DenseMatrix &weights_v, 
     DenseMatrix &biases_v, 
     DenseMatrix &inputs_v, 
-    DenseMatrix &output_v,
+    DenseMatrix &activated_v,
+    DenseMatrix &pre_activated,
     const ActivationType act_type
 ) {
     // clang-format on
-    ASSERT(output_v.numRows() == biases_v.numRows() && biases_v.numCols() == 1);
+    ASSERT(activated_v.numRows() == biases_v.numRows() && biases_v.numCols() == 1);
 
-    ASSERT(weights_v.numCols() == inputs_v.numRows() && //
-           weights_v.numRows() == output_v.numRows() && //
-           inputs_v.numCols() == output_v.numCols());
+    ASSERT(weights_v.numCols() == inputs_v.numRows() &&    //
+           weights_v.numRows() == activated_v.numRows() && //
+           inputs_v.numCols() == activated_v.numCols());
 
-    ASSERT(weights_v.devAddress() && //
-           biases_v.devAddress() &&  //
-           inputs_v.devAddress() &&  //
-           output_v.devAddress());
+    ASSERT(weights_v.devAddress() &&   //
+           biases_v.devAddress() &&    //
+           inputs_v.devAddress() &&    //
+           activated_v.devAddress() && //
+           pre_activated.devAddress());
 
     // compute dot product
     // clang-format off
@@ -66,8 +71,8 @@ void affine
         CUBLAS_HANDLE,          // handle
         CUBLAS_OP_N,            // transa
         CUBLAS_OP_N,            // transb
-        output_v.numRows(),     // m
-        output_v.numCols(),     // n
+        pre_activated.numRows(),     // m
+        pre_activated.numCols(),     // n
         weights_v.numCols(),    // k
         &alpha,                 // alpha
         weights_v.devAddress(), // A
@@ -75,21 +80,23 @@ void affine
         inputs_v.devAddress(),  // B
         inputs_v.numRows(),     // ldb
         &beta,                  // beta
-        output_v.devAddress(),  // C
-        output_v.numRows()      // ldc
+        pre_activated.devAddress(),  // C
+        pre_activated.numRows()      // ldc
     );
     // clang-format on
 
     // add biases to dot product
-    dim3 grid(std::ceil((float) output_v.size() / block_size));
+    dim3 grid(std::ceil((float) activated_v.size() / block_size));
 
     // clang-format off
     add_biases_kernel<<<grid, block_size>>>
     (
         biases_v.devAddress(), 
-        output_v.devAddress(), 
-        output_v.numRows(),
-        output_v.numCols(), act_type
+        activated_v.devAddress(), 
+        pre_activated.devAddress(),
+        activated_v.numRows(),
+        activated_v.numCols(), 
+        act_type
     );
     // clang-format on
 }
@@ -98,26 +105,26 @@ void affine
 // clang-format off
 __global__ void update_biases_grad_kernel
 (
-    const float *output_v, 
-    float *output_g, 
+    const float *pre_activated_v, 
+    float *activated_g, 
     float *biases_g, 
-    const int num_rows,
-    const int num_cols, 
+    const int r,
+    const int c, 
     const ActivationType act_type
 ) {
     // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= num_rows * num_cols)
+    if(idx >= r * c)
         return;
 
-    float grad = output_g[idx];
+    float grad = activated_g[idx];
     if(grad == 0)
         return;
 
-    grad *= activationDer(output_v[idx], act_type);
-    output_g[idx] = grad;
+    grad *= activationDer(pre_activated_v[idx], act_type);
+    activated_g[idx] = grad;
 
-    int neuron_idx = idx / num_cols;
+    int neuron_idx = idx / c;
     atomicAdd(&biases_g[neuron_idx], grad);
 }
 
@@ -127,7 +134,8 @@ void affine_bp
     Tensor &weights, 
     Tensor &biases, 
     Tensor &inputs, 
-    Tensor &output, 
+    Tensor &activated,
+    DenseMatrix &prev_activated,
     const ActivationType act_type
 ) {
     // clang-format on
@@ -139,33 +147,34 @@ void affine_bp
     const DenseMatrix &inputs_v = inputs.getValues();
     DenseMatrix &inputs_g = inputs.getGradients();
 
-    const DenseMatrix &output_v = output.getValues();
-    const DenseMatrix &output_g = output.getGradients();
+    const DenseMatrix &activated_v = activated.getValues();
+    const DenseMatrix &activated_g = activated.getGradients();
 
-    ASSERT(output_g.numRows() == biases_g.numRows() && biases_g.numCols() == 1);
+    ASSERT(activated_g.numRows() == biases_g.numRows() && biases_g.numCols() == 1);
 
-    ASSERT(weights_g.numCols() == inputs_g.numRows() && //
-           weights_g.numRows() == output_g.numRows() && //
-           inputs_g.numCols() == output_g.numCols());
+    ASSERT(weights_g.numCols() == inputs_g.numRows() &&    //
+           weights_g.numRows() == activated_g.numRows() && //
+           inputs_g.numCols() == activated_g.numCols());
 
-    ASSERT(weights_v.devAddress() && //
-           weights_g.devAddress() && //
-           biases_g.devAddress() &&  //
-           inputs_v.devAddress() &&  //
-           inputs_g.devAddress() &&  //
-           output_v.devAddress() &&  //
-           output_g.devAddress());
+    ASSERT(weights_v.devAddress() &&   //
+           weights_g.devAddress() &&   //
+           biases_g.devAddress() &&    //
+           inputs_v.devAddress() &&    //
+           inputs_g.devAddress() &&    //
+           activated_v.devAddress() && //
+           activated_g.devAddress() && //
+           prev_activated.devAddress());
 
     // update biases gradient
-    dim3 grid(std::ceil((float) output_g.size() / block_size));
+    dim3 grid(std::ceil((float) activated_g.size() / block_size));
     // clang-format off
     update_biases_grad_kernel<<<grid, block_size>>>
     (
-        output_v.devAddress(), 
-        output_g.devAddress(), 
+        prev_activated.devAddress(), 
+        activated_g.devAddress(), 
         biases_g.devAddress(),
-        output_g.numRows(), 
-        output_g.numCols(), 
+        activated_g.numRows(), 
+        activated_g.numCols(), 
         act_type
     );
     // clang-format on
@@ -179,10 +188,10 @@ void affine_bp
         CUBLAS_OP_T,            // transb
         weights_g.numRows(),    // m
         weights_g.numCols(),    // n
-        output_g.numCols(),     // k
+        activated_g.numCols(),     // k
         &alpha,                 // alpha
-        output_g.devAddress(),  // A
-        output_g.numRows(),     // lda
+        activated_g.devAddress(),  // A
+        activated_g.numRows(),     // lda
         inputs_v.devAddress(),  // B
         inputs_v.numRows(),     // ldb
         &beta,                  // beta
@@ -204,8 +213,8 @@ void affine_bp
         &alpha,                 // alpha
         weights_v.devAddress(), // A
         weights_v.numRows(),    // lda
-        output_g.devAddress(),  // B
-        output_g.numRows(),     // ldb
+        activated_g.devAddress(),  // B
+        activated_g.numRows(),     // ldb
         &beta,                  // beta
         inputs_g.devAddress(),  // C
         inputs_g.numRows()      // ldc

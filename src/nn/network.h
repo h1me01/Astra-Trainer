@@ -31,7 +31,8 @@ class Network {
     Loss *loss = nullptr;
     Optimizer *optim = nullptr;
 
-    DenseMatrix targets;
+    Array<float> psqt_indices;
+    Array<float> targets;
 
     std::function<void(FILE *)> quantFunc;
 
@@ -153,7 +154,7 @@ class Network {
         float start_lambda = 0.7,
         float end_lambda = 0.8
     ) 
-    : targets(batch_size, 1) {
+    : targets(batch_size), psqt_indices(batch_size) {
         // clang-format on
         Epochs = epochs;
         BatchSize = batch_size;

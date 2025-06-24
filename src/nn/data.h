@@ -18,27 +18,27 @@
 
 template <typename T> class Array {
   private:
-    int _size = 0;
+    int m_size = 0;
     T *host_data = nullptr;
     T *dev_data = nullptr;
 
   public:
-    Array() : _size(0) {}
+    Array() : m_size(0) {}
 
-    explicit Array(int size) : _size(size) {
+    explicit Array(int size) : m_size(size) {
         allocHost();
         allocDev();
     }
 
-    Array(const Array<T> &other) : _size(other._size) {
+    Array(const Array<T> &other) : m_size(other.m_size) {
         if(other.isHostAllocated()) {
             allocHost();
-            copyFromHost(other.host_data, other._size);
+            copyFromHost(other.host_data, other.m_size);
         }
 
         if(other.isDevAllocated()) {
             allocDev();
-            copyFromDev(other.dev_data, other._size);
+            copyFromDev(other.dev_data, other.m_size);
         }
     }
 
@@ -46,16 +46,16 @@ template <typename T> class Array {
         if(this != &other) {
             freeHost();
             freeDev();
-            _size = other._size;
+            m_size = other.m_size;
 
             if(other.isHostAllocated()) {
                 allocHost();
-                copyFromHost(other.host_data, other._size);
+                copyFromHost(other.host_data, other.m_size);
             }
 
             if(other.isDevAllocated()) {
                 allocDev();
-                copyFromDev(other.dev_data, other._size);
+                copyFromDev(other.dev_data, other.m_size);
             }
         }
 
@@ -82,30 +82,30 @@ template <typename T> class Array {
     }
 
     void allocHost() {
-        if(_size <= 0)
+        if(m_size <= 0)
             return;
         if(isHostAllocated())
             freeHost();
-        host_data = new T[_size]();
+        host_data = new T[m_size]();
     }
 
     void allocDev() {
-        if(_size <= 0)
+        if(m_size <= 0)
             return;
         if(isDevAllocated())
             freeDev();
-        CUDA_ASSERT(cudaMalloc(&dev_data, _size * sizeof(T)));
+        CUDA_ASSERT(cudaMalloc(&dev_data, m_size * sizeof(T)));
     }
 
     void copyFromHost(const T *data, int size) {
-        ASSERT(size == _size);
+        ASSERT(size == m_size);
         if(host_data == nullptr)
             allocHost();
         memcpy(host_data, data, sizeof(T) * size);
     }
 
     void copyFromDev(const T *data, int size) {
-        ASSERT(size == _size);
+        ASSERT(size == m_size);
         if(dev_data == nullptr)
             allocDev();
         CUDA_ASSERT(cudaMemcpy(dev_data, data, sizeof(T) * size, cudaMemcpyDeviceToDevice));
@@ -127,47 +127,48 @@ template <typename T> class Array {
 
     void clearHost() {
         if(host_data != nullptr)
-            memset(host_data, 0, sizeof(T) * _size);
+            memset(host_data, 0, sizeof(T) * m_size);
     }
 
     void clearDev() {
         if(dev_data != nullptr)
-            CUDA_ASSERT(cudaMemset(dev_data, 0, sizeof(T) * _size));
+            CUDA_ASSERT(cudaMemset(dev_data, 0, sizeof(T) * m_size));
     }
 
     void hostToDev() {
         if(!isHostAllocated() || !isDevAllocated())
             return;
-        CUDA_ASSERT(cudaMemcpy(dev_data, host_data, _size * sizeof(T), cudaMemcpyHostToDevice));
+        CUDA_ASSERT(cudaMemcpy(dev_data, host_data, m_size * sizeof(T), cudaMemcpyHostToDevice));
     }
 
     void devToHost() {
         if(!isHostAllocated() || !isDevAllocated())
             return;
-        CUDA_ASSERT(cudaMemcpy(host_data, dev_data, _size * sizeof(T), cudaMemcpyDeviceToHost));
+        CUDA_ASSERT(cudaMemcpy(host_data, dev_data, m_size * sizeof(T), cudaMemcpyDeviceToHost));
     }
 
     T get(int idx) const {
         ASSERT(isHostAllocated());
-        ASSERT(idx >= 0 && idx < _size);
+        ASSERT(idx >= 0 && idx < m_size);
         return host_data[idx];
     }
 
     T &get(int idx) {
         ASSERT(isHostAllocated());
-        ASSERT(idx >= 0 && idx < _size);
+        ASSERT(idx >= 0 && idx < m_size);
         return host_data[idx];
     }
 
     T operator()(int idx) const {
         return get(idx);
     }
+
     T &operator()(int idx) {
         return get(idx);
     }
 
     int size() const {
-        return _size;
+        return m_size;
     }
 };
 
@@ -199,6 +200,7 @@ class DenseMatrix : public Array<float> {
     int numRows() const {
         return num_rows;
     }
+
     int numCols() const {
         return num_cols;
     }

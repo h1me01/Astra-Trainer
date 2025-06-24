@@ -12,7 +12,7 @@ class Loss {
   public:
     Loss() : loss(1) {}
 
-    virtual void apply(const DenseMatrix &target, Tensor &output) = 0;
+    virtual void apply(const Array<float> &target, Tensor &output) = 0;
     virtual std::string getInfo() = 0;
 
     float getLoss() {
@@ -34,7 +34,7 @@ struct MPELoss : Loss {
   public:
     MPELoss(float power) : Loss(), power(power) {}
 
-    void apply(const DenseMatrix &targets, Tensor &output) {
+    void apply(const Array<float> &targets, Tensor &output) {
         const DenseMatrix &output_v = output.getValues();
         DenseMatrix &output_g = output.getGradients();
 
@@ -69,7 +69,7 @@ template <ActivationType act_type> //
 struct MSELoss : Loss {
     MSELoss() : Loss() {}
 
-    void apply(const DenseMatrix &targets, Tensor &output) {
+    void apply(const Array<float> &targets, Tensor &output) {
         const DenseMatrix &output_v = output.getValues();
         DenseMatrix &output_g = output.getGradients();
 

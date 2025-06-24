@@ -39,7 +39,8 @@ class FullyConnected : public LayerBase {
             weights.getValues(), 
             biases.getValues(), 
             inputs.getValues(), 
-            dense_output.getValues(), 
+            activated.getValues(), 
+            pre_activated,
             act_type
         );
         // clang-format on
@@ -47,7 +48,7 @@ class FullyConnected : public LayerBase {
 
     void backprop() override {
         Tensor &inputs = previous->getDenseOutput();
-        affine_bp(weights, biases, inputs, dense_output, act_type);
+        affine_bp(weights, biases, inputs, activated, pre_activated, act_type);
     }
 
     ActivationType getActivationType() const override {

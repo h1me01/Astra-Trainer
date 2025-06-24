@@ -5,23 +5,24 @@ __global__ void sparse_affine_kernel
 (
     const float *weights_v, 
     const float *biases_v, 
-    float *output_v, 
+    float *activated_v,
+    float *prev_activated,
     const int *features,
     const int *feature_sizes,
-    const int num_weight_rows, 
-    const int num_output_rows, 
-    const int output_offset, 
+    const int w_r,      // weight rows
+    const int a_r,      // activated rows
+    const int a_offset, // activated offset
     const int batch_size,
     const int max_entries, 
     ActivationType act_type
 ) {
     // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= num_weight_rows * batch_size)
+    if(idx >= w_r * batch_size)
         return;
 
-    const int batch_idx = idx / num_weight_rows;
-    const int neuron_idx = idx % num_weight_rows;
+    const int batch_idx = idx / w_r;
+    const int neuron_idx = idx % w_r;
 
     const int offset = batch_idx * max_entries;
     const int feature_size = feature_sizes[batch_idx];
@@ -29,47 +30,50 @@ __global__ void sparse_affine_kernel
     float sum = biases_v[neuron_idx];
     for(int i = 0; i < feature_size; i++) {
         int sparse_idx = features[i + offset];
-        sum += weights_v[num_weight_rows * sparse_idx + neuron_idx];
+        sum += weights_v[w_r * sparse_idx + neuron_idx];
     }
 
-    output_v[num_output_rows * batch_idx + neuron_idx + output_offset] = activate(sum, act_type);
+    int output_idx = a_r * batch_idx + neuron_idx + a_offset;
+
+    prev_activated[output_idx] = sum;
+    activated_v[output_idx] = activate(sum, act_type);
 }
 
 // clang-format off
 __global__ void sparse_affine_bp_kernel
 (
-    const float *output_v, 
-    const float *output_g, 
+    const float *activated_g,
+    const float *prev_activated, 
     float *weights_g, 
     float *biases_g,
     const int *features, 
     const int *feature_sizes,
-    const int num_weight_rows,
-    const int num_output_rows, 
-    const int output_offset, 
+    const int w_r,      // weight rows
+    const int a_r,      // activated rows
+    const int a_offset, // activated offset
     const int batch_size, 
     const int max_entries,
     ActivationType act_type
 ) {
     // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= num_weight_rows * batch_size)
+    if(idx >= w_r * batch_size)
         return;
 
-    const int batch_idx = idx / num_weight_rows;
-    const int neuron_idx = idx % num_weight_rows;
+    const int batch_idx = idx / w_r;
+    const int neuron_idx = idx % w_r;
 
-    const int output_idx = num_output_rows * batch_idx + neuron_idx + output_offset;
+    const int output_idx = a_r * batch_idx + neuron_idx + a_offset;
 
-    float grad = output_g[output_idx];
+    float grad = activated_g[output_idx];
     if(grad == 0)
         return;
-    grad *= activationDer(output_v[output_idx], act_type);
+    grad *= activationDer(prev_activated[output_idx], act_type);
 
     // skip output gradient update because:
     // 1. feature transformer doesnt have a prev layer
     // 2. performing this update slows down the program by 2-3 seconds
-    // output_g[output_idx] = grad;
+    // activated_g[output_idx] = grad;
 
     const int offset = batch_idx * max_entries;
     const int feature_size = feature_sizes[batch_idx];
@@ -77,6 +81,8 @@ __global__ void sparse_affine_bp_kernel
     atomicAdd(&biases_g[neuron_idx], grad);
     for(int i = 0; i < feature_size; i++) {
         int sparse_idx = features[i + offset];
-        atomicAdd(&weights_g[num_weight_rows * sparse_idx + neuron_idx], grad);
+        atomicAdd(&weights_g[w_r * sparse_idx + neuron_idx], grad);
     }
+
+    // no need to compute gradients for input features
 }

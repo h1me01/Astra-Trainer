@@ -76,6 +76,7 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
         }
 
         features_sizes(i) = count;
+        // psqt_indices(i) = (count - 1) / 4;
 
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / OutputScalar));
         float wdl_target = (ds[i].result + 1) / 2.0f;
@@ -85,6 +86,7 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
 
     // upload to device
     targets.hostToDev();
+    psqt_indices.hostToDev();
     features_sizes.hostToDev();
     stm_features.hostToDev();
     nstm_features.hostToDev();
