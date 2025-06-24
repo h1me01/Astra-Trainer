@@ -10,6 +10,7 @@ int main() {
     // get training data
     vector<string> files = fetchFilesFromPath(root_path + "/training_data");
 
+    // init network
     Network network( //
         600,         // epochs
         16384,       // batch size
@@ -33,7 +34,7 @@ int main() {
         1e-8    // epsilon
     );
 
-    // init learning rate scheduler
+    // init lr scheduler
     StepDecay lr_sched( //
         160,            // step size
         0.1             // gamma
@@ -60,19 +61,12 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-
-    // if you don't want to clamp all weights & biases
-    // you can do it individually by doing this:
-    // - layer.clampWeights(-1.99, 1.99);
-    // - layer.clampBiases(-1.99, 1.99);
-
     auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
 
     // setup quantization scheme
-
     network.setQuantizationScheme([&](FILE *f) {
         const int q1 = 255;
         const int q2 = 64;
@@ -86,7 +80,7 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_6/checkpoint-100/weights.bin");
+    // network.loadWeights(output_path + "/training_3/checkpoint-final/weights.bin");
     network.train(                  //
         files,                      //
         output_path,                //
