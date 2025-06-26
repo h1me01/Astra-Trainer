@@ -30,7 +30,8 @@ inline __device__ float activationDer(float x, ActivationType type) {
     case SCReLU:
         return (x > 0.0f && x < 1.0f) ? 2.0f * x : 0.0f;
     case Sigmoid:
-        return x * (1 - x); // assumes x is already sigmoided
+        x = activate(x, Sigmoid);
+        return x * (1 - x);
     default:
         return 1.0f; // Linear
     }

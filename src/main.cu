@@ -12,7 +12,7 @@ int main() {
 
     // init network
     Network network( //
-        600,         // epochs
+        800,         // epochs
         16384,       // batch size
         6104,        // batches per epoch
         100,         // save rate
@@ -40,6 +40,14 @@ int main() {
         0.1             // gamma
     );
 
+    // GradualDecay lr_sched(0.99); // 0.99 = gamma
+
+    // CosineAnnealing lr_sched(   //
+    //     network.getBatchSize(), // max epochs
+    //     0.001,                  // lr
+    //     0.001f * powf(0.3f, 5)  // min lr
+    //);
+
     optim.setDecay(0.01);
     optim.setLRScheduler(&lr_sched);
     optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
@@ -61,7 +69,7 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-    auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<256, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -81,10 +89,10 @@ int main() {
 
     // load weights only (if needed)
     // network.loadWeights(output_path + "/training_3/checkpoint-final/weights.bin");
-    network.train(                  //
-        files,                      //
-        output_path,                //
-        "training_4/checkpoint-100" // load checkpoint (if needed)
+    network.train(  //
+        files,      //
+        output_path //
+                    // "training_4/checkpoint-100" // load checkpoint (if needed)
     );
 
     cout << "\n================================ Testing Network ===============================\n\n";
