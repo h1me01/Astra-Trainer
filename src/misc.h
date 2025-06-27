@@ -66,6 +66,7 @@ inline int getBucketSize(const std::array<int, 64> &king_bucket) {
 }
 
 inline std::vector<std::string> fetchFilesFromPath(const std::string &path) {
+    std::cout << "================================= Training Data ================================\n\n";
     std::cout << "Loading files from folder: " << path << std::endl;
 
     std::vector<std::string> files;

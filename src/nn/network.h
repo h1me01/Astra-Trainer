@@ -224,6 +224,15 @@ class Network {
         return output(0) * OutputScalar;
     }
 
+    void testOnPositions(const std::vector<std::string> &positions) {
+        std::cout << "\n================================ Testing Network ===============================\n\n";
+
+        for(const std::string &fen : positions) {
+            std::cout << "FEN: " << fen << std::endl;
+            std::cout << "Eval: " << predict(fen) << std::endl;
+        }
+    }
+
     template <typename Func> //
     void setQuantizationScheme(Func &&func) {
         quantFunc = std::forward<Func>(func);

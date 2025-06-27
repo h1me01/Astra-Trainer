@@ -5,8 +5,6 @@ using namespace std;
 int main() {
     const string root_path = "D:/Astra-Data";
 
-    cout << "================================= Training Data ================================\n\n";
-
     // get training data
     vector<string> files = fetchFilesFromPath(root_path + "/training_data");
 
@@ -18,8 +16,8 @@ int main() {
         100,         // save rate
         1,           // thread count for dataloader
         400,         // output scalar
-        1.0,         // start lambda
-        1.0          // end lambda
+        1.0,         // wdl start lambda
+        1.0          // wdl end lambda
     );
 
     // init loss
@@ -69,7 +67,7 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-    auto ft = FeatureTransformer<256, SCReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -88,24 +86,16 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_3/checkpoint-final/weights.bin");
-    network.train(  //
-        files,      //
-        output_path //
-                    // "training_4/checkpoint-100" // load checkpoint (if needed)
+    // network.loadWeights(output_path + "/training_4/checkpoint-final/weights.bin");
+    network.train( //
+        files,
+        output_path
+        // ,"training_4/checkpoint-100" // load checkpoint (if needed)
     );
 
-    cout << "\n================================ Testing Network ===============================\n\n";
-
-    vector<string> test_fens = {
+    // test network on some positions
+    network.testOnPositions({
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         "rn1qk2r/ppp1bppp/5n2/3p1bB1/3P4/2N1P3/PP3PPP/R2QKBNR w KQkq - 1 7",
-    };
-
-    for(auto fen : test_fens) {
-        cout << "FEN: " << fen << endl;
-        cout << "Eval: " << network.predict(fen) << endl;
-    }
-
-    cout << "\n=================================== Finished ===================================\n";
+    });
 }
