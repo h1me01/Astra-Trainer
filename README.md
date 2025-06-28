@@ -27,10 +27,6 @@ cmake --build build-release --target Astra-Trainer --config Release --parallel 4
 ./build-release/release/astra-trainer
 ```
 
-## Usage
-
-The trainer currently only supports Stockfish's binpack format for training data. Custom data format support may be added in future.
-
 ## Credits
 
 - [CudAD](https://github.com/Luecx/CudAD)
