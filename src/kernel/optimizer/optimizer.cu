@@ -21,14 +21,19 @@ __global__ void adam_kernel( //
         return;
 
     const float grad = grads[idx] * grad_scale;
+
+    float val = vals[idx];
+    val *= decay;
+
+    if(grad == 0.0f)
+        return;
+
     float mom = moms[idx];
     float vel = vels[idx];
-    float val = vals[idx];
 
     mom = beta1 * mom + (1.0f - beta1) * grad;
     vel = beta2 * vel + (1.0f - beta2) * grad * grad;
 
-    val *= decay;
     val -= lr * mom / (sqrtf(vel) + eps);
 
     moms[idx] = mom;
@@ -60,14 +65,18 @@ __global__ void radam_kernel( //
         return;
 
     const float grad = grads[idx] * grad_scale;
+
+    float val = vals[idx];
+    val *= decay;
+
+    if(grad == 0.0f)
+        return;
+
     float mom = moms[idx];
     float vel = vels[idx];
-    float val = vals[idx];
 
     mom = beta1 * mom + (1.0f - beta1) * grad;
     vel = beta2 * vel + (1.0f - beta2) * grad * grad;
-
-    val *= decay;
 
     float beta2_t = powf(beta2, step);
     float N_sma_max = 2.0f / (1.0f - beta2) - 1.0f;
@@ -119,14 +128,14 @@ __global__ void ranger_kernel( //
         return;
 
     const float grad = grads[idx] * grad_scale;
+    float val = vals[idx];
+    val *= decay;
+
+    if(grad == 0.0f)
+        return;
+
     float mom = moms[idx];
     float vel = vels[idx];
-    float val = vals[idx];
-
-    mom = beta1 * mom + (1.0f - beta1) * grad;
-    vel = beta2 * vel + (1.0f - beta2) * grad * grad;
-
-    val *= decay;
 
     float beta2_t = powf(beta2, step);
     float beta1_correction = 1.0f - powf(beta1, step);
