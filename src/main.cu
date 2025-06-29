@@ -10,7 +10,7 @@ int main() {
 
     // init network
     Network network( //
-        800,         // epochs
+        1,           // epochs
         16384,       // batch size
         6104,        // batches per epoch
         100,         // save rate
@@ -67,8 +67,8 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-    auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
-    auto fc = FullyConnected<1>(&ft);
+    auto ft = FeatureTransformer<256, SCReLU>(getBucketSize(king_bucket) * 768);
+    auto fc = FullyConnected<1, Linear, true>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
 

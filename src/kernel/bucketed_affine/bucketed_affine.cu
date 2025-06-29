@@ -5,7 +5,7 @@
 __global__ void bucketed_affine_kernel( //
     const float *input_v,               // [batch_size, input_size]
     const float *weights_v,             // [bucket_size, neuron_size, input_size]
-    const float *biases_v,              // [neuron_size, 1]
+    const float *biases_v,              // [bucket_size, neuron_size]
     float *activated_v,                 // [batch_size, neuron_size]
     float *pre_activated,               // [batch_size, neuron_size]
     const int *bucket_idxs,             // [batch_size]
@@ -35,6 +35,7 @@ __global__ void bucketed_affine_kernel( //
     float weighted_sum = sum + biases_v[neuron_idx * bucket_size + bucket_idx];
 
     int output_idx = batch_idx * neuron_size + neuron_idx;
+
     pre_activated[output_idx] = weighted_sum;
     activated_v[output_idx] = activate(weighted_sum, act_type);
 }
@@ -49,7 +50,6 @@ void bucketed_affine_fwd( //
     const ActivationType act_type,
     const int bucket_size //
 ) {
-    // clang-format on
     const int batch_size = inputs_v.numCols();
     const int input_size = inputs_v.numRows();
     const int neuron_size = weights_v.numRows() / bucket_size;
@@ -83,90 +83,14 @@ void bucketed_affine_fwd( //
         bucket_size,
         act_type);
 
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 }
 
 // AFFINE BW
 
-__global__ void bucketed_bwd_input_kernel( //
-    const float *grad_output,              // [batch_size, neuron_size]
-    const float *weights,                  // [bucket_size, neuron_size, input_size]
-    float *grad_input,                     // [batch_size, input_size]
-    const int *bucket_idxs,                // [batch_size]
-    int batch_size,
-    int input_size,
-    int neuron_size //
-) {
-    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int input_idx = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if(batch_idx >= batch_size || input_idx >= input_size)
-        return;
-
-    const int bucket_offset = bucket_idxs[batch_idx] * neuron_size * input_size;
-
-    // compute gradient w.r.t. input
-    float sum = 0.0f;
-    for(int i = 0; i < neuron_size; ++i) {
-        int grad_output_offset = batch_idx * neuron_size + i;
-        int weight_offset = bucket_offset + i * input_size + input_idx;
-        sum += grad_output[grad_output_offset] * weights[weight_offset];
-    }
-
-    grad_input[batch_idx * input_size + input_idx] = sum;
-}
-
-__global__ void bucketed_bwd_weights_kernel( //
-    const float *grad_pre_activated,         // [batch_size, neuron_size] (after activation derivative)
-    const float *input,                      // [batch_size, input_size]
-    float *grad_weights,                     // [bucket_size, neuron_size, input_size]
-    const int *bucket_idxs,                  // [batch_size]
-    int batch_size,
-    int input_size,
-    int neuron_size,
-    int bucket_size //
-) {
-    extern __shared__ float shared_data[];
-
-    int bucket_idx = blockIdx.x;
-    int neuron_idx = blockIdx.y;
-    int input_idx = blockIdx.z * blockDim.z + threadIdx.z;
-
-    if(bucket_idx >= bucket_size || neuron_idx >= neuron_size || input_idx >= input_size)
-        return;
-
-    float local_sum = 0.0f;
-    int tid = threadIdx.x * blockDim.y * blockDim.z + threadIdx.y * blockDim.z + threadIdx.z;
-
-    // each thread processes multiple batch samples with stride
-    for(int b = threadIdx.x * blockDim.y + threadIdx.y; b < batch_size; b += blockDim.x * blockDim.y) {
-        if(bucket_idxs[b] == bucket_idx) {
-            local_sum += grad_pre_activated[b * neuron_size + neuron_idx] * input[b * input_size + input_idx];
-        }
-    }
-
-    shared_data[tid] = local_sum;
-    __syncthreads();
-
-    // reduction within block - only reduce across batch dimension
-    int reduction_size = blockDim.x * blockDim.y;
-    for(int stride = reduction_size / 2; stride > 0; stride >>= 1) {
-        if(tid < stride * blockDim.z && tid + stride * blockDim.z < blockDim.x * blockDim.y * blockDim.z) {
-            shared_data[tid] += shared_data[tid + stride * blockDim.z];
-        }
-        __syncthreads();
-    }
-
-    if(threadIdx.x == 0 && threadIdx.y == 0) {
-        grad_weights[bucket_idx * neuron_size * input_size + neuron_idx * input_size + input_idx] =
-            shared_data[threadIdx.z];
-    }
-}
-
 __global__ void apply_activation_derivative_kernel( //
-    const float *grad_output,                       // [batch_size, neuron_size]
+    float *activated_g,                             // [batch_size, neuron_size]
     const float *pre_activated,                     // [batch_size, neuron_size]
-    float *grad_pre_activated,                      // [batch_size, neuron_size]
     int batch_size,
     int neuron_size,
     ActivationType act_type //
@@ -178,17 +102,12 @@ __global__ void apply_activation_derivative_kernel( //
         return;
 
     int idx = batch_idx * neuron_size + neuron_idx;
-    float pre_act_val = pre_activated[idx];
-    float grad_out = grad_output[idx];
-
-    // Apply chain rule: grad_pre_activated = grad_output * activation_derivative(pre_activated)
-    grad_pre_activated[idx] = grad_out * activationDer(pre_act_val, act_type);
+    activated_g[idx] *= activationDer(pre_activated[idx], act_type);
 }
 
-// Separate kernel for bias gradients (using gradients w.r.t. pre-activation)
 __global__ void bucketed_bwd_biases_kernel( //
-    const float *grad_pre_activated,        // [batch_size, neuron_size]
-    float *grad_biases,                     // [neuron_size, bucket_size]
+    const float *activated_g,               // [batch_size, neuron_size]
+    float *biases_g,                        // [neuron_size, bucket_size]
     const int *bucket_idxs,                 // [batch_size]
     int batch_size,
     int neuron_size,
@@ -198,33 +117,106 @@ __global__ void bucketed_bwd_biases_kernel( //
 
     int bucket_idx = blockIdx.x;
     int neuron_idx = blockIdx.y;
+    int tid = threadIdx.x;
 
     if(bucket_idx >= bucket_size || neuron_idx >= neuron_size)
         return;
 
-    int tid = threadIdx.x;
     float local_sum = 0.0f;
 
     // Sum gradients for this neuron and bucket across all batch samples
-    for(int b = tid; b < batch_size; b += blockDim.x) {
-        if(bucket_idxs[b] == bucket_idx) {
-            local_sum += grad_pre_activated[b * neuron_size + neuron_idx];
-        }
-    }
+    for(int b = tid; b < batch_size; b += blockDim.x)
+        if(bucket_idxs[b] == bucket_idx)
+            local_sum += activated_g[b * neuron_size + neuron_idx];
 
     bias_shared[tid] = local_sum;
     __syncthreads();
 
     // Reduce within block
     for(int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if(tid < stride) {
+        if(tid < stride)
             bias_shared[tid] += bias_shared[tid + stride];
+        __syncthreads();
+    }
+
+    if(tid == 0)
+        biases_g[neuron_idx * bucket_size + bucket_idx] = bias_shared[0];
+}
+
+__global__ void bucketed_bwd_input_kernel( //
+    const float *activated_g,              // [batch_size, neuron_size]
+    const float *weights_v,                // [bucket_size, neuron_size, input_size]
+    float *input_g,                        // [batch_size, input_size]
+    const int *bucket_idxs,                // [batch_size]
+    int batch_size,
+    int input_size,
+    int neuron_size //
+) {
+    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int input_idx = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if(batch_idx >= batch_size || input_idx >= input_size)
+        return;
+
+    const int bucket_idx = bucket_idxs[batch_idx];
+    const int bucket_offset = bucket_idx * neuron_size * input_size;
+
+    // Compute gradient w.r.t. input
+    float sum = 0.0f;
+    for(int i = 0; i < neuron_size; ++i) {
+        int grad_output_offset = batch_idx * neuron_size + i;
+        int weight_offset = bucket_offset + i * input_size + input_idx;
+        sum += activated_g[grad_output_offset] * weights_v[weight_offset];
+    }
+
+    input_g[batch_idx * input_size + input_idx] = sum;
+}
+
+__global__ void bucketed_bwd_weights_kernel( //
+    const float *activated_g,                // [batch_size, neuron_size]
+    const float *input_v,                    // [batch_size, input_size]
+    float *weights_g,                        // [bucket_size, neuron_size, input_size]
+    const int *bucket_idxs,                  // [batch_size]
+    int batch_size,
+    int input_size,
+    int neuron_size,
+    int bucket_size //
+) {
+    // Each block handles one (bucket, neuron, input) combination
+    int bucket_idx = blockIdx.x;
+    int neuron_idx = blockIdx.y;
+    int input_idx = blockIdx.z;
+
+    if(bucket_idx >= bucket_size || neuron_idx >= neuron_size || input_idx >= input_size)
+        return;
+
+    extern __shared__ float shared_grad[];
+
+    int tid = threadIdx.x;
+    int block_size = blockDim.x;
+
+    float local_sum = 0.0f;
+
+    // Each thread processes multiple batch samples
+    for(int b = tid; b < batch_size; b += block_size) {
+        if(bucket_idxs[b] == bucket_idx) {
+            local_sum += activated_g[b * neuron_size + neuron_idx] * input_v[b * input_size + input_idx];
         }
+    }
+
+    shared_grad[tid] = local_sum;
+    __syncthreads();
+
+    // Reduction within block
+    for(int stride = block_size / 2; stride > 0; stride >>= 1) {
+        if(tid < stride)
+            shared_grad[tid] += shared_grad[tid + stride];
         __syncthreads();
     }
 
     if(tid == 0) {
-        grad_biases[neuron_idx * bucket_size + bucket_idx] = bias_shared[0];
+        int weight_idx = bucket_idx * neuron_size * input_size + neuron_idx * input_size + input_idx;
+        weights_g[weight_idx] = shared_grad[0];
     }
 }
 
@@ -238,17 +230,16 @@ void bucketed_affine_bwd( //
     const ActivationType act_type,
     const int bucket_size //
 ) {
-    // clang-format on
-    const DenseMatrix &weights_v = weights.getValues();
+    DenseMatrix &weights_v = weights.getValues();
     DenseMatrix &weights_g = weights.getGradients();
 
     DenseMatrix &biases_g = biases.getGradients();
 
-    const DenseMatrix &inputs_v = inputs.getValues();
+    DenseMatrix &inputs_v = inputs.getValues();
     DenseMatrix &inputs_g = inputs.getGradients();
 
-    const DenseMatrix &activated_v = activated.getValues();
-    const DenseMatrix &activated_g = activated.getGradients();
+    DenseMatrix &activated_v = activated.getValues();
+    DenseMatrix &activated_g = activated.getGradients();
 
     const int batch_size = inputs_v.numCols();
     const int input_size = inputs_v.numRows();
@@ -269,11 +260,8 @@ void bucketed_affine_bwd( //
            activated_g.devAddress() && //
            pre_activated.devAddress());
 
-    // Allocate temporary storage for gradients w.r.t. pre-activation
-    DenseMatrix grad_pre_activated(neuron_size, batch_size);
-
-    // Step 1: Apply activation derivative to get gradients w.r.t. pre-activation
-    {
+    // step 1: apply activation derivative to get gradients w.r.t. pre-activation
+    if(act_type != Linear) {
         dim3 block_size(16, 16);
         dim3 grid_size((batch_size + block_size.x - 1) / block_size.x, //
                        (neuron_size + block_size.y - 1) / block_size.y);
@@ -281,21 +269,20 @@ void bucketed_affine_bwd( //
         apply_activation_derivative_kernel<<<grid_size, block_size>>>( //
             activated_g.devAddress(),
             pre_activated.devAddress(),
-            grad_pre_activated.devAddress(),
             batch_size,
             neuron_size,
             act_type);
     }
 
-    // Step 2: Compute bias gradients using grad_pre_activated
+    // step 2: compute bias gradients using grad_pre_activated
     {
-        dim3 block_size(256); // 1D block for bias computation
+        const int block_size = 256;
         dim3 grid_size(bucket_size, neuron_size);
 
-        int shared_mem_size = block_size.x * sizeof(float);
+        int shared_mem_size = block_size * sizeof(float);
 
         bucketed_bwd_biases_kernel<<<grid_size, block_size, shared_mem_size>>>( //
-            grad_pre_activated.devAddress(),
+            activated_g.devAddress(),
             biases_g.devAddress(),
             bucket_indices.devAddress(),
             batch_size,
@@ -303,17 +290,15 @@ void bucketed_affine_bwd( //
             bucket_size);
     }
 
-    // Step 3: Compute weight gradients using grad_pre_activated
+    // step 3: compute weight gradients using grad_pre_activated
     {
-        dim3 block_size(4, 4, 4);
-        dim3 grid_size((bucket_size + block_size.x - 1) / block_size.x, //
-                       (neuron_size + block_size.y - 1) / block_size.y,
-                       (input_size + block_size.z - 1) / block_size.z);
+        const int block_size = 256;
+        dim3 grid_size(bucket_size, neuron_size, input_size);
 
-        int shared_mem_size = block_size.x * block_size.y * block_size.z * sizeof(float);
+        int shared_mem_size = block_size * sizeof(float);
 
         bucketed_bwd_weights_kernel<<<grid_size, block_size, shared_mem_size>>>( //
-            grad_pre_activated.devAddress(),
+            activated_g.devAddress(),
             inputs_v.devAddress(),
             weights_g.devAddress(),
             bucket_indices.devAddress(),
@@ -323,14 +308,14 @@ void bucketed_affine_bwd( //
             bucket_size);
     }
 
-    // Step 4: Compute input gradients using grad_pre_activated
+    // step 4: compute input gradients using grad_pre_activated
     {
         dim3 block_size(16, 16);
         dim3 grid_size((batch_size + block_size.x - 1) / block_size.x, //
                        (input_size + block_size.y - 1) / block_size.y);
 
         bucketed_bwd_input_kernel<<<grid_size, block_size>>>( //
-            grad_pre_activated.devAddress(),
+            activated_g.devAddress(),
             weights_v.devAddress(),
             inputs_g.devAddress(),
             bucket_indices.devAddress(),

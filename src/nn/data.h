@@ -24,7 +24,10 @@ class Array {
     T *dev_data = nullptr;
 
   public:
-    Array() : m_size(0) {}
+    Array() : m_size(0) {
+        host_data = nullptr;
+        dev_data = nullptr;
+    }
 
     explicit Array(int size) : m_size(size) {
         allocHost();
@@ -115,6 +118,7 @@ class Array {
     bool isHostAllocated() const {
         return host_data != nullptr;
     }
+
     bool isDevAllocated() const {
         return dev_data != nullptr;
     }
@@ -122,6 +126,7 @@ class Array {
     T *hostAddress() const {
         return host_data;
     }
+
     T *devAddress() const {
         return dev_data;
     }

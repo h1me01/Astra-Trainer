@@ -77,6 +77,8 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
         }
 
         psqt_indices(i) = (count - 1) / 4;
+        ASSERT(psqt_indices(i) >= 0 && psqt_indices(i) < 8);
+
         features_sizes(i) = count;
 
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / OutputScalar));

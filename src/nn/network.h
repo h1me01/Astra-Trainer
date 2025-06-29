@@ -202,6 +202,8 @@ class Network {
 
     // assumes output activation is sigmoid
     float predict(std::string fen) {
+        BatchSize = 1;
+
         init();
 
         Position pos;
