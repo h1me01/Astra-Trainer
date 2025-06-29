@@ -13,6 +13,8 @@
 
 class Network {
   private:
+    bool is_initialized = false;
+
     int Epochs;
     int BatchSize;
     int BatchesPerEpoch;
@@ -36,13 +38,18 @@ class Network {
     std::function<void(FILE *)> quantFunc;
 
     void init() {
-        ASSERT(optim != nullptr && loss != nullptr);
+        if(is_initialized)
+            return;
+
         ASSERT(!layers.empty());
         ASSERT(quantFunc != nullptr);
+        ASSERT(optim != nullptr && loss != nullptr);
 
         optim->init(layers);
         for(LayerBase *l : layers)
             l->init(BatchSize);
+
+        is_initialized = true;
     }
 
     void printInfo() {
@@ -202,8 +209,6 @@ class Network {
 
     // assumes output activation is sigmoid
     float predict(std::string fen) {
-        BatchSize = 1;
-
         init();
 
         Position pos;
