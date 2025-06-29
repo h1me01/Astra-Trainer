@@ -48,9 +48,10 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
 
     const int max_entries = sparse_inputs.maxEntries();
 
+    auto &psqt_indices = sparse_inputs.getPSQTIndices();
+    auto &features_sizes = sparse_inputs.getFeatureSizes();
     auto &stm_features = sparse_inputs.getFeatures()[0];
     auto &nstm_features = sparse_inputs.getFeatures()[1];
-    auto &features_sizes = sparse_inputs.getFeatureSizes();
 
     for(size_t i = 0; i < ds.size(); i++) {
         const auto pos = ds[i].pos;
@@ -75,8 +76,8 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
             count++;
         }
 
+        psqt_indices(i) = (count - 1) / 4;
         features_sizes(i) = count;
-        // psqt_indices(i) = (count - 1) / 4;
 
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / OutputScalar));
         float wdl_target = (ds[i].result + 1) / 2.0f;

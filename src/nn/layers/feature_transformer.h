@@ -15,7 +15,7 @@ template <int size, ActivationType act_type = Linear> //
 class FeatureTransformer : public LayerBase {
   private:
     int input_size;
-    Tensor weights{size, 1};
+    Tensor weights{1, 1};
     Tensor biases{size, 1};
 
   public:
