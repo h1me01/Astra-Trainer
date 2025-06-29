@@ -4,7 +4,7 @@ __global__ void sparse_affine_kernel( //
     const float *weights_v,
     const float *biases_v,
     float *activated_v,
-    float *prev_activated,
+    float *pre_activated,
     const int *features,
     const int *feature_sizes,
     const int w_r,      // weight rows
@@ -32,13 +32,13 @@ __global__ void sparse_affine_kernel( //
 
     int output_idx = a_r * batch_idx + neuron_idx + a_offset;
 
-    prev_activated[output_idx] = sum;
+    pre_activated[output_idx] = sum;
     activated_v[output_idx] = activate(sum, act_type);
 }
 
 __global__ void sparse_affine_bp_kernel( //
     const float *activated_g,
-    const float *prev_activated,
+    const float *pre_activated,
     float *weights_g,
     float *biases_g,
     const int *features,
@@ -62,7 +62,7 @@ __global__ void sparse_affine_bp_kernel( //
     float grad = activated_g[output_idx];
     if(grad == 0)
         return;
-    grad *= activationDer(prev_activated[output_idx], act_type);
+    grad *= activationDer(pre_activated[output_idx], act_type);
 
     // no need to compute gradients for previous layer since previous are inputs
 

@@ -1,7 +1,5 @@
 #include "affine.h"
 
-constexpr int block_size = 128;
-
 constexpr float alpha = 1;
 constexpr float beta = 0;
 
@@ -21,7 +19,7 @@ void destroyCublas() {
 __global__ void add_biases_kernel( //
     const float *biases_v,
     float *activated_v,
-    float *prev_activated_v,
+    float *pre_activated_v,
     const int r,
     const int c,
     const ActivationType act_type //
@@ -32,9 +30,9 @@ __global__ void add_biases_kernel( //
 
     int neuron_idx = idx / c;
 
-    float weighted_sum = prev_activated_v[idx] + biases_v[neuron_idx];
+    float weighted_sum = pre_activated_v[idx] + biases_v[neuron_idx];
 
-    prev_activated_v[idx] = weighted_sum;
+    pre_activated_v[idx] = weighted_sum;
     activated_v[idx] = activate(weighted_sum, act_type);
 }
 
@@ -46,7 +44,6 @@ void affine( //
     DenseMatrix &pre_activated,
     const ActivationType act_type //
 ) {
-    // clang-format on
     ASSERT(activated_v.numRows() == biases_v.numRows() && biases_v.numCols() == 1);
 
     ASSERT(weights_v.numCols() == inputs_v.numRows() &&    //
@@ -78,9 +75,10 @@ void affine( //
     );
 
     // add biases to dot product
-    dim3 grid(std::ceil((float) activated_v.size() / block_size));
+    const int block_size = 128;
+    const int grid_size = std::ceil((float) activated_v.size() / block_size);
 
-    add_biases_kernel<<<grid, block_size>>>( //
+    add_biases_kernel<<<grid_size, block_size>>>( //
         biases_v.devAddress(),
         activated_v.devAddress(),
         pre_activated.devAddress(),
@@ -98,7 +96,6 @@ __global__ void update_biases_grad_kernel( //
     const int c,
     const ActivationType act_type //
 ) {
-    // clang-format on
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
         return;
@@ -119,10 +116,9 @@ void affine_bp( //
     Tensor &biases,
     Tensor &inputs,
     Tensor &activated,
-    DenseMatrix &prev_activated,
+    DenseMatrix &pre_activated,
     const ActivationType act_type //
 ) {
-    // clang-format on
     const DenseMatrix &weights_v = weights.getValues();
     DenseMatrix &weights_g = weights.getGradients();
 
@@ -147,12 +143,14 @@ void affine_bp( //
            inputs_g.devAddress() &&    //
            activated_v.devAddress() && //
            activated_g.devAddress() && //
-           prev_activated.devAddress());
+           pre_activated.devAddress());
 
     // update biases gradient
-    dim3 grid(std::ceil((float) activated_g.size() / block_size));
-    update_biases_grad_kernel<<<grid, block_size>>>( //
-        prev_activated.devAddress(),
+    const int block_size = 128;
+    const int grid_size = std::ceil((float) activated_g.size() / block_size);
+
+    update_biases_grad_kernel<<<grid_size, block_size>>>( //
+        pre_activated.devAddress(),
         activated_g.devAddress(),
         biases_g.devAddress(),
         activated_g.numRows(),

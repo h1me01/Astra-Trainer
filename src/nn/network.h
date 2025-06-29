@@ -261,7 +261,7 @@ class Network {
     };
 
     Tensor &getOutput() {
-        return layers[layers.size() - 1]->getDenseOutput();
+        return layers[layers.size() - 1]->getDenseOutput().activated;
     };
 
     std::vector<LayerBase *> getLayers() {

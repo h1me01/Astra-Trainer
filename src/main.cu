@@ -46,9 +46,9 @@ int main() {
     //     0.001f * powf(0.3f, 5)  // min lr
     //);
 
+    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
     optim.setDecay(0.01);
     optim.setLRScheduler(&lr_sched);
-    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
     network.setOptimizer(&optim);
 
@@ -68,7 +68,7 @@ int main() {
 
     // init hidden layers
     auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
-    auto fc = FullyConnected<1, Linear>(&ft);
+    auto fc = FullyConnected<1>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
 

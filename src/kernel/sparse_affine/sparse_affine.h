@@ -6,8 +6,8 @@
 __global__ void sparse_affine_kernel( //
     const float *weights_v,
     const float *biases_v,
-    float *activated,
-    float *prev_activated,
+    float *activated_v,
+    float *pre_activated,
     const int *features,
     const int *feature_sizes,
     const int w_r,      // weight rows
@@ -19,7 +19,7 @@ __global__ void sparse_affine_kernel( //
 
 __global__ void sparse_affine_bp_kernel( //
     const float *activated_g,
-    const float *prev_activated,
+    const float *pre_activated,
     float *weights_g,
     float *biases_g,
     const int *features,

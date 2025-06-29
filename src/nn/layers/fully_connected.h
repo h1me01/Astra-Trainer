@@ -9,7 +9,7 @@
 #include "../data.h"
 #include "layer.h"
 
-template <int size, ActivationType act_type> //
+template <int size, ActivationType act_type = Linear> //
 class FullyConnected : public LayerBase {
   private:
     Tensor weights{size, 1};
@@ -32,24 +32,24 @@ class FullyConnected : public LayerBase {
     }
 
     void forward() override {
-        Tensor &inputs = previous->getDenseOutput();
+        Tensor &inputs = previous->getDenseOutput().activated;
         affine( //
             weights.getValues(),
             biases.getValues(),
             inputs.getValues(),
-            activated.getValues(),
-            pre_activated,
+            output.activated.getValues(),
+            output.pre_activated,
             act_type);
     }
 
     void backprop() override {
-        Tensor &inputs = previous->getDenseOutput();
+        Tensor &inputs = previous->getDenseOutput().activated;
         affine_bp( //
             weights,
             biases,
             inputs,
-            activated,
-            pre_activated,
+            output.activated,
+            output.pre_activated,
             act_type);
     }
 

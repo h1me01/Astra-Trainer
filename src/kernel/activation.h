@@ -6,7 +6,6 @@
 enum ActivationType { //
     Linear,
     ReLU,
-    LeakyReLU,
     CReLU,
     SCReLU,
     SqrRelu,
@@ -18,8 +17,6 @@ inline __device__ float activate(float x, ActivationType type) {
     switch(type) {
     case ReLU:
         return max(0.0f, x);
-    case LeakyReLU:
-        return (x > 0.0f) ? x : 0.01f * x;
     case CReLU:
         return clamp(x, 0.0f, 1.0f);
     case SCReLU:
@@ -40,8 +37,6 @@ inline __device__ float activationDer(float x, ActivationType type) {
     switch(type) {
     case ReLU:
         return (x > 0.0f) ? 1.0f : 0.0f;
-    case LeakyReLU:
-        return (x > 0.0f) ? 1.0f : 0.01f;
     case CReLU:
         return (x > 0.0f && x < 1.0f) ? 1.0f : 0.0f;
     case SCReLU:

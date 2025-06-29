@@ -11,7 +11,7 @@ void affine( //
     DenseMatrix &biases_v,
     DenseMatrix &inputs_v,
     DenseMatrix &activated_v,
-    DenseMatrix &prev_activated,
+    DenseMatrix &pre_activated,
     const ActivationType act_type);
 
 void affine_bp( //
@@ -19,5 +19,5 @@ void affine_bp( //
     Tensor &biases,
     Tensor &inputs,
     Tensor &activated,
-    DenseMatrix &prev_activated,
+    DenseMatrix &pre_activated,
     const ActivationType act_type);

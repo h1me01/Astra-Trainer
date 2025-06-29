@@ -11,23 +11,30 @@ class LayerBase {
     std::string name;
 
     SparseBatch sparse_batch{1, 1};
-    DenseMatrix pre_activated{1, 1};
 
-    Tensor activated{1, 1};
+    struct Output {
+        DenseMatrix pre_activated{1, 1};
+        Tensor activated{1, 1};
+
+        Output() {}
+        Output(int output_size, int batch_size)
+            : pre_activated(output_size, batch_size), activated(output_size, batch_size) {}
+    };
+
+    Output output;
 
   public:
     void init(int batch_size) {
         sparse_batch = SparseBatch(batch_size, 32);
-        pre_activated = DenseMatrix(getOutputSize(), batch_size);
-        activated = Tensor(getOutputSize(), batch_size);
+        output = Output(getOutputSize(), batch_size);
     }
 
     SparseBatch &getSparseBatch() {
         return sparse_batch;
     }
 
-    Tensor &getDenseOutput() {
-        return activated;
+    Output &getDenseOutput() {
+        return output;
     }
 
     void clampWeights(float min, float max) {
