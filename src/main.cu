@@ -10,8 +10,8 @@ int main() {
 
     // init network
     Network network( //
-        800,         // epochs
-        16384,       // batch size
+        50,          // epochs
+        1,           // batch size
         6104,        // batches per epoch
         100,         // save rate
         1,           // thread count for dataloader
@@ -54,14 +54,14 @@ int main() {
 
     // init king bucket (if needed)
     array<int, 64> king_bucket = {
-        0,  1,  2,  3,  3,  2,  1,  0,  //
-        4,  5,  6,  7,  7,  6,  5,  4,  //
-        8,  8,  9,  9,  9,  9,  8,  8,  //
-        10, 10, 10, 10, 10, 10, 10, 10, //
-        10, 10, 10, 10, 10, 10, 10, 10, //
-        11, 11, 11, 11, 11, 11, 11, 11, //
-        11, 11, 11, 11, 11, 11, 11, 11, //
-        11, 11, 11, 11, 11, 11, 11, 11, //
+        0, 0, 0, 0, 1, 1, 1, 1, //
+        0, 0, 0, 0, 1, 1, 1, 1, //
+        0, 0, 0, 0, 1, 1, 1, 1, //
+        0, 0, 0, 0, 1, 1, 1, 1, //
+        2, 2, 2, 2, 3, 3, 3, 3, //
+        2, 2, 2, 2, 3, 3, 3, 3, //
+        2, 2, 2, 2, 3, 3, 3, 3, //
+        2, 2, 2, 2, 3, 3, 3, 3  //
     };
 
     network.setKingBucket(king_bucket);
@@ -86,12 +86,12 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_4/checkpoint-final/weights.bin");
-    network.train( //
-        files,
-        output_path
-        // ,"training_4/checkpoint-100" // load checkpoint (if needed)
-    );
+    network.loadWeights(output_path + "/training_6/checkpoint-final/weights.bin");
+    // network.train( //
+    //    files,
+    //    output_path
+    //    // ,"training_4/checkpoint-100" // load checkpoint (if needed)
+    //);
 
     // test network on some positions
     network.testOnPositions({

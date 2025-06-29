@@ -330,7 +330,6 @@ class Tensor {
         }
 
         Array<T> data{values.size()};
-        data.allocHost();
 
         int num_rows = values.numRows();
         int num_cols = values.numCols();

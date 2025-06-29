@@ -25,6 +25,10 @@ int parseEpochFromCheckpoint(const std::string &checkpoint_name) {
     }
 }
 
+// sparse batch definition
+
+SparseBatch LayerBase::sparse_batch{1, 1};
+
 // network class
 
 int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
@@ -44,14 +48,14 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
 }
 
 void Network::fill(std::vector<DataEntry> &ds, float lambda) {
-    SparseBatch &sparse_inputs = layers[0]->getSparseBatch();
+    SparseBatch &sb = layers[0]->getSparseBatch();
 
-    const int max_entries = sparse_inputs.maxEntries();
+    const int max_entries = sb.maxEntries();
 
-    auto &psqt_indices = sparse_inputs.getPSQTIndices();
-    auto &features_sizes = sparse_inputs.getFeatureSizes();
-    auto &stm_features = sparse_inputs.getFeatures()[0];
-    auto &nstm_features = sparse_inputs.getFeatures()[1];
+    auto &psqt_indices = sb.getPSQTIndices();
+    auto &features_sizes = sb.getFeatureSizes();
+    auto &stm_features = sb.getFeatures()[0];
+    auto &nstm_features = sb.getFeatures()[1];
 
     for(size_t i = 0; i < ds.size(); i++) {
         const auto pos = ds[i].pos;
@@ -76,7 +80,7 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
             count++;
         }
 
-        psqt_indices(i) = (count - 1) / 4;
+        psqt_indices(i) = (count - 2) / 4;
         ASSERT(psqt_indices(i) >= 0 && psqt_indices(i) < 8);
 
         features_sizes(i) = count;

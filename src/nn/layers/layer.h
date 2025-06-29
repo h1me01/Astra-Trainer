@@ -10,7 +10,7 @@ class LayerBase {
   protected:
     std::string name;
 
-    SparseBatch sparse_batch{1, 1};
+    static SparseBatch sparse_batch;
 
     struct Output {
         DenseMatrix pre_activated{1, 1};
