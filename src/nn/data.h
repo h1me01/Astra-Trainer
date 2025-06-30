@@ -277,6 +277,13 @@ class SparseBatch {
     std::vector<Array<int>> &getFeatures() {
         return features;
     }
+
+    void hostToDev() {
+        psqt_indices.hostToDev();
+        feature_sizes.hostToDev();
+        for(auto &feature : features)
+            feature.hostToDev();
+    }
 };
 
 // Tensor

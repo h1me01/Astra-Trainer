@@ -93,10 +93,7 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
 
     // upload to device
     targets.hostToDev();
-    psqt_indices.hostToDev();
-    features_sizes.hostToDev();
-    stm_features.hostToDev();
-    nstm_features.hostToDev();
+    sb.hostToDev();
 }
 
 void Network::train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name) {
