@@ -41,7 +41,9 @@ inline std::string getActivationName(int type) {
     case 1: return "ReLU";
     case 2: return "CReLU";
     case 3: return "SCReLU";
-    case 4: return "Sigmoid";
+    case 4: return "SqrRelu";
+    case 5: return "Sigmoid";
+    case 6: return "Tanh";
     default: return "Unknown";
     }
     // clang-format on
