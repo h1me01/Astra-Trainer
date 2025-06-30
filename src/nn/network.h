@@ -205,6 +205,8 @@ class Network {
         } catch(const std::exception &e) {
             throw std::runtime_error("Failed to load weights from " + file + ": " + e.what());
         }
+
+        saveCheckpoint("D:/Astra-Data/nn_output/training_6/test");
     }
 
     // assumes output activation is sigmoid

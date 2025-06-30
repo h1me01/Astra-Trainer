@@ -324,31 +324,32 @@ class Tensor {
     }
 
     template <typename T> void quantize(FILE *f, float scale, bool transpose = false) {
-        if(!std::is_integral_v<T>) {
-            std::cout << "Error: quantize only supports integral types\n";
-            exit(1);
-        }
+        static_assert(std::is_integral_v<T>, "quantize only supports integral types");
 
         Array<T> data{values.size()};
-
         int num_rows = values.numRows();
         int num_cols = values.numCols();
-
         int idx = 0;
-        for(int i = 0; i < (transpose ? num_cols : num_rows); i++)
-            for(int j = 0; j < (transpose ? num_rows : num_cols); j++) {
-                float orig = transpose ? values(j, i) : values(i, j);
-                T quant = static_cast<T>(round(orig * scale));
 
-                // check for overflow/underflow
-                if(quant < std::numeric_limits<T>::min() || quant > std::numeric_limits<T>::max()) {
-                    std::cout << "Overflow/Underflow detected while quantitizing: quant = " << quant
-                              << " | orig = " << orig << "\n";
-                    exit(1);
-                }
-
-                data(idx++) = quant;
+        auto quantize_value = [&](float orig) {
+            T quant = static_cast<T>(round(orig * scale));
+            if(quant < std::numeric_limits<T>::min() || quant > std::numeric_limits<T>::max()) {
+                std::cout << "Overflow/Underflow detected while quantizing: quant = " << quant << " | orig = " << orig
+                          << "\n";
+                exit(1);
             }
+            return quant;
+        };
+
+        if(transpose) {
+            for(int i = 0; i < num_cols; i++)
+                for(int j = 0; j < num_rows; j++)
+                    data(idx++) = quantize_value(values(j, i));
+        } else {
+            // for now do this like this because bucketed weights mess up the quantization
+            for(int i = 0; i < values.size(); i++)
+                data(idx++) = quantize_value(values(i));
+        }
 
         fwrite(data.hostAddress(), sizeof(T), data.size(), f);
     }

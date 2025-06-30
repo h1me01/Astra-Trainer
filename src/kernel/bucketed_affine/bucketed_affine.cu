@@ -8,7 +8,7 @@ __global__ void bucketed_affine_kernel( //
     const float *biases_v,              // [bucket_size, neuron_size]
     float *activated_v,                 // [batch_size, neuron_size]
     float *pre_activated,               // [batch_size, neuron_size]
-    const int *bucket_idxs,             // [batch_size]
+    const int *bucket_indices,          // [batch_size]
     int batch_size,
     int input_size,
     int neuron_size,
@@ -21,7 +21,7 @@ __global__ void bucketed_affine_kernel( //
     if(batch_idx >= batch_size || neuron_idx >= neuron_size)
         return;
 
-    const int bucket_idx = bucket_idxs[batch_idx];
+    const int bucket_idx = bucket_indices[batch_idx];
     const int bucket_offset = bucket_idx * neuron_size * input_size;
 
     // compute dot product
@@ -35,7 +35,6 @@ __global__ void bucketed_affine_kernel( //
     float weighted_sum = sum + biases_v[neuron_idx * bucket_size + bucket_idx];
 
     int output_idx = batch_idx * neuron_size + neuron_idx;
-
     pre_activated[output_idx] = weighted_sum;
     activated_v[output_idx] = activate(weighted_sum, act_type);
 }

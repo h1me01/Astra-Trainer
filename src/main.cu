@@ -10,8 +10,8 @@ int main() {
 
     // init network
     Network network( //
-        5,           // epochs
-        1,           // batch size
+        50,          // epochs
+        16384,       // batch size
         6104,        // batches per epoch
         100,         // save rate
         1,           // thread count for dataloader
@@ -46,8 +46,8 @@ int main() {
     //     0.001f * powf(0.3f, 5)  // min lr
     //);
 
-    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
     optim.setDecay(0.01);
+    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
     optim.setLRScheduler(&lr_sched);
 
     network.setOptimizer(&optim);
@@ -67,7 +67,7 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-    auto ft = FeatureTransformer<64, SCReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<512, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear, true>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -77,10 +77,10 @@ int main() {
         const int q1 = 255;
         const int q2 = 64;
 
-        ft.getParams()[0]->quantize<int16_t>(f, q1, true); // weights
-        ft.getParams()[1]->quantize<int16_t>(f, q1);       // biases
-        fc.getParams()[0]->quantize<int16_t>(f, q2);       // weights
-        fc.getParams()[1]->quantize<int16_t>(f, q1 * q2);  // biases
+        ft.getParams()[0]->quantize<int16_t>(f, q1);      // weights
+        ft.getParams()[1]->quantize<int16_t>(f, q1);      // biases
+        fc.getParams()[0]->quantize<int16_t>(f, q2);      // weights
+        fc.getParams()[1]->quantize<int16_t>(f, q1 * q2); // biases
     });
 
     const string output_path = root_path + "/nn_output";
