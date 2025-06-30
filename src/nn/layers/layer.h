@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+enum class WeightInitType { Uniform, He };
+
 class LayerBase {
   protected:
     std::string name;
@@ -22,6 +24,24 @@ class LayerBase {
     };
 
     Output output;
+
+    std::string getParamsInfo() {
+        std::stringstream info;
+
+        const std::vector<Tensor *> &params = getParams();
+        if(!params.empty()) {
+            int i = 0;
+            for(const Tensor *t : params) {
+                std::string prefix = (i++ == 0) ? "weights(" : "biases(";
+                info << "  -> " << prefix                  //
+                     << "min=" << formatNumber(t->min())   //
+                     << ", max=" << formatNumber(t->max()) //
+                     << ")" << "\n";
+            }
+        }
+
+        return info.str();
+    }
 
   public:
     void init(int batch_size) {
@@ -55,28 +75,5 @@ class LayerBase {
     virtual void forward() = 0;
     virtual void backprop() = 0;
 
-    std::string getInfo() {
-        std::stringstream info;
-        info << name << "<";
-        info << getActivationName(getActivationType()) << ">(";
-        info << "input_size=" << std::to_string(getInputSize());
-        info << ", output_size=" << std::to_string(getOutputSize()) << ")\n";
-
-        const std::vector<Tensor *> &tunables = getParams();
-        if(!tunables.empty()) {
-            int i = 0;
-            for(const Tensor *t : tunables) {
-                std::string prefix = (i++ == 0) ? "weights(" : "biases(";
-                // clang-format off
-                info << "  -> " 
-                     << prefix 
-                     << "min=" << formatNumber(t->min()) 
-                     << ", max=" << formatNumber(t->max())
-                     << ")" << "\n";
-                // clang-format on
-            }
-        }
-
-        return info.str();
-    }
+    virtual std::string getInfo() = 0;
 };

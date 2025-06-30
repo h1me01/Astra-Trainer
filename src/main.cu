@@ -55,21 +55,37 @@ int main() {
 
     // init king bucket (if needed)
     array<int, 64> king_bucket = {
-        0, 0, 0, 0, 1, 1, 1, 1, //
-        0, 0, 0, 0, 1, 1, 1, 1, //
-        0, 0, 0, 0, 1, 1, 1, 1, //
-        0, 0, 0, 0, 1, 1, 1, 1, //
-        2, 2, 2, 2, 3, 3, 3, 3, //
-        2, 2, 2, 2, 3, 3, 3, 3, //
-        2, 2, 2, 2, 3, 3, 3, 3, //
-        2, 2, 2, 2, 3, 3, 3, 3  //
+        0,  1,  2,  3,  3,  2,  1,  0,  //
+        4,  5,  6,  7,  7,  6,  5,  4,  //
+        8,  8,  9,  9,  9,  9,  8,  8,  //
+        10, 10, 10, 10, 10, 10, 10, 10, //
+        10, 10, 10, 10, 10, 10, 10, 10, //
+        11, 11, 11, 11, 11, 11, 11, 11, //
+        11, 11, 11, 11, 11, 11, 11, 11, //
+        11, 11, 11, 11, 11, 11, 11, 11, //
     };
 
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-    auto ft = FeatureTransformer<1536, SCReLU>(getBucketSize(king_bucket) * 768);
-    auto fc = FullyConnected<1>(&ft);
+    // clang-format off
+    auto ft = FeatureTransformer<         
+        1536,                             // size
+        SCReLU                            // activation type
+    >(                                
+        getBucketSize(king_bucket) * 768, // input size
+        WeightInitType::Uniform           // weight initialization type
+    );
+
+    auto fc = FullyConnected<
+        1,      // size
+        Linear, // activation type (output activation is done in loss)
+        true    // bucketed (comment out or set to false for non-bucketed)
+    >( 
+        &ft,                    // previous layer
+        WeightInitType::Uniform // weight initialization type
+    );
+    // clang-format on
 
     network.setHiddenLayers({&ft, &fc});
 

@@ -11,7 +11,7 @@
 
 // perspective transformer layer
 // meaning there are two sparse inputs for both sides
-template <int size, ActivationType act_type = Linear> //
+template <int size, ActivationType act_type> //
 class FeatureTransformer : public LayerBase {
   private:
     int input_size;
@@ -19,14 +19,18 @@ class FeatureTransformer : public LayerBase {
     Tensor biases{size, 1};
 
   public:
-    FeatureTransformer(int input_size, bool init_uniformly = true) : input_size(input_size) {
+    FeatureTransformer(int input_size, WeightInitType init_type) : input_size(input_size) {
         name = "FeatureTransformer";
 
         weights = Tensor(size, input_size);
-        if(init_uniformly)
+        switch(init_type) {
+        case WeightInitType::Uniform:
             weights.initUniformly();
-        else
+            break;
+        case WeightInitType::He:
             weights.heInit(input_size);
+            break;
+        }
     }
 
     void forward() override {
@@ -135,5 +139,15 @@ class FeatureTransformer : public LayerBase {
 
     std::vector<Tensor *> getParams() override {
         return {&weights, &biases};
+    }
+
+    std::string getInfo() override {
+        std::stringstream info;
+        info << name << "<";
+        info << getActivationName(getActivationType()) << ">(";
+        info << std::to_string(getInputSize());
+        info << "->2x" << std::to_string(size) << ")\n";
+        info << getParamsInfo();
+        return info.str();
     }
 };

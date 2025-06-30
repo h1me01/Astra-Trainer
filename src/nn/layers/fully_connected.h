@@ -9,7 +9,10 @@
 #include "../data.h"
 #include "layer.h"
 
-template <int size, ActivationType act_type = Linear, bool bucketed = false> //
+template < //
+    int size,
+    ActivationType act_type,
+    bool bucketed = false>
 class FullyConnected : public LayerBase {
   private:
     static constexpr int bucket_size = 8; // for now only supports 8 buckets
@@ -20,16 +23,20 @@ class FullyConnected : public LayerBase {
     LayerBase *previous;
 
   public:
-    FullyConnected(LayerBase *previous, bool init_uniformly = true) : previous(previous) {
+    FullyConnected(LayerBase *previous, WeightInitType init_type) : previous(previous) {
         name = "FullyConnected";
 
         int input_size = previous->getOutputSize();
 
         weights = Tensor(size * (bucketed ? bucket_size : 1), input_size);
-        if(init_uniformly)
+        switch(init_type) {
+        case WeightInitType::Uniform:
             weights.initUniformly();
-        else
+            break;
+        case WeightInitType::He:
             weights.heInit(input_size);
+            break;
+        }
     }
 
     void forward() override {
@@ -94,5 +101,15 @@ class FullyConnected : public LayerBase {
 
     std::vector<Tensor *> getParams() override {
         return {&weights, &biases};
+    }
+
+    std::string getInfo() override {
+        std::stringstream info;
+        info << name << "<";
+        info << getActivationName(getActivationType()) << ">(";
+        info << std::to_string(getInputSize());
+        info << "->" << (bucketed ? "8x" : "") << std::to_string(size) << ")\n";
+        info << getParamsInfo();
+        return info.str();
     }
 };
