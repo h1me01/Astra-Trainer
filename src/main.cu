@@ -10,7 +10,7 @@ int main() {
 
     // init network
     Network network( //
-        50,          // epochs
+        5,           // epochs
         1,           // batch size
         6104,        // batches per epoch
         100,         // save rate
@@ -67,7 +67,7 @@ int main() {
     network.setKingBucket(king_bucket);
 
     // init hidden layers
-    auto ft = FeatureTransformer<512, SCReLU>(getBucketSize(king_bucket) * 768);
+    auto ft = FeatureTransformer<64, SCReLU>(getBucketSize(king_bucket) * 768);
     auto fc = FullyConnected<1, Linear, true>(&ft);
 
     network.setHiddenLayers({&ft, &fc});
@@ -86,12 +86,12 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    network.loadWeights(output_path + "/training_6/checkpoint-final/weights.bin");
-    // network.train( //
-    //    files,
-    //    output_path
-    //    // ,"training_4/checkpoint-100" // load checkpoint (if needed)
-    //);
+    // network.loadWeights(output_path + "/training_6/checkpoint-final/weights.bin");
+    network.train( //
+        files,
+        output_path
+        // ,"training_4/checkpoint-100" // load checkpoint (if needed)
+    );
 
     // test network on some positions
     network.testOnPositions({
