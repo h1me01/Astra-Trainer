@@ -32,6 +32,9 @@ int main() {
         1e-8    // epsilon
     );
 
+    optim.setDecay(0.01);
+    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
+
     // init lr scheduler
     StepDecay lr_sched( //
         160,            // step size
@@ -46,8 +49,6 @@ int main() {
     //     0.001f * powf(0.3f, 5)  // min lr
     //);
 
-    optim.setDecay(0.01);
-    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
     optim.setLRScheduler(&lr_sched);
 
     network.setOptimizer(&optim);
