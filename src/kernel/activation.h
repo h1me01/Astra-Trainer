@@ -7,8 +7,8 @@ enum ActivationType { //
     Linear,
     ReLU,
     CReLU,
+    SReLU,
     SCReLU,
-    SqrRelu,
     Sigmoid,
     Tanh
 };
@@ -19,11 +19,11 @@ inline __device__ float activate(float x, ActivationType type) {
         return max(0.0f, x);
     case CReLU:
         return clamp(x, 0.0f, 1.0f);
+    case SReLU:
+        return (x > 0.0f) ? x * x : 0.0f;
     case SCReLU:
         x = clamp(x, 0.0f, 1.0f);
         return x * x;
-    case SqrRelu:
-        return (x > 0.0f) ? x * x : 0.0f;
     case Sigmoid:
         return 1.0f / (1.0f + expf(-x));
     case Tanh:
@@ -39,10 +39,10 @@ inline __device__ float activationDer(float x, ActivationType type) {
         return (x > 0.0f) ? 1.0f : 0.0f;
     case CReLU:
         return (x > 0.0f && x < 1.0f) ? 1.0f : 0.0f;
+    case SReLU:
+        return (x > 0.0f) ? 2.0f * x : 0.0f;
     case SCReLU:
         return (x > 0.0f && x < 1.0f) ? 2.0f * x : 0.0f;
-    case SqrRelu:
-        return (x > 0.0f) ? 2.0f * x : 0.0f;
     case Sigmoid:
         x = activate(x, Sigmoid);
         return x * (1 - x);

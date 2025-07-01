@@ -123,7 +123,7 @@ __global__ void bucketed_bwd_biases_kernel( //
 
     float local_sum = 0.0f;
 
-    // Sum gradients for this neuron and bucket across all batch samples
+    // sum gradients for this neuron and bucket across all batch samples
     for(int b = tid; b < batch_size; b += blockDim.x)
         if(bucket_idxs[b] == bucket_idx)
             local_sum += activated_g[b * neuron_size + neuron_idx];
@@ -131,7 +131,7 @@ __global__ void bucketed_bwd_biases_kernel( //
     bias_shared[tid] = local_sum;
     __syncthreads();
 
-    // Reduce within block
+    // reduce within block
     for(int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
         if(tid < stride)
             bias_shared[tid] += bias_shared[tid + stride];
@@ -160,12 +160,12 @@ __global__ void bucketed_bwd_input_kernel( //
     const int bucket_idx = bucket_idxs[batch_idx];
     const int bucket_offset = bucket_idx * neuron_size * input_size;
 
-    // Compute gradient w.r.t. input
+    // compute gradient w.r.t. input
     float sum = 0.0f;
     for(int i = 0; i < neuron_size; ++i) {
-        int grad_output_offset = batch_idx * neuron_size + i;
+        int output_offset = batch_idx * neuron_size + i;
         int weight_offset = bucket_offset + i * input_size + input_idx;
-        sum += activated_g[grad_output_offset] * weights_v[weight_offset];
+        sum += activated_g[output_offset] * weights_v[weight_offset];
     }
 
     input_g[batch_idx * input_size + input_idx] = sum;
@@ -181,7 +181,6 @@ __global__ void bucketed_bwd_weights_kernel( //
     int neuron_size,
     int bucket_size //
 ) {
-    // Each block handles one (bucket, neuron, input) combination
     int bucket_idx = blockIdx.x;
     int neuron_idx = blockIdx.y;
     int input_idx = blockIdx.z;
@@ -196,7 +195,7 @@ __global__ void bucketed_bwd_weights_kernel( //
 
     float local_sum = 0.0f;
 
-    // Each thread processes multiple batch samples
+    // each thread processes multiple batch samples
     for(int b = tid; b < batch_size; b += block_size) {
         if(bucket_idxs[b] == bucket_idx) {
             local_sum += activated_g[b * neuron_size + neuron_idx] * input_v[b * input_size + input_idx];
@@ -206,7 +205,7 @@ __global__ void bucketed_bwd_weights_kernel( //
     shared_grad[tid] = local_sum;
     __syncthreads();
 
-    // Reduction within block
+    // reduction within block
     for(int stride = block_size / 2; stride > 0; stride >>= 1) {
         if(tid < stride)
             shared_grad[tid] += shared_grad[tid + stride];
