@@ -46,7 +46,7 @@ class LayerBase {
   public:
     void init(int batch_size) {
         sparse_batch = SparseBatch(batch_size, 32);
-        output = Output(getOutputSize(), batch_size);
+        output = Output(batch_size, getOutputSize());
     }
 
     SparseBatch &getSparseBatch() {

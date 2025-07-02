@@ -10,7 +10,7 @@ int main() {
 
     // init network
     Network network( //
-        800,         // epochs
+        600,         // epochs
         16384,       // batch size
         6104,        // batches per epoch
         100,         // save rate
@@ -103,7 +103,7 @@ int main() {
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_6/checkpoint-final/weights.bin");
+    // network.loadWeights(output_path + "/training_5/checkpoint-final/weights.bin");
     network.train( //
         files,
         output_path

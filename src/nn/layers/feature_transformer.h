@@ -46,7 +46,7 @@ class FeatureTransformer : public LayerBase {
         DenseMatrix &activated_v = output.activated.getValues();
         DenseMatrix &pre_activated = output.pre_activated;
 
-        ASSERT(batch_size == activated_v.numCols());
+        ASSERT(batch_size == activated_v.numRows());
 
         ASSERT(weights_v.devAddress() &&     //
                biases_v.devAddress() &&      //
@@ -69,7 +69,7 @@ class FeatureTransformer : public LayerBase {
                 feature.devAddress(),
                 feature_sizes.devAddress(),
                 weights_v.numRows(),
-                activated_v.numRows(),
+                activated_v.numCols(),
                 i * size,
                 batch_size,
                 max_entries,
@@ -92,7 +92,7 @@ class FeatureTransformer : public LayerBase {
         DenseMatrix &activated_g = output.activated.getGradients();
         DenseMatrix &pre_activated = output.pre_activated;
 
-        ASSERT(activated_g.numCols() == batch_size);
+        ASSERT(activated_g.numRows() == batch_size);
 
         ASSERT(weights_g.devAddress() &&     //
                biases_g.devAddress() &&      //
@@ -115,7 +115,7 @@ class FeatureTransformer : public LayerBase {
                 feature.devAddress(),
                 feature_sizes.devAddress(),
                 weights_g.numRows(),
-                activated_g.numRows(),
+                activated_g.numCols(),
                 i * size,
                 batch_size,
                 max_entries,

@@ -49,15 +49,15 @@ void bucketed_affine_fwd( //
     const ActivationType act_type,
     const int bucket_size //
 ) {
-    const int batch_size = inputs_v.numCols();
-    const int input_size = inputs_v.numRows();
+    const int batch_size = inputs_v.numRows();
+    const int input_size = inputs_v.numCols();
     const int neuron_size = weights_v.numRows() / bucket_size;
 
-    ASSERT(activated_v.numRows() == neuron_size && biases_v.numCols() == 1);
+    ASSERT(activated_v.numCols() == neuron_size && biases_v.numCols() == 1);
 
     ASSERT(weights_v.numCols() == input_size &&    //
-           neuron_size == activated_v.numRows() && //
-           batch_size == activated_v.numCols());
+           neuron_size == activated_v.numCols() && //
+           batch_size == activated_v.numRows());
 
     ASSERT(weights_v.devAddress() &&   //
            biases_v.devAddress() &&    //
@@ -239,15 +239,15 @@ void bucketed_affine_bwd( //
     DenseMatrix &activated_v = activated.getValues();
     DenseMatrix &activated_g = activated.getGradients();
 
-    const int batch_size = inputs_v.numCols();
-    const int input_size = inputs_v.numRows();
+    const int batch_size = inputs_v.numRows();
+    const int input_size = inputs_v.numCols();
     const int neuron_size = weights_v.numRows() / bucket_size;
 
-    ASSERT(activated_g.numRows() == neuron_size && biases_g.numCols() == 1);
+    ASSERT(activated_g.numCols() == neuron_size && biases_g.numCols() == 1);
 
-    ASSERT(weights_g.numCols() == inputs_g.numRows() && //
-           neuron_size == activated_g.numRows() &&      //
-           inputs_g.numCols() == activated_g.numCols());
+    ASSERT(weights_g.numCols() == input_size &&    //
+           neuron_size == activated_g.numCols() && //
+           batch_size == activated_g.numRows());
 
     ASSERT(weights_v.devAddress() &&   //
            weights_g.devAddress() &&   //
