@@ -24,11 +24,11 @@ __global__ void add_biases_kernel( //
     const int c,
     const ActivationType act_type //
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
         return;
 
-    int neuron_idx = idx / c;
+    const int neuron_idx = idx / c;
 
     float weighted_sum = pre_activated_v[idx] + biases_v[neuron_idx];
 
@@ -96,7 +96,7 @@ __global__ void update_biases_grad_kernel( //
     const int c,
     const ActivationType act_type //
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
         return;
 
@@ -107,7 +107,7 @@ __global__ void update_biases_grad_kernel( //
     grad *= activationDer(pre_activated_v[idx], act_type);
     activated_g[idx] = grad;
 
-    int neuron_idx = idx / c;
+    const int neuron_idx = idx / c;
     atomicAdd(&biases_g[neuron_idx], grad);
 }
 

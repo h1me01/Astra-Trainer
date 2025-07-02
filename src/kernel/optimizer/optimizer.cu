@@ -137,6 +137,9 @@ __global__ void ranger_kernel( //
     float mom = moms[idx];
     float vel = vels[idx];
 
+    mom = beta2 * mom + (1.0 - beta2) * grad * grad;
+    vel = beta1 * vel + (1.0 - beta1) * grad;
+
     float beta2_t = powf(beta2, step);
     float beta1_correction = 1.0f - powf(beta1, step);
     float N_sma_max = 2.0f / (1.0f - beta2) - 1.0f;
@@ -150,8 +153,9 @@ __global__ void ranger_kernel( //
                         / beta1_correction;
         // clang-format on
         val -= step_size * mom / (sqrtf(vel) + eps);
-    } else
+    } else {
         val -= (lr / beta1_correction) * mom;
+    }
 
     // moving average of weights
     if(step % k == 0) {

@@ -14,7 +14,7 @@ __global__ void sparse_affine_kernel( //
     const int max_entries,
     ActivationType act_type //
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= w_r * batch_size)
         return;
 
