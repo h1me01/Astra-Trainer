@@ -70,7 +70,7 @@ int main() {
     // init hidden layers
     // clang-format off
     auto ft = FeatureTransformer<         
-        1536,  // size
+        512,  // size
         SCReLU // activation type
     >(                                
         getBucketSize(king_bucket) * 768, // input size

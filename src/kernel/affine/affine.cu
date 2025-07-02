@@ -24,11 +24,11 @@ __global__ void add_biases_kernel( //
     const int c,
     const ActivationType act_type //
 ) {
-    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
         return;
 
-    const int neuron_idx = idx / c;
+    int neuron_idx = idx / c;
 
     float weighted_sum = pre_activated_v[idx] + biases_v[neuron_idx];
 
@@ -44,11 +44,11 @@ void affine( //
     DenseMatrix &pre_activated,
     const ActivationType act_type //
 ) {
-    ASSERT(activated_v.numCols() == biases_v.numRows() && biases_v.numCols() == 1);
+    ASSERT(activated_v.numRows() == biases_v.numRows() && biases_v.numCols() == 1);
 
-    ASSERT(weights_v.numCols() == inputs_v.numCols() &&    //
-           weights_v.numRows() == activated_v.numCols() && //
-           inputs_v.numRows() == activated_v.numRows());
+    ASSERT(weights_v.numCols() == inputs_v.numRows() &&    //
+           weights_v.numRows() == activated_v.numRows() && //
+           inputs_v.numCols() == activated_v.numCols());
 
     ASSERT(weights_v.devAddress() &&   //
            biases_v.devAddress() &&    //
@@ -61,17 +61,17 @@ void affine( //
         CUBLAS_HANDLE,              // handle
         CUBLAS_OP_N,                // transa
         CUBLAS_OP_N,                // transb
-        pre_activated.numCols(),    // m
-        pre_activated.numRows(),    // n
+        pre_activated.numRows(),    // m
+        pre_activated.numCols(),    // n
         weights_v.numCols(),        // k
         &alpha,                     // alpha
         weights_v.devAddress(),     // A
         weights_v.numRows(),        // lda
         inputs_v.devAddress(),      // B
-        inputs_v.numCols(),         // ldb
+        inputs_v.numRows(),         // ldb
         &beta,                      // beta
         pre_activated.devAddress(), // C
-        pre_activated.numCols()     // ldc
+        pre_activated.numRows()     // ldc
     );
 
     // add biases to dot product
@@ -96,7 +96,7 @@ __global__ void update_biases_grad_kernel( //
     const int c,
     const ActivationType act_type //
 ) {
-    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
         return;
 
@@ -107,7 +107,7 @@ __global__ void update_biases_grad_kernel( //
     grad *= activationDer(pre_activated_v[idx], act_type);
     activated_g[idx] = grad;
 
-    const int neuron_idx = idx / c;
+    int neuron_idx = idx / c;
     atomicAdd(&biases_g[neuron_idx], grad);
 }
 
@@ -119,22 +119,22 @@ void affine_bp( //
     DenseMatrix &pre_activated,
     const ActivationType act_type //
 ) {
-    DenseMatrix &weights_v = weights.getValues();
+    const DenseMatrix &weights_v = weights.getValues();
     DenseMatrix &weights_g = weights.getGradients();
 
     DenseMatrix &biases_g = biases.getGradients();
 
-    DenseMatrix &inputs_v = inputs.getValues();
+    const DenseMatrix &inputs_v = inputs.getValues();
     DenseMatrix &inputs_g = inputs.getGradients();
 
-    DenseMatrix &activated_v = activated.getValues();
-    DenseMatrix &activated_g = activated.getGradients();
+    const DenseMatrix &activated_v = activated.getValues();
+    const DenseMatrix &activated_g = activated.getGradients();
 
-    ASSERT(activated_g.numCols() == biases_g.numRows() && biases_g.numCols() == 1);
+    ASSERT(activated_g.numRows() == biases_g.numRows() && biases_g.numCols() == 1);
 
-    ASSERT(weights_g.numCols() == inputs_g.numCols() &&    //
-           weights_g.numRows() == activated_g.numCols() && //
-           inputs_g.numRows() == activated_g.numRows());
+    ASSERT(weights_g.numCols() == inputs_g.numRows() &&    //
+           weights_g.numRows() == activated_g.numRows() && //
+           inputs_g.numCols() == activated_g.numCols());
 
     ASSERT(weights_v.devAddress() &&   //
            weights_g.devAddress() &&   //
@@ -153,8 +153,8 @@ void affine_bp( //
         pre_activated.devAddress(),
         activated_g.devAddress(),
         biases_g.devAddress(),
-        activated_g.numCols(),
         activated_g.numRows(),
+        activated_g.numCols(),
         act_type);
 
     // update weights gradient
@@ -164,12 +164,12 @@ void affine_bp( //
         CUBLAS_OP_T,              // transb
         weights_g.numRows(),      // m
         weights_g.numCols(),      // n
-        activated_g.numRows(),    // k
+        activated_g.numCols(),    // k
         &alpha,                   // alpha
         activated_g.devAddress(), // A
-        activated_g.numCols(),    // lda
+        activated_g.numRows(),    // lda
         inputs_v.devAddress(),    // B
-        inputs_v.numCols(),       // ldb
+        inputs_v.numRows(),       // ldb
         &beta,                    // beta
         weights_g.devAddress(),   // C
         weights_g.numRows()       // ldc
@@ -180,16 +180,16 @@ void affine_bp( //
         CUBLAS_HANDLE,            // handle
         CUBLAS_OP_T,              // transa
         CUBLAS_OP_N,              // transb
-        inputs_g.numCols(),       // m
-        inputs_g.numRows(),       // n
+        inputs_g.numRows(),       // m
+        inputs_g.numCols(),       // n
         weights_v.numRows(),      // k
         &alpha,                   // alpha
         weights_v.devAddress(),   // A
         weights_v.numRows(),      // lda
         activated_g.devAddress(), // B
-        activated_g.numCols(),    // ldb
+        activated_g.numRows(),    // ldb
         &beta,                    // beta
         inputs_g.devAddress(),    // C
-        inputs_g.numCols()        // ldc
+        inputs_g.numRows()        // ldc
     );
 }
