@@ -30,36 +30,36 @@ class Array {
     }
 
     explicit Array(int size) : m_size(size) {
-        allocHost();
-        allocDev();
+        alloc_host();
+        alloc_dev();
     }
 
     Array(const Array<T> &other) : m_size(other.m_size) {
-        if(other.isHostAllocated()) {
-            allocHost();
-            copyFromHost(other.host_data, other.m_size);
+        if(other.is_host_allocated()) {
+            alloc_host();
+            copy_from_host(other.host_data, other.m_size);
         }
 
-        if(other.isDevAllocated()) {
-            allocDev();
-            copyFromDev(other.dev_data, other.m_size);
+        if(other.is_dev_allocated()) {
+            alloc_dev();
+            copy_from_dev(other.dev_data, other.m_size);
         }
     }
 
     Array<T> &operator=(const Array<T> &other) {
         if(this != &other) {
-            freeHost();
-            freeDev();
+            free_host();
+            free_dev();
             m_size = other.m_size;
 
-            if(other.isHostAllocated()) {
-                allocHost();
-                copyFromHost(other.host_data, other.m_size);
+            if(other.is_host_allocated()) {
+                alloc_host();
+                copy_from_host(other.host_data, other.m_size);
             }
 
-            if(other.isDevAllocated()) {
-                allocDev();
-                copyFromDev(other.dev_data, other.m_size);
+            if(other.is_dev_allocated()) {
+                alloc_dev();
+                copy_from_dev(other.dev_data, other.m_size);
             }
         }
 
@@ -67,100 +67,100 @@ class Array {
     }
 
     virtual ~Array() {
-        freeHost();
-        freeDev();
+        free_host();
+        free_dev();
     }
 
-    void freeHost() {
-        if(!isHostAllocated())
+    void free_host() {
+        if(!is_host_allocated())
             return;
         delete[] host_data;
         host_data = nullptr;
     }
 
-    void freeDev() {
-        if(!isDevAllocated())
+    void free_dev() {
+        if(!is_dev_allocated())
             return;
         CUDA_ASSERT(cudaFree(dev_data));
         dev_data = nullptr;
     }
 
-    void allocHost() {
+    void alloc_host() {
         if(m_size <= 0)
             return;
-        if(isHostAllocated())
-            freeHost();
+        if(is_host_allocated())
+            free_host();
         host_data = new T[m_size]();
     }
 
-    void allocDev() {
+    void alloc_dev() {
         if(m_size <= 0)
             return;
-        if(isDevAllocated())
-            freeDev();
+        if(is_dev_allocated())
+            free_dev();
         CUDA_ASSERT(cudaMalloc(&dev_data, m_size * sizeof(T)));
     }
 
-    void copyFromHost(const T *data, int size) {
+    void copy_from_host(const T *data, int size) {
         ASSERT(size == m_size);
         if(host_data == nullptr)
-            allocHost();
+            alloc_host();
         memcpy(host_data, data, sizeof(T) * size);
     }
 
-    void copyFromDev(const T *data, int size) {
+    void copy_from_dev(const T *data, int size) {
         ASSERT(size == m_size);
         if(dev_data == nullptr)
-            allocDev();
+            alloc_dev();
         CUDA_ASSERT(cudaMemcpy(dev_data, data, sizeof(T) * size, cudaMemcpyDeviceToDevice));
     }
 
-    bool isHostAllocated() const {
+    bool is_host_allocated() const {
         return host_data != nullptr;
     }
 
-    bool isDevAllocated() const {
+    bool is_dev_allocated() const {
         return dev_data != nullptr;
     }
 
-    T *hostAddress() const {
+    T *host_address() const {
         return host_data;
     }
 
-    T *devAddress() const {
+    T *dev_address() const {
         return dev_data;
     }
 
-    void clearHost() {
+    void clear_host() {
         if(host_data != nullptr)
             memset(host_data, 0, sizeof(T) * m_size);
     }
 
-    void clearDev() {
+    void clear_dev() {
         if(dev_data != nullptr)
             CUDA_ASSERT(cudaMemset(dev_data, 0, sizeof(T) * m_size));
     }
 
-    void hostToDev() {
-        if(!isHostAllocated() || !isDevAllocated())
+    void host_to_dev() {
+        if(!is_host_allocated() || !is_dev_allocated())
             return;
         CUDA_ASSERT(cudaMemcpy(dev_data, host_data, m_size * sizeof(T), cudaMemcpyHostToDevice));
     }
 
-    void devToHost() {
-        if(!isHostAllocated() || !isDevAllocated())
+    void dev_to_host() {
+        if(!is_host_allocated() || !is_dev_allocated())
             return;
         CUDA_ASSERT(cudaMemcpy(host_data, dev_data, m_size * sizeof(T), cudaMemcpyDeviceToHost));
     }
 
     T get(int idx) const {
-        ASSERT(isHostAllocated());
+        ASSERT(is_host_allocated());
         ASSERT(idx >= 0 && idx < m_size);
         return host_data[idx];
     }
 
     T &get(int idx) {
-        ASSERT(isHostAllocated());
+        ASSERT(is_host_allocated());
         ASSERT(idx >= 0 && idx < m_size);
         return host_data[idx];
     }
@@ -182,41 +182,41 @@ class Array {
 
 class DenseMatrix : public Array<float> {
   private:
-    int num_rows, num_cols;
+    int n_rows, n_cols;
 
   public:
     using Array<float>::operator();
 
     DenseMatrix(int num_rows, int num_cols) //
-        : num_rows(num_rows), num_cols(num_cols), Array(num_rows * num_cols) {}
+        : n_rows(num_rows), n_cols(num_cols), Array(num_rows * num_cols) {}
 
     DenseMatrix(const DenseMatrix &other) //
-        : num_rows(other.num_rows), num_cols(other.num_cols), Array<float>(other) {}
+        : n_rows(other.n_rows), n_cols(other.n_cols), Array<float>(other) {}
 
     DenseMatrix &operator=(const DenseMatrix &other) {
         if(this != &other) {
-            num_rows = other.num_rows;
-            num_cols = other.num_cols;
+            n_rows = other.n_rows;
+            n_cols = other.n_cols;
             Array<float>::operator=(other);
         }
 
         return *this;
     }
 
-    int numRows() const {
-        return num_rows;
+    int num_rows() const {
+        return n_rows;
     }
 
-    int numCols() const {
-        return num_cols;
+    int num_cols() const {
+        return n_cols;
     }
 
     float operator()(int row_idx, int col_idx) const {
-        return get(numRows() * col_idx + row_idx);
+        return get(num_rows() * col_idx + row_idx);
     }
 
     float &operator()(int row_idx, int col_idx) {
-        return get(numRows() * col_idx + row_idx);
+        return get(num_rows() * col_idx + row_idx);
     }
 };
 
@@ -258,31 +258,31 @@ class SparseBatch {
         return *this;
     }
 
-    int getBatchSize() const {
+    int get_batch_size() const {
         return batch_size;
     }
 
-    int maxEntries() const {
+    int get_max_entries() const {
         return max_entries;
     }
 
-    Array<int> &getPSQTIndices() {
+    Array<int> &get_psqt_indices() {
         return psqt_indices;
     }
 
-    Array<int> &getFeatureSizes() {
+    Array<int> &get_feature_sizes() {
         return feature_sizes;
     }
 
-    std::vector<Array<int>> &getFeatures() {
+    std::vector<Array<int>> &get_features() {
         return features;
     }
 
-    void hostToDev() {
-        psqt_indices.hostToDev();
-        feature_sizes.hostToDev();
+    void host_to_dev() {
+        psqt_indices.host_to_dev();
+        feature_sizes.host_to_dev();
         for(auto &feature : features)
-            feature.hostToDev();
+            feature.host_to_dev();
     }
 };
 
@@ -299,8 +299,8 @@ class Tensor {
   public:
     Tensor(int num_rows, int num_cols)
         : values(DenseMatrix{num_rows, num_cols}), gradients(DenseMatrix{num_rows, num_cols}) {
-        values.clearHost();
-        gradients.clearHost();
+        values.clear_host();
+        gradients.clear_host();
     }
 
     Tensor(const Tensor &other) //
@@ -314,29 +314,25 @@ class Tensor {
         return *this;
     }
 
-    void initUniformly() {
+    void init_uniformly() {
         std::mt19937 gen{std::random_device{}()};
         std::uniform_real_distribution<> dis(-0.1f, 0.1f);
         for(int i = 0; i < values.size(); i++)
             values(i) = dis(gen);
-        values.hostToDev();
+        values.host_to_dev();
     }
 
-    void heInit(int previous_size) {
+    void he_init(int previous_size) {
         std::mt19937 gen{std::random_device{}()};
         std::uniform_real_distribution<> dis(0, std::sqrt(2.0f / previous_size));
         for(int i = 0; i < values.size(); i++)
             values(i) = dis(gen);
-        values.hostToDev();
+        values.host_to_dev();
     }
 
-    template <typename T> void quantize(FILE *f, float scale, bool transpose = false) {
+    template <typename T> //
+    void quant(FILE *f, float scale, bool trans = false) {
         static_assert(std::is_integral_v<T>, "quantize only supports integral types");
-
-        Array<T> data{values.size()};
-        int num_rows = values.numRows();
-        int num_cols = values.numCols();
-        int idx = 0;
 
         auto quantize_value = [&](float orig) {
             T quant = static_cast<T>(round(orig * scale));
@@ -348,17 +344,20 @@ class Tensor {
             return quant;
         };
 
-        if(transpose) {
-            for(int i = 0; i < num_cols; i++)
-                for(int j = 0; j < num_rows; j++)
-                    data(idx++) = quantize_value(values(j, i));
+        Array<T> data{values.size()};
+        int idx = 0;
+
+        if(trans) {
+            for(int r = 0; r < values.num_rows(); r++)
+                for(int c = 0; c < values.num_cols(); c++)
+                    data(idx++) = quantize_value(values(r, c));
         } else {
-            // for now do this like this because bucketed weights mess up the quantization
-            for(int i = 0; i < values.size(); i++)
-                data(idx++) = quantize_value(values(i));
+            for(int c = 0; c < values.num_cols(); c++)
+                for(int r = 0; r < values.num_rows(); r++)
+                    data(idx++) = quantize_value(values(r, c));
         }
 
-        fwrite(data.hostAddress(), sizeof(T), data.size(), f);
+        fwrite(data.host_address(), sizeof(T), data.size(), f);
     }
 
     void clamp(float min_val, float max_val) {
@@ -374,11 +373,11 @@ class Tensor {
         return max_val;
     }
 
-    DenseMatrix &getValues() {
+    DenseMatrix &get_vals() {
         return values;
     }
 
-    DenseMatrix &getGradients() {
+    DenseMatrix &get_grads() {
         return gradients;
     }
 };

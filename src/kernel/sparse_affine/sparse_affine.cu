@@ -1,18 +1,20 @@
 #include "sparse_affine.h"
 
+// FORWARD
+
 __global__ void sparse_affine_kernel( //
-    const float *weights_v,
-    const float *biases_v,
-    float *activated_v,
-    float *pre_activated,
-    const int *features,
-    const int *feature_sizes,
-    const int w_r,      // weight rows
-    const int a_r,      // activated rows
-    const int a_offset, // activated offset
-    const int batch_size,
-    const int max_entries,
-    ActivationType act_type //
+    const float *weights_v,           //
+    const float *biases_v,            //
+    float *activated_v,               //
+    float *pre_activated,             //
+    const int *features,              //
+    const int *feature_sizes,         //
+    const int w_r,                    // weight rows
+    const int a_r,                    // activated rows
+    const int a_offset,               // activated offset
+    const int batch_size,             //
+    const int max_entries,            //
+    ActivationType act_type           //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= w_r * batch_size)
@@ -36,19 +38,60 @@ __global__ void sparse_affine_kernel( //
     activated_v[output_idx] = activate(sum, act_type);
 }
 
+void sparse_affine_fwd(              //
+    DenseMatrix &activated_v,        //
+    DenseMatrix &pre_activated,      //
+    const DenseMatrix &weights_v,    //
+    const DenseMatrix &biases_v,     //
+    const Array<int> &features,      //
+    const Array<int> &feature_sizes, //
+    const int a_offset,              //
+    const int batch_size,            //
+    const int max_entries,           //
+    const ActivationType act_type    //
+) {
+    ASSERT(batch_size == activated_v.num_cols());
+
+    ASSERT(weights_v.dev_address() &&     //
+           biases_v.dev_address() &&      //
+           activated_v.dev_address() &&   //
+           pre_activated.dev_address() && //
+           features.dev_address() &&      //
+           feature_sizes.dev_address());
+
+    const int block_size = 128;
+    const int grid_size = std::ceil(float(weights_v.num_rows() * batch_size) / block_size);
+
+    sparse_affine_kernel<<<grid_size, block_size>>>( //
+        weights_v.dev_address(),
+        biases_v.dev_address(),
+        activated_v.dev_address(),
+        pre_activated.dev_address(),
+        features.dev_address(),
+        feature_sizes.dev_address(),
+        weights_v.num_rows(),
+        activated_v.num_rows(),
+        a_offset,
+        batch_size,
+        max_entries,
+        act_type);
+}
+
+// BACKWARD
+
 __global__ void sparse_affine_bp_kernel( //
-    const float *activated_g,
-    const float *pre_activated,
-    float *weights_g,
-    float *biases_g,
-    const int *features,
-    const int *feature_sizes,
-    const int w_r,      // weight rows
-    const int a_r,      // activated rows
-    const int a_offset, // activated offset
-    const int batch_size,
-    const int max_entries,
-    ActivationType act_type //
+    const float *activated_g,            //
+    const float *pre_activated,          //
+    float *weights_g,                    //
+    float *biases_g,                     //
+    const int *features,                 //
+    const int *feature_sizes,            //
+    const int w_r,                       // weight rows
+    const int a_r,                       // activated rows
+    const int a_offset,                  // activated offset
+    const int batch_size,                //
+    const int max_entries,               //
+    ActivationType act_type              //
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= w_r * batch_size)
@@ -62,7 +105,7 @@ __global__ void sparse_affine_bp_kernel( //
     float grad = activated_g[output_idx];
     if(grad == 0)
         return;
-    grad *= activationDer(pre_activated[output_idx], act_type);
+    grad *= activate_der(pre_activated[output_idx], act_type);
 
     // no need to compute gradients for previous layer since previous are inputs
 
@@ -74,4 +117,43 @@ __global__ void sparse_affine_bp_kernel( //
         int sparse_idx = features[i + offset];
         atomicAdd(&weights_g[w_r * sparse_idx + neuron_idx], grad);
     }
+}
+
+void sparse_affine_bwd(               //
+    const DenseMatrix &activated_g,   //
+    const DenseMatrix &pre_activated, //
+    DenseMatrix &weights_g,           //
+    DenseMatrix &biases_g,            //
+    const Array<int> &features,       //
+    const Array<int> &feature_sizes,  //
+    const int a_offset,               //
+    const int batch_size,             //
+    const int max_entries,            //
+    const ActivationType act_type     //
+) {
+    ASSERT(activated_g.num_cols() == batch_size);
+
+    ASSERT(weights_g.dev_address() &&     //
+           biases_g.dev_address() &&      //
+           activated_g.dev_address() &&   //
+           pre_activated.dev_address() && //
+           features.dev_address() &&      //
+           feature_sizes.dev_address());
+
+    const int block_size = 128;
+    const int grid_size = std::ceil(float(weights_g.num_rows() * batch_size) / block_size);
+
+    sparse_affine_bp_kernel<<<grid_size, block_size>>>( //
+        activated_g.dev_address(),
+        pre_activated.dev_address(),
+        weights_g.dev_address(),
+        biases_g.dev_address(),
+        features.dev_address(),
+        feature_sizes.dev_address(),
+        weights_g.num_rows(),
+        activated_g.num_rows(),
+        a_offset,
+        batch_size,
+        max_entries,
+        act_type);
 }

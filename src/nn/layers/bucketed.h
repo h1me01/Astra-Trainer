@@ -1,0 +1,94 @@
+#pragma once
+
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+#include "../../kernel/kernel.h"
+#include "../../misc.h"
+#include "../data.h"
+#include "layer.h"
+
+class Bucketed : public LayerBase {
+  public:
+    static constexpr int NUM_BUCKETS = 8; // for now only supports 8 buckets
+
+  private:
+    int size;
+    LayerBase *previous;
+
+  public:
+    Bucketed(LayerBase *previous) : previous(previous) {
+        name = "Bucketed";
+        size = previous->get_output_size() / NUM_BUCKETS;
+        ASSERT(size == 1);
+    }
+
+    void forward() override {
+        Tensor &input = previous->get_output().activated;
+
+        const int batch_size = sparse_batch.get_batch_size();
+        const int input_size = previous->get_output_size();
+
+        const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
+        DenseMatrix &input_v = input.get_vals();
+
+        ASSERT(input_v.num_rows() == NUM_BUCKETS);
+        ASSERT(input_v.num_cols() == batch_size);
+        ASSERT(batch_size == bucket_indices.size());
+
+        select_fwd( //
+            input_v,
+            output.activated.get_vals(),
+            bucket_indices,
+            batch_size,
+            input_size,
+            size);
+    }
+
+    void backward() override {
+        Tensor &input = previous->get_output().activated;
+
+        const int batch_size = sparse_batch.get_batch_size();
+        const int input_size = previous->get_output_size();
+
+        const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
+        DenseMatrix &input_g = input.get_grads();
+
+        ASSERT(input_g.num_rows() == NUM_BUCKETS);
+        ASSERT(input_g.num_cols() == batch_size);
+        ASSERT(batch_size == bucket_indices.size());
+
+        select_bwd( //
+            input_g,
+            output.activated.get_grads(),
+            bucket_indices,
+            batch_size,
+            input_size,
+            size);
+    }
+
+    ActivationType activation_type() const override {
+        return Linear; // doesn't use activation
+    }
+
+    int get_output_size() const override {
+        return size;
+    }
+
+    int get_input_size() const override {
+        return previous->get_output_size();
+    }
+
+    std::vector<Tensor *> get_params() override {
+        return {};
+    }
+
+    std::string get_info() override {
+        std::stringstream ss;
+        ss << name << "(";
+        ss << std::to_string(get_input_size());
+        ss << "->" << std::to_string(size) << ")\n";
+        return ss.str();
+    }
+};

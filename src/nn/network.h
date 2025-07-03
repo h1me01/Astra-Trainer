@@ -6,6 +6,7 @@
 
 #include "../dataloader/dataloader.h"
 #include "data.h"
+#include "layers/bucketed.h"
 #include "layers/feature_transformer.h"
 #include "layers/fully_connected.h"
 #include "loss.h"
@@ -28,7 +29,7 @@ class Network {
     std::stringstream info;
 
     std::vector<LayerBase *> layers;
-    std::array<int, 64> king_bucket;
+    std::array<int, 64> input_bucket;
 
     Loss *loss = nullptr;
     Optimizer *optim = nullptr;
@@ -52,7 +53,7 @@ class Network {
         is_initialized = true;
     }
 
-    void printInfo() {
+    void print_info() {
         // save and print network info
         info << "\n================================= Network Info =================================\n\n";
         info << "Epochs: " << Epochs << std::endl;
@@ -62,20 +63,20 @@ class Network {
         info << "Output Scalar: " << OutputScalar << std::endl;
         info << "Start Lambda: " << StartLambda << std::endl;
         info << "End Lambda: " << EndLambda << std::endl;
-        info << "Loss: " << loss->getInfo() << std::endl;
-        info << "Optimizer: " << optim->getInfo() << std::endl;
+        info << "Loss: " << loss->info() << std::endl;
+        info << "Optimizer: " << optim->get_info() << std::endl;
 
         info << "\n============================= Network Architecture =============================\n\n";
         info << "King Bucket: " << std::endl;
-        for(size_t i = 0; i < king_bucket.size(); ++i) {
-            info << std::setw(3) << king_bucket[i];
+        for(size_t i = 0; i < input_bucket.size(); ++i) {
+            info << std::setw(3) << input_bucket[i];
             if((i + 1) % 8 == 0)
                 info << "\n";
         }
 
         info << "\nHidden Layers:" << std::endl;
         for(LayerBase *l : layers)
-            info << " - " << l->getInfo();
+            info << " - " << l->get_info();
         info << "\n";
 
         std::cout << info.str();
@@ -86,12 +87,12 @@ class Network {
             layers[i]->forward();
     }
 
-    void backprop() {
+    void backward() {
         for(int i = layers.size() - 1; i >= 0; i--)
-            layers[i]->backprop();
+            layers[i]->backward();
     }
 
-    void saveCheckpoint(const std::string &path) {
+    void save_checkpoint(const std::string &path) {
         ASSERT(quantFunc != nullptr);
 
         // create directory if it doesn't exist
@@ -109,11 +110,11 @@ class Network {
                 throw std::runtime_error("Failed to write weights to " + file);
 
             for(LayerBase *l : layers) {
-                for(Tensor *t : l->getParams()) {
-                    DenseMatrix &weights = t->getValues();
-                    weights.devToHost();
+                for(Tensor *t : l->get_params()) {
+                    DenseMatrix &weights = t->get_vals();
+                    weights.dev_to_host();
 
-                    int written = fwrite(weights.hostAddress(), sizeof(float), weights.size(), f);
+                    int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
                     if(written != weights.size())
                         throw std::runtime_error("Error writing weights to file");
                 }
@@ -171,14 +172,14 @@ class Network {
         StartLambda = start_lambda;
         EndLambda = end_lambda;
 
-        createCublas();
+        create_cublas();
     }
 
     ~Network() {
-        destroyCublas();
+        destroy_cublas();
     }
 
-    void loadWeights(const std::string &file) {
+    void load_weights(const std::string &file) {
         std::ifstream f(file, std::ios::binary);
 
         // check if the file exists
@@ -188,16 +189,16 @@ class Network {
 
         try {
             for(LayerBase *l : layers) {
-                for(Tensor *t : l->getParams()) {
-                    DenseMatrix &weights = t->getValues();
+                for(Tensor *t : l->get_params()) {
+                    DenseMatrix &weights = t->get_vals();
 
-                    f.read(reinterpret_cast<char *>(weights.hostAddress()), weights.size() * sizeof(float));
+                    f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
                     if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
                         throw std::runtime_error("Error: insufficient data read from file. Expected " +
                                                  std::to_string(weights.size()) + " floats");
                     }
 
-                    weights.hostToDev();
+                    weights.host_to_dev();
                 }
             }
 
@@ -224,13 +225,13 @@ class Network {
 
         LayerBase *output_layer = layers.back();
 
-        DenseMatrix &output = getOutput().getValues();
-        output.devToHost();
+        DenseMatrix &output = get_output().get_vals();
+        output.dev_to_host();
 
         return output(0) * OutputScalar;
     }
 
-    void testOnPositions(const std::vector<std::string> &positions) {
+    void evaluate_positions(const std::vector<std::string> &positions) {
         std::cout << "\n================================ Testing Network ===============================\n\n";
 
         for(const std::string &fen : positions) {
@@ -240,37 +241,37 @@ class Network {
     }
 
     template <typename Func> //
-    void setQuantizationScheme(Func &&func) {
+    void set_quant_scheme(Func &&func) {
         quantFunc = std::forward<Func>(func);
     }
 
-    void setLoss(Loss *loss) {
+    void set_loss(Loss *loss) {
         ASSERT(loss != nullptr);
         this->loss = loss;
     }
 
-    void setOptimizer(Optimizer *optim) {
+    void set_optim(Optimizer *optim) {
         ASSERT(optim != nullptr);
         this->optim = optim;
     }
 
-    void setKingBucket(std::array<int, 64> king_bucket) {
-        this->king_bucket = king_bucket;
+    void set_input_bucket(std::array<int, 64> input_bucket) {
+        this->input_bucket = input_bucket;
     }
 
-    void setHiddenLayers(std::vector<LayerBase *> hidden_layers) {
+    void set_hidden_layers(std::vector<LayerBase *> hidden_layers) {
         this->layers = hidden_layers;
     }
 
-    int getBatchSize() {
+    int get_batch_size() {
         return BatchSize;
     };
 
-    Tensor &getOutput() {
-        return layers[layers.size() - 1]->getDenseOutput().activated;
+    Tensor &get_output() {
+        return layers[layers.size() - 1]->get_output().activated;
     };
 
-    std::vector<LayerBase *> getLayers() {
+    std::vector<LayerBase *> get_layers() {
         return layers;
     }
 

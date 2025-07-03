@@ -3,25 +3,17 @@
 #include "../../nn/data.h"
 #include "../activation.h"
 
-// clang-format off
-__global__ void mpe_kernel
-(
-    const float *targets, 
-    const float *output_v, 
-    float *output_g, 
-    float *loss, 
+void mpe_loss( //
+    const Array<float> &targets,
+    Array<float> &loss,
+    Tensor &output,
     const float power,
     const ActivationType act_type,
-    const int size
-);
+    const int size);
 
-__global__ void mse_kernel
-(
-    const float *targets, 
-    const float *output_v, 
-    float *output_g, 
-    float *loss, 
+void mse_loss( //
+    const Array<float> &targets,
+    Array<float> &loss,
+    Tensor &output,
     const ActivationType act_type,
-    const int size
-);
-// clang-format on
+    const int size);

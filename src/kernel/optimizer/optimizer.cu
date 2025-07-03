@@ -1,22 +1,28 @@
 #include "../util.h"
 #include "optimizer.h"
 
+float getDecay(const float lr, const float decay) {
+    return 1.0f - lr * decay;
+}
+
+// ADAM
+
 __global__ void adam_kernel( //
-    float *vals,
-    float *grads,
-    float *moms,
-    float *vels,
-    const float lr,
-    const float beta1,
-    const float beta2,
-    const float eps,
-    const float decay,
-    const float min_val,
-    const float max_val,
-    const float grad_scale,
-    const int size //
+    float *vals,             //
+    float *grads,            //
+    float *moms,             //
+    float *vels,             //
+    const float lr,          //
+    const float beta1,       //
+    const float beta2,       //
+    const float eps,         //
+    const float decay,       //
+    const float min_val,     //
+    const float max_val,     //
+    const float grad_scale,  //
+    const int size           //
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;
 
@@ -42,25 +48,61 @@ __global__ void adam_kernel( //
     grads[idx] = 0.0f;
 }
 
-// https://github.com/LiyuanLucasLiu/RAdam/blob/master/radam/radam.py
-__global__ void radam_kernel( //
-    float *vals,
-    float *grads,
-    float *moms,
-    float *vels,
-    const float lr,
-    const float beta1,
-    const float beta2,
-    const float eps,
-    const float decay,
-    const float min_val,
-    const float max_val,
-    const float grad_scale,
-    const int N_sma_threshold,
-    const int step,
-    const int size //
+void adam_optim(              //
+    DenseMatrix &vals,        //
+    DenseMatrix &grads,       //
+    Array<float> &moms,       //
+    Array<float> &vels,       //
+    const AdamParams &params, //
+    const float min_val,      //
+    const float max_val,      //
+    const float grad_scale    //
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    ASSERT(vals.dev_address() &&  //
+           grads.dev_address() && //
+           moms.dev_address() &&  //
+           vels.dev_address());
+
+    const int block_size = 1024;
+    const int grid_size(std::ceil((float) vals.size() / block_size));
+
+    adam_kernel<<<grid_size, block_size>>>( //
+        vals.dev_address(),
+        grads.dev_address(),
+        moms.dev_address(),
+        vels.dev_address(),
+        params.lr,
+        params.beta1,
+        params.beta2,
+        params.eps,
+        getDecay(params.lr, params.decay),
+        min_val,
+        max_val,
+        grad_scale,
+        vals.size());
+}
+
+// RADAM
+
+// https://github.com/LiyuanLucasLiu/RAdam/blob/master/radam/radam.py
+__global__ void radam_kernel(  //
+    float *vals,               //
+    float *grads,              //
+    float *moms,               //
+    float *vels,               //
+    const float lr,            //
+    const float beta1,         //
+    const float beta2,         //
+    const float eps,           //
+    const float decay,         //
+    const float min_val,       //
+    const float max_val,       //
+    const float grad_scale,    //
+    const int N_sma_threshold, //
+    const int step,            //
+    const int size             //
+) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
         return;
 
@@ -102,26 +144,66 @@ __global__ void radam_kernel( //
     grads[idx] = 0.0f;
 }
 
+void radam_optim(              //
+    DenseMatrix &vals,         //
+    DenseMatrix &grads,        //
+    Array<float> &moms,        //
+    Array<float> &vels,        //
+    const AdamParams &params,  //
+    const float min_val,       //
+    const float max_val,       //
+    const float grad_scale,    //
+    const int N_sma_threshold, //
+    const int step             //
+) {
+    ASSERT(vals.dev_address() &&  //
+           grads.dev_address() && //
+           moms.dev_address() &&  //
+           vels.dev_address());
+
+    const int block_size = 1024;
+    const int grid_size(std::ceil((float) vals.size() / block_size));
+
+    radam_kernel<<<grid_size, block_size>>>( //
+        vals.dev_address(),
+        grads.dev_address(),
+        moms.dev_address(),
+        vels.dev_address(),
+        params.lr,
+        params.beta1,
+        params.beta2,
+        params.eps,
+        getDecay(params.lr, params.decay),
+        min_val,
+        max_val,
+        grad_scale,
+        N_sma_threshold,
+        step,
+        vals.size());
+}
+
+// RANGER
+
 // https://github.com/official-stockfish/nnue-pytorch/blob/master/ranger.py
 __global__ void ranger_kernel( //
-    float *vals,
-    float *grads,
-    float *moms,
-    float *vels,
-    float *slow_buffer,
-    const float lr,
-    const float beta1,
-    const float beta2,
-    const float eps,
-    const float decay,
-    const float min_val,
-    const float max_val,
-    const float grad_scale,
-    const float alpha,
-    const int k,
-    const int N_sma_threshold,
-    const int step,
-    const int size //
+    float *vals,               //
+    float *grads,              //
+    float *moms,               //
+    float *vels,               //
+    float *slow_buffer,        //
+    const float lr,            //
+    const float beta1,         //
+    const float beta2,         //
+    const float eps,           //
+    const float decay,         //
+    const float min_val,       //
+    const float max_val,       //
+    const float grad_scale,    //
+    const float alpha,         //
+    const int k,               //
+    const int N_sma_threshold, //
+    const int step,            //
+    const int size             //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
@@ -169,4 +251,49 @@ __global__ void ranger_kernel( //
     vels[idx] = vel;
     vals[idx] = clamp(val, min_val, max_val);
     grads[idx] = 0.0f;
+}
+
+void ranger_optim(             //
+    DenseMatrix &vals,         //
+    DenseMatrix &grads,        //
+    Array<float> &moms,        //
+    Array<float> &vels,        //
+    Array<float> &slow_buffer, //
+    const AdamParams &params,  //
+    const float min_val,       //
+    const float max_val,       //
+    const float grad_scale,    //
+    const float alpha,         //
+    const int k,               //
+    const int N_sma_threshold, //
+    const int step             //
+) {
+    ASSERT(vals.dev_address() &&  //
+           grads.dev_address() && //
+           moms.dev_address() &&  //
+           vels.dev_address() &&  //
+           slow_buffer.dev_address());
+
+    const int block_size = 1024;
+    const int grid_size(std::ceil((float) vals.size() / block_size));
+
+    ranger_kernel<<<grid_size, block_size>>>( //
+        vals.dev_address(),
+        grads.dev_address(),
+        moms.dev_address(),
+        vels.dev_address(),
+        slow_buffer.dev_address(),
+        params.lr,
+        params.beta1,
+        params.beta2,
+        params.eps,
+        getDecay(params.lr, params.decay),
+        min_val,
+        max_val,
+        grad_scale,
+        alpha,
+        k,
+        N_sma_threshold,
+        step,
+        vals.size());
 }

@@ -2,62 +2,66 @@
 
 #include "../misc.h"
 
-struct LRScheduler {
-    virtual float getLR(int epoch, float lr) = 0;
-    virtual std::string getInfo() = 0;
+class LRScheduler {
+  public:
+    virtual float get_lr(int epoch, float lr) = 0;
+    virtual std::string get_info() = 0;
 };
 
-struct StepDecay : public LRScheduler {
-    int step;
-    float gamma;
+class StepDecay : public LRScheduler {
+  private:
+    int m_step;
+    float m_gamma;
 
-    StepDecay(int step = 100, float gamma = 1.0) : step(step), gamma(gamma) {}
+  public:
+    StepDecay(int step = 100, float gamma = 1.0) : m_step(step), m_gamma(gamma) {}
 
-    float getLR(int epoch, float lr) override {
-        return epoch % step == 0 ? lr * gamma : lr;
+    float get_lr(int epoch, float lr) override {
+        return epoch % m_step == 0 ? lr * m_gamma : lr;
     }
 
-    std::string getInfo() override {
-        return "StepDecay(gamma=" + formatNumber(gamma) + ", step=" + std::to_string(step) + ")";
+    std::string get_info() override {
+        return "StepDecay(gamma=" + format_number(m_gamma) + ", step=" + std::to_string(m_step) + ")";
     }
 };
 
-struct GradualDecay : public LRScheduler {
-    float gamma;
+class GradualDecay : public LRScheduler {
+  private:
+    float m_gamma;
 
-    GradualDecay(float gamma = 0.92) : gamma(gamma) {}
+  public:
+    GradualDecay(float gamma = 0.92) : m_gamma(gamma) {}
 
-    float getLR(int epoch, float lr) override {
-        return lr * gamma;
+    float get_lr(int epoch, float lr) override {
+        return lr * m_gamma;
     }
 
-    std::string getInfo() override {
-        return "GradualDecay(gamma=" + formatNumber(gamma) + ")";
+    std::string get_info() override {
+        return "GradualDecay(gamma=" + format_number(m_gamma) + ")";
     }
 };
 
 class CosineAnnealing : public LRScheduler {
   private:
-    int max_epochs;
-    float min_lr;
-    float initial_lr;
-    bool initial_lr_set = false;
+    int m_max_epochs;
+    float m_min_lr;
+    float m_initial_lr;
 
-    const float pi = 3.14159265358979f;
+    const float m_pi = 3.14159265358979f;
 
   public:
     CosineAnnealing(int max_epochs, float initial_lr, float min_lr)
-        : max_epochs(max_epochs), initial_lr(initial_lr), min_lr(min_lr) {}
+        : m_max_epochs(max_epochs), m_initial_lr(initial_lr), m_min_lr(min_lr) {}
 
-    float getLR(int epoch, float lr) override {
-        if(epoch >= max_epochs)
-            return min_lr;
+    float get_lr(int epoch, float lr) override {
+        if(epoch >= m_max_epochs)
+            return m_min_lr;
 
-        float lambda = 1.0f - 0.5f * (1.0f + std::cos(pi * epoch / max_epochs));
-        return initial_lr + lambda * (min_lr - initial_lr);
+        float lambda = 1.0f - 0.5f * (1.0f + std::cos(m_pi * epoch / m_max_epochs));
+        return m_initial_lr + lambda * (m_min_lr - m_initial_lr);
     }
 
-    std::string getInfo() override {
-        return "CosineAnnealing(T_max=" + std::to_string(max_epochs) + ", eta_min=" + formatNumber(min_lr) + ")";
+    std::string get_info() override {
+        return "CosineAnnealing(T_max=" + std::to_string(m_max_epochs) + ", eta_min=" + format_number(m_min_lr) + ")";
     }
 };

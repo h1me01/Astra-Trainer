@@ -33,7 +33,7 @@ inline __device__ float activate(float x, ActivationType type) {
     }
 }
 
-inline __device__ float activationDer(float x, ActivationType type) {
+inline __device__ float activate_der(float x, ActivationType type) {
     switch(type) {
     case ReLU:
         return (x > 0.0f) ? 1.0f : 0.0f;

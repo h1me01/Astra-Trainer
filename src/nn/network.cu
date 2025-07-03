@@ -3,7 +3,7 @@
 
 // helper
 
-int parseEpochFromCheckpoint(const std::string &checkpoint_name) {
+int epoch_from_checkpoint(const std::string &checkpoint_name) {
     size_t dash_pos = checkpoint_name.find_last_of('-');
     if(dash_pos == std::string::npos) {
         std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0.\n";
@@ -25,6 +25,23 @@ int parseEpochFromCheckpoint(const std::string &checkpoint_name) {
     }
 }
 
+int get_next_training_idx(const std::string &output_path) {
+    int max_index = 0;
+
+    for(const auto &entry : std::filesystem::directory_iterator(output_path)) {
+        if(!entry.is_directory())
+            continue;
+
+        std::string folder_name = entry.path().filename().string();
+        if(folder_name.find("training_") == 0) {
+            int index = std::stoi(folder_name.substr(9));
+            max_index = std::max(max_index, index);
+        }
+    }
+
+    return max_index + 1;
+}
+
 // sparse batch definition
 
 SparseBatch LayerBase::sparse_batch{1, 1};
@@ -38,7 +55,7 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     int _pt = int(pt);
     int _view = int(view);
 
-    const int ksIndex = king_bucket[(56 * _view) ^ _ksq];
+    const int ksIndex = input_bucket[(56 * _view) ^ _ksq];
     // relative square
     _psq = _psq ^ (56 * _view);
     // horizontal flip if king is on other half
@@ -48,14 +65,14 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
 }
 
 void Network::fill(std::vector<DataEntry> &ds, float lambda) {
-    SparseBatch &sb = layers[0]->getSparseBatch();
+    SparseBatch &sb = layers[0]->get_sparse_batch();
 
-    const int max_entries = sb.maxEntries();
+    const int max_entries = sb.get_max_entries();
 
-    auto &psqt_indices = sb.getPSQTIndices();
-    auto &features_sizes = sb.getFeatureSizes();
-    auto &stm_features = sb.getFeatures()[0];
-    auto &nstm_features = sb.getFeatures()[1];
+    auto &psqt_indices = sb.get_psqt_indices();
+    auto &features_sizes = sb.get_feature_sizes();
+    auto &stm_features = sb.get_features()[0];
+    auto &nstm_features = sb.get_features()[1];
 
     for(size_t i = 0; i < ds.size(); i++) {
         const auto pos = ds[i].pos;
@@ -92,13 +109,13 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     }
 
     // upload to device
-    targets.hostToDev();
-    sb.hostToDev();
+    targets.host_to_dev();
+    sb.host_to_dev();
 }
 
 void Network::train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name) {
     init();
-    printInfo();
+    print_info();
 
     std::string training_folder;
     Logger log;
@@ -107,7 +124,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
     if(checkpoint_name.empty()) {
         std::cout << "No checkpoint path provided, training from scratch.\n";
 
-        int next_training_index = getNextTrainingIndex(output_path);
+        int next_training_index = get_next_training_idx(output_path);
         std::stringstream new_folder_path;
         new_folder_path << output_path << "/training_" << next_training_index;
         training_folder = new_folder_path.str();
@@ -128,15 +145,15 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
             return;
         }
 
-        loadWeights(checkpoint_path + "/weights.bin");
+        load_weights(checkpoint_path + "/weights.bin");
         optim->load(checkpoint_path);
         std::cout << std::endl;
 
-        epoch = parseEpochFromCheckpoint(checkpoint_name);
-        optim->lrFromEpoch(epoch);
+        epoch = epoch_from_checkpoint(checkpoint_name);
+        optim->lr_from_epoch(epoch);
 
         if(epoch > 0)
-            std::cout << "Resuming from epoch " << epoch << " with learning rate " << optim->getLR() << std::endl;
+            std::cout << "Resuming from epoch " << epoch << " with learning rate " << optim->get_lr() << std::endl;
 
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
 
@@ -172,9 +189,9 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
             fill(ds, lambda);
 
             timer.stop();
-            auto elapsed = timer.getElapsedTime();
+            auto elapsed = timer.elapsed_time();
 
-            if(batch == BatchesPerEpoch || timer.isTimeReached(1000)) {
+            if(batch == BatchesPerEpoch || timer.is_time_reached(1000)) {
                 printf("\repoch/batch = %3d/%4d, ", epoch, batch);
                 printf("pos/sec = %7d, ", (int) round(1000.0f * BatchSize * batch / elapsed));
                 printf("time = %3ds", (int) elapsed / 1000);
@@ -182,15 +199,15 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
             }
 
             forward();
-            loss->apply(targets, getOutput());
-            backprop();
+            loss->apply(targets, get_output());
+            backward();
             optim->apply(ds.size());
         }
 
-        float epoch_loss = loss->getLoss() / (BatchSize * BatchesPerEpoch);
+        float epoch_loss = loss->loss() / (BatchSize * BatchesPerEpoch);
 
         timer.stop();
-        auto elapsed = timer.getElapsedTime();
+        auto elapsed = timer.elapsed_time();
 
         printf("\repoch/batch = %3d/%4d, ", epoch, BatchesPerEpoch);
         printf("loss = %1.8f, ", epoch_loss);
@@ -202,9 +219,9 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
 
         if(epoch % SaveRate == 0 || epoch == Epochs) {
             std::string suffix = epoch == Epochs ? "final" : std::to_string(epoch);
-            saveCheckpoint(training_folder + "/checkpoint-" + suffix);
+            save_checkpoint(training_folder + "/checkpoint-" + suffix);
         }
 
-        optim->updateLR(epoch);
+        optim->update_lr(epoch);
     }
 }

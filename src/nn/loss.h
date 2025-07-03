@@ -7,57 +7,45 @@
 
 class Loss {
   protected:
-    Array<float> loss;
+    Array<float> m_loss;
 
   public:
-    Loss() : loss(1) {}
+    Loss() : m_loss(1) {}
 
     virtual void apply(const Array<float> &target, Tensor &output) = 0;
-    virtual std::string getInfo() = 0;
+    virtual std::string info() = 0;
 
-    float getLoss() {
-        loss.devToHost();
-        return loss(0);
+    float loss() {
+        m_loss.dev_to_host();
+        return m_loss(0);
     }
 
     void reset() {
-        loss(0) = 0;
-        loss.hostToDev();
+        m_loss(0) = 0;
+        m_loss.host_to_dev();
     }
 };
 
 template <ActivationType act_type> //
 struct MPELoss : Loss {
   private:
-    float power;
+    float m_power;
 
   public:
-    MPELoss(float power) : Loss(), power(power) {}
+    MPELoss(float power) : Loss(), m_power(power) {}
 
     void apply(const Array<float> &targets, Tensor &output) {
-        const DenseMatrix &output_v = output.getValues();
-        DenseMatrix &output_g = output.getGradients();
-
-        ASSERT(output_v.devAddress() && //
-               output_g.devAddress() && //
-               targets.devAddress() &&  //
-               loss.devAddress());
-
-        constexpr int block_size = 1024;
-        dim3 grid(std::ceil((float) output_v.size() / block_size));
-
-        mpe_kernel<<<grid, block_size>>>( //
-            targets.devAddress(),
-            output_v.devAddress(),
-            output_g.devAddress(),
-            loss.devAddress(),
-            power,
+        mpe_loss( //
+            targets,
+            m_loss,
+            output,
+            m_power,
             act_type,
-            output_v.size());
+            output.get_vals().size());
     }
 
-    std::string getInfo() {
-        return "MPELoss<" + getActivationName(act_type) + ">(power=" + formatNumber(power) + ")";
+    std::string info() {
+        return "MPELoss<" + get_activation_name(act_type) + ">(power=" + format_number(m_power) + ")";
     }
 };
 
@@ -66,27 +54,15 @@ struct MSELoss : Loss {
     MSELoss() : Loss() {}
 
     void apply(const Array<float> &targets, Tensor &output) {
-        const DenseMatrix &output_v = output.getValues();
-        DenseMatrix &output_g = output.getGradients();
-
-        ASSERT(output_v.devAddress() && //
-               output_g.devAddress() && //
-               targets.devAddress() &&  //
-               loss.devAddress());
-
-        constexpr int block_size = 1024;
-        dim3 grid(std::ceil((float) output_v.size() / block_size));
-
-        mse_kernel<<<grid, block_size>>>( //
-            targets.devAddress(),
-            output_v.devAddress(),
-            output_g.devAddress(),
-            loss.devAddress(),
+        mse_loss( //
+            targets,
+            m_loss,
+            output,
             act_type,
-            output_v.size());
+            output.get_vals().size());
     }
 
-    std::string getInfo() {
-        return "MSELoss<" + getActivationName(act_type) + ">()";
+    std::string info() {
+        return "MSELoss<" + get_activation_name(act_type) + ">()";
     }
 };

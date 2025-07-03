@@ -33,15 +33,15 @@
         }                                                                                                              \
     }
 
-inline std::string getActivationName(int type) {
+inline std::string get_activation_name(int type) {
     // clang-format off
     switch(type) 
     {
     case 0: return "Linear";
     case 1: return "ReLU";
     case 2: return "CReLU";
-    case 3: return "SCReLU";
-    case 4: return "SqrRelu";
+    case 3: return "SRelu";
+    case 4: return "SCReLU";
     case 5: return "Sigmoid";
     case 6: return "Tanh";
     default: return "Unknown";
@@ -49,13 +49,13 @@ inline std::string getActivationName(int type) {
     // clang-format on
 }
 
-inline std::string formatNumber(float num) {
+inline std::string format_number(float num) {
     std::ostringstream oss;
     oss << num;
     return oss.str();
 }
 
-inline int getBucketSize(const std::array<int, 64> &king_bucket) {
+inline int get_bucket_size(const std::array<int, 64> &king_bucket) {
     if(king_bucket.empty())
         return 1;
 
@@ -67,7 +67,7 @@ inline int getBucketSize(const std::array<int, 64> &king_bucket) {
     return max_value + 1;
 }
 
-inline std::vector<std::string> fetchFilesFromPath(const std::string &path) {
+inline std::vector<std::string> fetch_files_from_path(const std::string &path) {
     std::cout << "================================= Training Data ================================\n\n";
     std::cout << "Loading files from folder: " << path << std::endl;
 
@@ -88,23 +88,6 @@ inline std::vector<std::string> fetchFilesFromPath(const std::string &path) {
     }
 
     return files;
-}
-
-inline int getNextTrainingIndex(const std::string &output_path) {
-    int max_index = 0;
-
-    for(const auto &entry : std::filesystem::directory_iterator(output_path)) {
-        if(!entry.is_directory())
-            continue;
-
-        std::string folder_name = entry.path().filename().string();
-        if(folder_name.find("training_") == 0) {
-            int index = std::stoi(folder_name.substr(9));
-            max_index = std::max(max_index, index);
-        }
-    }
-
-    return max_index + 1;
 }
 
 class Logger {
@@ -165,13 +148,13 @@ class Timer {
         end_point = steady_clock::now();
     }
 
-    long long getElapsedTime() const {
+    long long elapsed_time() const {
         return std::chrono::duration_cast<ms>(end_point - start_point).count();
     }
 
     // returns true if the provided has elapsed since the last call
-    bool isTimeReached(long long time) {
-        long long elapsed = getElapsedTime();
+    bool is_time_reached(long long time) {
+        long long elapsed = elapsed_time();
         if(elapsed - prev_duration > time) {
             prev_duration = elapsed;
             return true;

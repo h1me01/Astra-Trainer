@@ -3,10 +3,10 @@
 #include "../../nn/data.h"
 #include "../activation.h"
 
-void createCublas();
-void destroyCublas();
+void create_cublas();
+void destroy_cublas();
 
-void affine( //
+void affine_fwd( //
     DenseMatrix &weights_v,
     DenseMatrix &biases_v,
     DenseMatrix &inputs_v,
@@ -14,7 +14,7 @@ void affine( //
     DenseMatrix &pre_activated,
     const ActivationType act_type);
 
-void affine_bp( //
+void affine_bwd( //
     Tensor &weights,
     Tensor &biases,
     Tensor &inputs,

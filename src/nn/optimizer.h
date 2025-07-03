@@ -20,52 +20,40 @@ class Optimizer {
 
     int step = 0;
 
-    float lr;
-    float beta1;
-    float beta2;
-    float eps;
-
-    float decay = 0.0f;
+    AdamParams params;
 
     float min_val = -1;
     float max_val = -1;
 
     LRScheduler *scheduler = nullptr;
 
-    float getDecay() {
-        return 1.0f - lr * decay;
-    }
-
   public:
-    Optimizer(float lr, float beta1, float beta2, float eps) //
-        : lr(lr), beta1(beta1), beta2(beta2), eps(eps) {}
+    Optimizer(AdamParams params) //
+        : params(params) {}
 
     void init(std::vector<LayerBase *> layers) {
-        for(LayerBase *l : layers)
-            for(auto *t : l->getParams()) {
+        for(LayerBase *l : layers) {
+            for(auto *t : l->get_params()) {
                 if(min_val != -1)
                     t->clamp(min_val, t->max());
                 if(max_val != -1)
                     t->clamp(t->min(), max_val);
                 tunables.push_back(t);
             }
-        initBuffers();
+        }
+        init_buffers();
     }
 
-    void lrFromEpoch(int epoch) {
+    void lr_from_epoch(int epoch) {
         if(scheduler == nullptr)
             return;
         for(int i = 1; i <= epoch; i++)
-            updateLR(i);
+            update_lr(i);
     }
 
-    void updateLR(int epoch) {
+    void update_lr(int epoch) {
         if(scheduler != nullptr)
-            lr = scheduler->getLR(epoch, lr);
-    }
-
-    void setDecay(float decay) {
-        this->decay = decay;
+            params.lr = scheduler->get_lr(epoch, params.lr);
     }
 
     void clamp(float min, float max) {
@@ -73,7 +61,7 @@ class Optimizer {
         this->max_val = max;
     }
 
-    void setLRScheduler(LRScheduler *scheduler) {
+    void set_scheduler(LRScheduler *scheduler) {
         this->scheduler = scheduler;
     }
 
@@ -89,19 +77,19 @@ class Optimizer {
                 throw std::runtime_error("Failed to open file " + filename);
 
             for(size_t i = 0; i < buffers.size(); i++) {
-                f.read(reinterpret_cast<char *>(buffers[i].hostAddress()), buffers[i].size() * sizeof(float));
+                f.read(reinterpret_cast<char *>(buffers[i].host_address()), buffers[i].size() * sizeof(float));
                 if(f.gcount() != static_cast<std::streamsize>(buffers[i].size() * sizeof(float))) {
                     throw std::runtime_error("Error: insufficient data read for " + name + ". Expected " +
                                              std::to_string(buffers[i].size()) + " floats");
                 }
-                buffers[i].hostToDev();
+                buffers[i].host_to_dev();
             }
         };
 
         try {
             loadFile(state_path + "/momentum.bin", momentum, "momentum");
             loadFile(state_path + "/velocity.bin", velocity, "velocity");
-            if(!slow_buffer.empty())
+            if(name == "Ranger")
                 loadFile(state_path + "/slow_buffer.bin", slow_buffer, "slow_buffer");
         } catch(const std::exception &e) {
             throw std::runtime_error("Failed to load optimizer state from " + state_path + ": " + e.what());
@@ -121,8 +109,8 @@ class Optimizer {
             }
 
             for(auto &buffer : buffers) {
-                buffer.devToHost();
-                f.write(reinterpret_cast<const char *>(buffer.hostAddress()), buffer.size() * sizeof(float));
+                buffer.dev_to_host();
+                f.write(reinterpret_cast<const char *>(buffer.host_address()), buffer.size() * sizeof(float));
                 if(!f.good())
                     throw std::runtime_error("Error writing to file " + filename);
             }
@@ -131,82 +119,64 @@ class Optimizer {
         try {
             saveFile(state_path + "/momentum.bin", momentum);
             saveFile(state_path + "/velocity.bin", velocity);
-            if(!slow_buffer.empty())
+            if(name == "Ranger")
                 saveFile(state_path + "/slow_buffer.bin", slow_buffer);
         } catch(const std::exception &e) {
             throw std::runtime_error("Failed to save optimizer state to " + state_path + ": " + e.what());
         }
     }
 
-    float getLR() const {
-        return lr;
-    }
-
-    virtual void initBuffers() {
-        for(Tensor *t : tunables) {
-            int size = t->getValues().size();
-            momentum.push_back(Array<float>{size});
-            velocity.push_back(Array<float>{size});
-        }
+    float get_lr() const {
+        return params.lr;
     }
 
     virtual void apply(int batch_size) = 0;
 
-    std::string getInfo() {
-        std::stringstream info;
-        info << name << "(";
-        info << "lr=" << formatNumber(lr);
-        info << ", beta1=" << formatNumber(beta1);
-        info << ", beta2=" << formatNumber(beta2);
-        info << ", eps=" << formatNumber(eps);
-        if(decay != 0.0f)
-            info << ", decay=" << formatNumber(decay);
+    void init_buffers() {
+        for(Tensor *t : tunables) {
+            int size = t->get_vals().size();
+            momentum.push_back(Array<float>{size});
+            velocity.push_back(Array<float>{size});
+            slow_buffer.push_back(Array<float>{size});
+        }
+    }
+
+    std::string get_info() {
+        std::stringstream ss;
+        ss << name << "(";
+        ss << "lr=" << format_number(params.lr);
+        ss << ", beta1=" << format_number(params.beta1);
+        ss << ", beta2=" << format_number(params.beta2);
+        ss << ", eps=" << format_number(params.eps);
+        if(params.decay != 0.0f)
+            ss << ", decay=" << format_number(params.decay);
         if(scheduler != nullptr)
-            info << ", sched=" << scheduler->getInfo();
-        info << ")";
-        return info.str();
+            ss << ", sched=" << scheduler->get_info();
+        ss << ")";
+        return ss.str();
     }
 };
 
 struct Adam : Optimizer {
-    Adam(float lr = 0.001, float beta1 = 0.9, float beta2 = 0.999, float eps = 1e-8)
-        : Optimizer(lr, beta1, beta2, eps) {
+    Adam(AdamParams params = AdamParams{0.001, 0.9, 0.999, 1e-8, 0.01}) : Optimizer(params) {
         name = "Adam";
     }
 
     void apply(int batch_size) override {
         step++;
 
-        const float _decay = getDecay();
         const float grad_scale = 1.0f / batch_size;
 
-        constexpr int block_size = 1024;
-
         for(size_t i = 0; i < tunables.size(); i++) {
-            DenseMatrix &values = tunables[i]->getValues();
-            DenseMatrix &gradients = tunables[i]->getGradients();
-
-            ASSERT(values.devAddress() &&      //
-                   gradients.devAddress() &&   //
-                   momentum[i].devAddress() && //
-                   velocity[i].devAddress());
-
-            dim3 grid(std::ceil((float) values.size() / block_size));
-
-            adam_kernel<<<grid, block_size>>>( //
-                values.devAddress(),
-                gradients.devAddress(),
-                momentum[i].devAddress(),
-                velocity[i].devAddress(),
-                lr,
-                beta1,
-                beta2,
-                eps,
-                _decay,
+            adam_optim( //
+                tunables[i]->get_vals(),
+                tunables[i]->get_grads(),
+                momentum[i],
+                velocity[i],
+                params,
                 tunables[i]->min(),
                 tunables[i]->max(),
-                grad_scale,
-                values.size());
+                grad_scale);
         }
     }
 };
@@ -216,46 +186,27 @@ class RAdam : public Optimizer {
     int N_sma_threshold = 5;
 
   public:
-    RAdam(float lr = 0.001, float beta1 = 0.9, float beta2 = 0.999, float eps = 1e-8)
-        : Optimizer(lr, beta1, beta2, eps) {
+    RAdam(AdamParams params = AdamParams{0.001, 0.9, 0.999, 1e-8, 0.01}) : Optimizer(params) {
         name = "RAdam";
     }
 
     void apply(int batch_size) override {
         step++;
 
-        const float _decay = getDecay();
         const float grad_scale = 1.0f / batch_size;
 
-        constexpr int block_size = 1024;
-
         for(size_t i = 0; i < tunables.size(); i++) {
-            DenseMatrix &values = tunables[i]->getValues();
-            DenseMatrix &gradients = tunables[i]->getGradients();
-
-            ASSERT(values.devAddress() &&      //
-                   gradients.devAddress() &&   //
-                   momentum[i].devAddress() && //
-                   velocity[i].devAddress());
-
-            dim3 grid(std::ceil((float) values.size() / block_size));
-
-            radam_kernel<<<grid, block_size>>>( //
-                values.devAddress(),
-                gradients.devAddress(),
-                momentum[i].devAddress(),
-                velocity[i].devAddress(),
-                lr,
-                beta1,
-                beta2,
-                eps,
-                _decay,
+            radam_optim( //
+                tunables[i]->get_vals(),
+                tunables[i]->get_grads(),
+                momentum[i],
+                velocity[i],
+                params,
                 tunables[i]->min(),
                 tunables[i]->max(),
                 grad_scale,
                 N_sma_threshold,
-                step,
-                values.size());
+                step);
         }
     }
 
@@ -271,58 +222,30 @@ class Ranger : public Optimizer {
     int N_sma_threshold = 6;
 
   public:
-    Ranger(float lr = 0.001, float beta1 = 0.95, float beta2 = 0.999, float eps = 1e-5)
-        : Optimizer(lr, beta1, beta2, eps) {
+    Ranger(AdamParams params = AdamParams{0.001, 0.95, 0.999, 1e-5, 0.01}) : Optimizer(params) {
         name = "Ranger";
-    }
-
-    void initBuffers() override {
-        for(Tensor *t : tunables) {
-            int size = t->getValues().size();
-            momentum.push_back(Array<float>{size});
-            velocity.push_back(Array<float>{size});
-            slow_buffer.push_back(Array<float>{size});
-        }
     }
 
     void apply(int batch_size) override {
         step++;
 
-        const float _decay = getDecay();
         const float grad_scale = 1.0f / batch_size;
 
-        constexpr int block_size = 1024;
-
         for(size_t i = 0; i < tunables.size(); i++) {
-            DenseMatrix &values = tunables[i]->getValues();
-            DenseMatrix &gradients = tunables[i]->getGradients();
-
-            ASSERT(values.devAddress() &&      //
-                   gradients.devAddress() &&   //
-                   momentum[i].devAddress() && //
-                   velocity[i].devAddress());
-
-            dim3 grid(std::ceil((float) values.size() / block_size));
-
-            ranger_kernel<<<grid, block_size>>>( //
-                values.devAddress(),
-                gradients.devAddress(),
-                momentum[i].devAddress(),
-                velocity[i].devAddress(),
-                slow_buffer[i].devAddress(),
-                lr,
-                beta1,
-                beta2,
-                eps,
-                _decay,
+            ranger_optim( //
+                tunables[i]->get_vals(),
+                tunables[i]->get_grads(),
+                momentum[i],
+                velocity[i],
+                slow_buffer[i],
+                params,
                 tunables[i]->min(),
                 tunables[i]->max(),
                 grad_scale,
                 alpha,
                 k,
                 N_sma_threshold,
-                step,
-                values.size());
+                step);
         }
     }
 

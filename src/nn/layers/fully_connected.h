@@ -9,16 +9,11 @@
 #include "../data.h"
 #include "layer.h"
 
-template < //
-    int size,
-    ActivationType act_type,
-    bool bucketed = false>
+template <int size, ActivationType act_type = Linear> //
 class FullyConnected : public LayerBase {
   private:
-    static constexpr int bucket_size = 8; // for now only supports 8 buckets
-
     Tensor weights{1, 1};
-    Tensor biases{size * (bucketed ? bucket_size : 1), 1};
+    Tensor biases{size, 1};
 
     LayerBase *previous;
 
@@ -26,90 +21,66 @@ class FullyConnected : public LayerBase {
     FullyConnected(LayerBase *previous, WeightInitType init_type) : previous(previous) {
         name = "FullyConnected";
 
-        int input_size = previous->getOutputSize();
+        int input_size = previous->get_output_size();
 
-        weights = Tensor(size * (bucketed ? bucket_size : 1), input_size);
+        weights = Tensor(size, input_size);
         switch(init_type) {
         case WeightInitType::Uniform:
-            weights.initUniformly();
+            weights.init_uniformly();
             break;
         case WeightInitType::He:
-            weights.heInit(input_size);
+            weights.he_init(input_size);
             break;
         }
     }
 
     void forward() override {
-        Tensor &inputs = previous->getDenseOutput().activated;
+        Tensor &inputs = previous->get_output().activated;
 
-        if(bucketed) {
-            bucketed_affine_fwd( //
-                weights.getValues(),
-                biases.getValues(),
-                inputs.getValues(),
-                output.activated.getValues(),
-                output.pre_activated,
-                sparse_batch.getPSQTIndices(),
-                act_type,
-                bucket_size);
-        } else {
-            affine( //
-                weights.getValues(),
-                biases.getValues(),
-                inputs.getValues(),
-                output.activated.getValues(),
-                output.pre_activated,
-                act_type);
-        }
+        affine_fwd( //
+            weights.get_vals(),
+            biases.get_vals(),
+            inputs.get_vals(),
+            output.activated.get_vals(),
+            output.pre_activated,
+            act_type);
     }
 
-    void backprop() override {
-        Tensor &inputs = previous->getDenseOutput().activated;
+    void backward() override {
+        Tensor &inputs = previous->get_output().activated;
 
-        if(bucketed) {
-            bucketed_affine_bwd( //
-                weights,
-                biases,
-                inputs,
-                output.activated,
-                output.pre_activated,
-                sparse_batch.getPSQTIndices(),
-                act_type,
-                bucket_size);
-        } else {
-            affine_bp( //
-                weights,
-                biases,
-                inputs,
-                output.activated,
-                output.pre_activated,
-                act_type);
-        }
+        affine_bwd( //
+            weights,
+            biases,
+            inputs,
+            output.activated,
+            output.pre_activated,
+            act_type);
     }
 
-    ActivationType getActivationType() const override {
+    ActivationType activation_type() const override {
         return act_type;
     }
 
-    int getOutputSize() const override {
+    int get_output_size() const override {
         return size;
     }
 
-    int getInputSize() const override {
-        return previous->getOutputSize();
+    int get_input_size() const override {
+        return previous->get_output_size();
     }
 
-    std::vector<Tensor *> getParams() override {
+    std::vector<Tensor *> get_params() override {
         return {&weights, &biases};
     }
 
-    std::string getInfo() override {
-        std::stringstream info;
-        info << name << "<";
-        info << getActivationName(getActivationType()) << ">(";
-        info << std::to_string(getInputSize());
-        info << "->" << (bucketed ? "8x" : "") << std::to_string(size) << ")\n";
-        info << getParamsInfo();
-        return info.str();
+    std::string get_info() override {
+        std::stringstream ss;
+        ss << name << "<";
+        ss << get_activation_name(activation_type()) << ">(";
+        ss << std::to_string(get_input_size());
+        ss << "->" << std::to_string(size) << ")\n";
+        ss << params_info();
+        return ss.str();
     }
 };
