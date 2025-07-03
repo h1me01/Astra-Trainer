@@ -102,7 +102,7 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
 
         features_sizes(i) = count;
 
-        float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / OutputScalar));
+        float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / hp.output_scalar));
         float wdl_target = (ds[i].result + 1) / 2.0f;
 
         targets(i) = lambda * score_target + (1.0f - lambda) * wdl_target;
@@ -162,7 +162,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
     }
 
     // init dataloader
-    FeaturedBatchStream dataloader(files, ThreadCount, BatchSize, false);
+    FeaturedBatchStream dataloader(files, hp.thread_count, hp.batch_size, false);
 
     std::cout << "\n=============================== Training Network ===============================\n\n";
 
@@ -178,22 +178,22 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
     }
 
     Timer timer;
-    for(epoch = epoch + 1; epoch <= Epochs; epoch++) {
+    for(epoch = epoch + 1; epoch <= hp.epochs; epoch++) {
         timer.start();
         loss->reset();
 
-        float lambda = StartLambda + (EndLambda - StartLambda) * (epoch / float(Epochs));
+        float lambda = hp.start_lambda + (hp.end_lambda - hp.start_lambda) * (epoch / float(hp.epochs));
 
-        for(int batch = 1; batch <= BatchesPerEpoch; batch++) {
+        for(int batch = 1; batch <= hp.batches_per_epoch; batch++) {
             auto ds = dataloader.next();
             fill(ds, lambda);
 
             timer.stop();
             auto elapsed = timer.elapsed_time();
 
-            if(batch == BatchesPerEpoch || timer.is_time_reached(1000)) {
+            if(batch == hp.batches_per_epoch || timer.is_time_reached(1000)) {
                 printf("\repoch/batch = %3d/%4d, ", epoch, batch);
-                printf("pos/sec = %7d, ", (int) round(1000.0f * BatchSize * batch / elapsed));
+                printf("pos/sec = %7d, ", (int) round(1000.0f * hp.batch_size * batch / elapsed));
                 printf("time = %3ds", (int) elapsed / 1000);
                 std::cout << std::flush;
             }
@@ -204,21 +204,21 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
             optim->apply(ds.size());
         }
 
-        float epoch_loss = loss->loss() / (BatchSize * BatchesPerEpoch);
+        float epoch_loss = loss->loss() / (hp.batch_size * hp.batches_per_epoch);
 
         timer.stop();
         auto elapsed = timer.elapsed_time();
 
-        printf("\repoch/batch = %3d/%4d, ", epoch, BatchesPerEpoch);
+        printf("\repoch/batch = %3d/%4d, ", epoch, hp.batches_per_epoch);
         printf("loss = %1.8f, ", epoch_loss);
-        printf("pos/sec = %7d, ", (int) round(1000.0f * BatchSize * BatchesPerEpoch / elapsed));
+        printf("pos/sec = %7d, ", (int) round(1000.0f * hp.batch_size * hp.batches_per_epoch / elapsed));
         printf("time = %3ds", (int) elapsed / 1000);
         std::cout << std::endl;
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
-        if(epoch % SaveRate == 0 || epoch == Epochs) {
-            std::string suffix = epoch == Epochs ? "final" : std::to_string(epoch);
+        if(epoch % hp.save_rate == 0 || epoch == hp.epochs) {
+            std::string suffix = epoch == hp.epochs ? "final" : std::to_string(epoch);
             save_checkpoint(training_folder + "/checkpoint-" + suffix);
         }
 

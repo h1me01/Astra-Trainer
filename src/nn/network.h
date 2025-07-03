@@ -12,19 +12,44 @@
 #include "loss.h"
 #include "optimizer.h"
 
+struct Hyperparameters {
+    int epochs = 500;
+    int batch_size = 16384;
+    int batches_per_epoch = 6104;
+    int save_rate = 10;
+    int thread_count = 1; // dataloader thread count
+    float output_scalar = 400.0f;
+    float start_lambda = 0.7f;
+    float end_lambda = 0.8f;
+
+    Hyperparameters() {}
+
+    Hyperparameters(           //
+        int epochs,            //
+        int batch_size,        //
+        int batches_per_epoch, //
+        int save_rate,         //
+        int thread_count,      //
+        float output_scalar,   //
+        float start_lambda,    //
+        float end_lambda       //
+    ) {
+        this->epochs = epochs;
+        this->batch_size = batch_size;
+        this->batches_per_epoch = batches_per_epoch;
+        this->save_rate = save_rate;
+        this->thread_count = thread_count;
+        this->output_scalar = output_scalar;
+        this->start_lambda = start_lambda;
+        this->end_lambda = end_lambda;
+    }
+};
+
 class Network {
   private:
     bool is_initialized = false;
 
-    int Epochs;
-    int BatchSize;
-    int BatchesPerEpoch;
-    int SaveRate;
-    int ThreadCount; // dataloader thread count
-
-    float OutputScalar;
-    float StartLambda;
-    float EndLambda;
+    Hyperparameters hp;
 
     std::stringstream info;
 
@@ -48,7 +73,7 @@ class Network {
 
         optim->init(layers);
         for(LayerBase *l : layers)
-            l->init(BatchSize);
+            l->init(hp.batch_size);
 
         is_initialized = true;
     }
@@ -56,18 +81,18 @@ class Network {
     void print_info() {
         // save and print network info
         info << "\n================================= Network Info =================================\n\n";
-        info << "Epochs: " << Epochs << std::endl;
-        info << "Batch Size: " << BatchSize << std::endl;
-        info << "Batches per Epoch: " << BatchesPerEpoch << std::endl;
-        info << "Save Rate: " << SaveRate << std::endl;
-        info << "Output Scalar: " << OutputScalar << std::endl;
-        info << "Start Lambda: " << StartLambda << std::endl;
-        info << "End Lambda: " << EndLambda << std::endl;
+        info << "Epochs: " << hp.epochs << std::endl;
+        info << "Batch Size: " << hp.batch_size << std::endl;
+        info << "Batches per Epoch: " << hp.batches_per_epoch << std::endl;
+        info << "Save Rate: " << hp.save_rate << std::endl;
+        info << "Output Scalar: " << hp.output_scalar << std::endl;
+        info << "Start Lambda: " << hp.start_lambda << std::endl;
+        info << "End Lambda: " << hp.end_lambda << std::endl;
         info << "Loss: " << loss->info() << std::endl;
         info << "Optimizer: " << optim->get_info() << std::endl;
 
         info << "\n============================= Network Architecture =============================\n\n";
-        info << "King Bucket: " << std::endl;
+        info << "Input Bucket: " << std::endl;
         for(size_t i = 0; i < input_bucket.size(); ++i) {
             info << std::setw(3) << input_bucket[i];
             if((i + 1) % 8 == 0)
@@ -150,28 +175,7 @@ class Network {
     void fill(std::vector<DataEntry> &ds, float lambda);
 
   public:
-    // clang-format off
-    explicit Network(
-        int epochs = 500,
-        int batch_size = 16384,
-        int batches_per_epoch = 6104,
-        int save_rate = 10,
-        int thread_count = 2,
-        float output_scalar = 400,
-        float start_lambda = 0.7,
-        float end_lambda = 0.8
-    ) 
-    : targets(batch_size) {
-        // clang-format on
-        Epochs = epochs;
-        BatchSize = batch_size;
-        BatchesPerEpoch = batches_per_epoch;
-        SaveRate = save_rate;
-        ThreadCount = thread_count;
-        OutputScalar = output_scalar;
-        StartLambda = start_lambda;
-        EndLambda = end_lambda;
-
+    explicit Network(Hyperparameters hp) : hp(hp), targets(hp.batch_size) {
         create_cublas();
     }
 
@@ -228,7 +232,7 @@ class Network {
         DenseMatrix &output = get_output().get_vals();
         output.dev_to_host();
 
-        return output(0) * OutputScalar;
+        return output(0) * hp.output_scalar;
     }
 
     void evaluate_positions(const std::vector<std::string> &positions) {
@@ -264,7 +268,7 @@ class Network {
     }
 
     int get_batch_size() {
-        return BatchSize;
+        return hp.batch_size;
     };
 
     Tensor &get_output() {

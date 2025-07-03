@@ -142,7 +142,7 @@ struct FeaturedBatchStream {
     int m_batch_size;
     int m_concurrency;
     bool m_cyclic;
-    std::array<int, 64> m_king_bucket{};
+    std::array<int, 64> m_input_bucket{};
 
     std::deque<std::vector<DataEntry>> m_batches;
     std::mutex m_batch_mutex;

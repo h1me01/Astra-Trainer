@@ -9,16 +9,16 @@ int main() {
     vector<string> files = fetch_files_from_path(root_path + "/training_data");
 
     // init network
-    Network network( //
-        50,          // epochs
-        16384,       // batch size
-        6104,        // batches per epoch
-        100,         // save rate
-        1,           // thread count for dataloader
-        400,         // output scalar
-        1.0,         // wdl start lambda
-        1.0          // wdl end lambda
-    );
+    Network network({
+        5,     // epochs
+        16384, // batch size
+        6104,  // batches per epoch
+        100,   // save rate
+        1,     // thread count for dataloader
+        400,   // output scalar
+        1.0,   // wdl start lambda
+        1.0    // wdl end lambda
+    });
 
     // init loss
     MPELoss<Sigmoid> loss(2.5); // 2.5 = power
@@ -53,8 +53,8 @@ int main() {
 
     network.set_optim(&optim);
 
-    // init king bucket (if needed)
-    array<int, 64> king_bucket = {
+    // init input bucket (if needed)
+    array<int, 64> input_bucket = {
         0,  1,  2,  3,  3,  2,  1,  0,  //
         4,  5,  6,  7,  7,  6,  5,  4,  //
         8,  8,  9,  9,  9,  9,  8,  8,  //
@@ -65,12 +65,12 @@ int main() {
         11, 11, 11, 11, 11, 11, 11, 11, //
     };
 
-    network.set_input_bucket(king_bucket);
+    network.set_input_bucket(input_bucket);
 
     // init hidden layers
-    auto ft = DualFeatureTransformer<1536, SCReLU>( //
-        get_bucket_size(king_bucket) * 768,         // input size
-        WeightInitType::Uniform                     // weight initialization type
+    auto ft = DualFeatureTransformer<256, SCReLU>( //
+        get_bucket_size(input_bucket) * 768,       // input size
+        WeightInitType::Uniform                    // weight initialization type
     );
 
     auto l1 = FullyConnected<Bucketed::NUM_BUCKETS>( //

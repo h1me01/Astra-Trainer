@@ -55,14 +55,14 @@ inline std::string format_number(float num) {
     return oss.str();
 }
 
-inline int get_bucket_size(const std::array<int, 64> &king_bucket) {
-    if(king_bucket.empty())
+inline int get_bucket_size(const std::array<int, 64> &bucket) {
+    if(bucket.empty())
         return 1;
 
-    int max_value = king_bucket[0];
-    for(size_t i = 1; i < king_bucket.size(); ++i)
-        if(king_bucket[i] > max_value)
-            max_value = king_bucket[i];
+    int max_value = bucket[0];
+    for(size_t i = 1; i < bucket.size(); ++i)
+        if(bucket[i] > max_value)
+            max_value = bucket[i];
 
     return max_value + 1;
 }
