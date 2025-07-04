@@ -9,7 +9,6 @@
 enum class WeightInitType { Uniform, He };
 
 enum class QuantType { //
-    NONE,
     INT8,
     INT16,
     INT32,
@@ -17,9 +16,9 @@ enum class QuantType { //
 };
 
 struct QuantScheme {
-    int scale = -1;
+    int scale = 1;
     bool trans = false;
-    QuantType type = QuantType::NONE;
+    QuantType type = QuantType::FLOAT;
 
     QuantScheme() {};
 };
@@ -104,10 +103,6 @@ class Tensor {
         return m_upper_bound;
     }
 
-    bool is_quantized() const {
-        return quant_scheme.type != QuantType::NONE;
-    }
-
     DenseMatrix<float> &get_data() {
         return data;
     }
@@ -137,18 +132,23 @@ inline void Tensor::init(WeightInitType type, int previous_size) {
 
 template <typename T> //
 void Tensor::write_quantized(FILE *f) {
-    auto quantize_value = [&](float orig) {
-        T quant = static_cast<T>(round(orig * quant_scheme.scale));
-        if(quant < std::numeric_limits<T>::min() || quant > std::numeric_limits<T>::max()) {
-            std::stringstream ss;
-            ss << "Error: Overflow/Underflow while quantizing value: " << orig;
-            ss << " with scale: " << quant_scheme.scale << ". ";
-            ss << "Quantized value: " << static_cast<int>(quant) << ". ";
-            ss << "Type: " << typeid(T).name() << ".";
+    auto quantize_value = [&](float orig) -> T {
+        if constexpr(std::is_same_v<T, float>) {
+            return orig; // no quantization needed for float
+        } else {
+            float scaled = orig * quant_scheme.scale;
+            T quant = static_cast<T>(round(scaled));
 
-            error(ss.str());
+            if(quant < std::numeric_limits<T>::min() || quant > std::numeric_limits<T>::max()) {
+                std::stringstream ss;
+                ss << "Error: Overflow/Underflow while quantizing value: " << orig;
+                ss << " with scale: " << quant_scheme.scale << ". ";
+                ss << "Quantized value: " << static_cast<long long>(quant) << ". ";
+                ss << "Type: " << typeid(T).name() << ".";
+                error(ss.str());
+            }
+            return quant;
         }
-        return quant;
     };
 
     Array<T> quantized = Array<T>(data.size());
