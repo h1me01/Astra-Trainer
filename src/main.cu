@@ -37,7 +37,7 @@ int main() {
 
     // init lr scheduler
     CosineAnnealing lr_scheduler( //
-        network.get_batch_size(), // max epochs
+        300,                      // max epochs
         0.001,                    // lr
         0.001 * 0.3 * 0.3 * 0.3   // final lr
     );
