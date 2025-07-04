@@ -34,8 +34,12 @@ int get_next_training_idx(const std::string &output_path) {
 
         std::string folder_name = entry.path().filename().string();
         if(folder_name.find("training_") == 0) {
-            int index = std::stoi(folder_name.substr(9));
-            max_index = std::max(max_index, index);
+            try {
+                int index = std::stoi(folder_name.substr(9));
+                max_index = std::max(max_index, index);
+            } catch(const std::exception &) {
+                continue; // skip folders with invalid numeric suffixes
+            }
         }
     }
 
@@ -255,7 +259,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
             optim->apply(ds.size());
         }
 
-        float epoch_loss = loss->loss() / (hp.batch_size * hp.batches_per_epoch);
+        float epoch_loss = loss->get_loss() / (hp.batch_size * hp.batches_per_epoch);
 
         timer.stop();
         auto elapsed = timer.elapsed_time();

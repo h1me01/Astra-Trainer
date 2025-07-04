@@ -1,6 +1,6 @@
 #include "sparse_affine.h"
 
-const int block_size = 128;
+constexpr int block_size = 128;
 
 // FORWARD
 
@@ -53,8 +53,6 @@ void sparse_affine_fwd(                  //
 ) {
     const int batch_size = activated_v.cols();
 
-    ASSERT(batch_size == activated_v.cols());
-
     ASSERT(weights_v.dev_address()        //
            && biases_v.dev_address()      //
            && activated_v.dev_address()   //
@@ -104,21 +102,20 @@ __global__ void sparse_affine_bp_kernel( //
 
     const int output_idx = a_r * batch_idx + neuron_idx + a_offset;
 
-    float grad = activated_g[output_idx];
-    if(grad == 0)
-        return;
-    grad *= activate_der(pre_activated[output_idx], act_type);
+    float grad = activated_g[output_idx] * activate_der(pre_activated[output_idx], act_type);
+
+    if(grad != 0) {
+        const int offset = batch_idx * max_entries;
+        const int feature_size = feature_sizes[batch_idx];
+
+        atomicAdd(&biases_g[neuron_idx], grad);
+        for(int i = 0; i < feature_size; i++) {
+            int sparse_idx = features[i + offset];
+            atomicAdd(&weights_g[w_r * sparse_idx + neuron_idx], grad);
+        }
+    }
 
     // no need to compute gradients for previous layer since previous are inputs
-
-    const int offset = batch_idx * max_entries;
-    const int feature_size = feature_sizes[batch_idx];
-
-    atomicAdd(&biases_g[neuron_idx], grad);
-    for(int i = 0; i < feature_size; i++) {
-        int sparse_idx = features[i + offset];
-        atomicAdd(&weights_g[w_r * sparse_idx + neuron_idx], grad);
-    }
 }
 
 void sparse_affine_bwd(                      //
@@ -133,8 +130,6 @@ void sparse_affine_bwd(                      //
     const ActivationType act_type            //
 ) {
     const int batch_size = activated_g.cols();
-
-    ASSERT(activated_g.cols() == batch_size);
 
     ASSERT(weights_g.dev_address()        //
            && biases_g.dev_address()      //

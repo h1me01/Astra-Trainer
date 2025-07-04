@@ -3,6 +3,8 @@
 constexpr float alpha = 1;
 constexpr float beta = 0;
 
+constexpr int block_size = 128;
+
 // cublasSgemm performs C = A * B * alpha + C * beta
 
 cublasHandle_t CUBLAS_HANDLE;
@@ -14,8 +16,6 @@ void create_cublas() {
 void destroy_cublas() {
     cublasDestroy(CUBLAS_HANDLE);
 }
-
-const int block_size = 128;
 
 // AFFINE
 __global__ void biases_fwd_kernel( //
@@ -89,13 +89,24 @@ void affine_fwd(                       //
 }
 
 // AFFINE BP
+__global__ void activation_grad_kernel( //
+    const float *pre_activated_v,       //
+    float *activated_g,                 //
+    const int size,                     //
+    const ActivationType act_type       //
+) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if(idx >= size)
+        return;
+
+    activated_g[idx] *= activate_der(pre_activated_v[idx], act_type);
+}
+
 __global__ void biases_bwd_kernel( //
-    const float *pre_activated_v,  //
-    float *activated_g,            //
+    const float *activated_g,      //
     float *biases_g,               //
     const int r,                   //
-    const int c,                   //
-    const ActivationType act_type  //
+    const int c                    //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
@@ -103,10 +114,7 @@ __global__ void biases_bwd_kernel( //
 
     const int neuron_idx = idx / c;
 
-    const float grad = activated_g[idx] * activate_der(pre_activated_v[idx], act_type);
-
-    activated_g[idx] = grad;
-    atomicAdd(&biases_g[neuron_idx], grad);
+    atomicAdd(&biases_g[neuron_idx], activated_g[idx]);
 }
 
 void affine_bwd(                       //
@@ -147,13 +155,19 @@ void affine_bwd(                       //
     // and update biases gradients
     const int grid_size = std::ceil((float) activated_g.size() / block_size);
 
-    biases_bwd_kernel<<<grid_size, block_size>>>( //
+    activation_grad_kernel<<<grid_size, block_size>>>( //
         pre_activated.dev_address(),
+        activated_g.dev_address(),
+        activated_g.size(),
+        act_type);
+
+    cudaDeviceSynchronize();
+
+    biases_bwd_kernel<<<grid_size, block_size>>>( //
         activated_g.dev_address(),
         biases_g.dev_address(),
         activated_g.rows(),
-        activated_g.cols(),
-        act_type);
+        activated_g.cols());
 
     // update weights gradient
     cublasSgemm(                   //

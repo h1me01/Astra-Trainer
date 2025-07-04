@@ -10,7 +10,7 @@ int main() {
 
     // init network
     Network network({
-        600,   // epochs
+        300,   // epochs
         16384, // batch size
         6104,  // batches per epoch
         100,   // save rate
@@ -36,13 +36,13 @@ int main() {
     optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
     // init lr scheduler
-    CosineAnnealing lr_sched(     //
+    CosineAnnealing lr_scheduler( //
         network.get_batch_size(), // max epochs
         0.001,                    // lr
-        0.001 * 0.3 * 0.3 * 0.3   // min lr
+        0.001 * 0.3 * 0.3 * 0.3   // final lr
     );
 
-    optim.set_scheduler(&lr_sched);
+    optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
 

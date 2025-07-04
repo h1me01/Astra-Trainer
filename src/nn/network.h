@@ -7,7 +7,7 @@
 #include "data/include.h"
 #include "layers/include.h"
 #include "loss.h"
-#include "optimizer.h"
+#include "optimizer/include.h"
 
 struct Hyperparams {
     int epochs = 500;
@@ -208,11 +208,11 @@ class Network {
 
     int get_batch_size() {
         return hp.batch_size;
-    };
+    }
 
     Tensor &get_output() {
         return layers.back()->get_output().activated;
-    };
+    }
 
     std::vector<LayerBase *> get_layers() {
         return layers;

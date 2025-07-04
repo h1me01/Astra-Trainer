@@ -1,6 +1,6 @@
 #include "select.h"
 
-const int block_size = 1024;
+constexpr int block_size = 1024;
 
 // FORWARD
 
@@ -37,7 +37,7 @@ void select_fwd(                        //
     const int batch_size = output_v.cols();
     const int output_size = output_v.rows();
 
-    const int grid_size = std::ceil(batch_size * output_size / block_size);
+    const int grid_size = std::ceil(float(batch_size * output_size) / block_size);
 
     select_fwd_kernel<<<grid_size, block_size>>>( //
         inputs_v.dev_address(),
@@ -68,7 +68,7 @@ __global__ void select_bwd_kernel( //
     const int bucket = indices[batch_idx];
     const int input_offset = input_size * batch_idx + output_size * bucket + output_idx;
 
-    inputs_g[input_offset] += output_g[output_size * batch_idx + output_idx];
+    inputs_g[input_offset] = output_g[output_size * batch_idx + output_idx];
 }
 
 void select_bwd(                        //
@@ -83,7 +83,7 @@ void select_bwd(                        //
     const int batch_size = output_g.cols();
     const int output_size = output_g.rows();
 
-    const int grid_size = std::ceil(batch_size * output_size / block_size);
+    const int grid_size = std::ceil(float(batch_size * output_size) / block_size);
 
     // clear input gradient
     inputs_g.clear_dev();

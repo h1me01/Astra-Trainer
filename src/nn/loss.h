@@ -7,22 +7,21 @@
 
 class Loss {
   protected:
-    Array<float> m_loss;
+    Array<float> loss{1};
 
   public:
-    Loss() : m_loss(1) {}
+    Loss() {}
 
     virtual void apply(const Array<float> &target, Tensor &output) = 0;
     virtual std::string info() = 0;
 
-    float loss() {
-        m_loss.dev_to_host();
-        return m_loss(0);
+    float get_loss() {
+        loss.dev_to_host();
+        return loss(0);
     }
 
     void reset() {
-        m_loss(0) = 0;
-        m_loss.host_to_dev();
+        loss.clear();
     }
 };
 
@@ -37,7 +36,7 @@ struct MPELoss : Loss {
     void apply(const Array<float> &targets, Tensor &output) {
         mpe_loss( //
             targets,
-            m_loss,
+            loss,
             output,
             m_power,
             act_type,
@@ -56,7 +55,7 @@ struct MSELoss : Loss {
     void apply(const Array<float> &targets, Tensor &output) {
         mse_loss( //
             targets,
-            m_loss,
+            loss,
             output,
             act_type,
             output.get_data().size());

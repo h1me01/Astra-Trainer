@@ -45,13 +45,20 @@ class Tensor {
         grads.clear();
     }
 
-    Tensor(const Tensor &other) //
-        : data(other.data), grads(other.grads) {}
+    Tensor(const Tensor &other)
+        : data(other.data),                   //
+          grads(other.grads),                 //
+          m_lower_bound(other.m_lower_bound), //
+          m_upper_bound(other.m_upper_bound), //
+          quant_scheme(other.quant_scheme) {}
 
     Tensor &operator=(const Tensor &other) {
         if(this != &other) {
             data = other.data;
             grads = other.grads;
+            m_lower_bound = other.m_lower_bound;
+            m_upper_bound = other.m_upper_bound;
+            quant_scheme = other.quant_scheme;
         }
         return *this;
     }

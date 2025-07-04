@@ -5,13 +5,13 @@ float getDecay(const float lr, const float decay) {
     return 1.0f - lr * decay;
 }
 
-const int block_size = 1024;
+constexpr int block_size = 1024;
 
 // ADAM
 
 __global__ void adam_kernel( //
     float *vals,             //
-    float *grads,            //
+    const float *grads,      //
     float *moms,             //
     float *vels,             //
     const float lr,          //
@@ -33,9 +33,6 @@ __global__ void adam_kernel( //
     float val = vals[idx];
     val *= decay;
 
-    if(grad == 0.0f)
-        return;
-
     float mom = moms[idx];
     float vel = vels[idx];
 
@@ -47,7 +44,6 @@ __global__ void adam_kernel( //
     moms[idx] = mom;
     vels[idx] = vel;
     vals[idx] = clamp(val, min_val, max_val);
-    grads[idx] = 0.0f;
 }
 
 void adam_optim(               //
@@ -81,6 +77,8 @@ void adam_optim(               //
         max_val,
         grad_scale,
         vals.size());
+
+    grads.clear_dev();
 }
 
 // RADAM
@@ -88,7 +86,7 @@ void adam_optim(               //
 // https://github.com/LiyuanLucasLiu/RAdam/blob/master/radam/radam.py
 __global__ void radam_kernel(  //
     float *vals,               //
-    float *grads,              //
+    const float *grads,        //
     float *moms,               //
     float *vels,               //
     const float lr,            //
@@ -111,9 +109,6 @@ __global__ void radam_kernel(  //
 
     float val = vals[idx];
     val *= decay;
-
-    if(grad == 0.0f)
-        return;
 
     float mom = moms[idx];
     float vel = vels[idx];
@@ -142,7 +137,6 @@ __global__ void radam_kernel(  //
     moms[idx] = mom;
     vels[idx] = vel;
     vals[idx] = clamp(val, min_val, max_val);
-    grads[idx] = 0.0f;
 }
 
 void radam_optim(              //
@@ -180,6 +174,8 @@ void radam_optim(              //
         N_sma_threshold,
         step,
         vals.size());
+
+    grads.clear_dev();
 }
 
 // RANGER
@@ -187,7 +183,7 @@ void radam_optim(              //
 // https://github.com/official-stockfish/nnue-pytorch/blob/master/ranger.py
 __global__ void ranger_kernel( //
     float *vals,               //
-    float *grads,              //
+    const float *grads,        //
     float *moms,               //
     float *vels,               //
     float *slow_buffer,        //
@@ -213,14 +209,11 @@ __global__ void ranger_kernel( //
     float val = vals[idx];
     val *= decay;
 
-    if(grad == 0.0f)
-        return;
-
     float mom = moms[idx];
     float vel = vels[idx];
 
-    mom = beta2 * mom + (1.0 - beta2) * grad * grad;
-    vel = beta1 * vel + (1.0 - beta1) * grad;
+    mom = beta1 * mom + (1.0f - beta1) * grad;
+    vel = beta2 * vel + (1.0f - beta2) * grad * grad;
 
     float beta2_t = powf(beta2, step);
     float beta1_correction = 1.0f - powf(beta1, step);
@@ -250,7 +243,6 @@ __global__ void ranger_kernel( //
     moms[idx] = mom;
     vels[idx] = vel;
     vals[idx] = clamp(val, min_val, max_val);
-    grads[idx] = 0.0f;
 }
 
 void ranger_optim(             //
@@ -295,4 +287,6 @@ void ranger_optim(             //
         N_sma_threshold,
         step,
         vals.size());
+
+    grads.clear_dev();
 }

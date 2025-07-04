@@ -71,7 +71,7 @@ __global__ void mse_kernel(        //
         return;
 
     const float pre_activated = output_v[idx];
-    const float activated = activate(output_v[idx], act_type);
+    const float activated = activate(pre_activated, act_type);
     const float diff = activated - targets[idx];
 
     output_g[idx] = 2.0f * diff * activate_der(pre_activated, act_type);

@@ -10,7 +10,7 @@ class LayerBase {
   protected:
     std::string name;
 
-    static SparseBatch sparse_batch;
+    static SparseBatch sparse_batch; // all layers must share the same sparse batch
 
     struct Output {
         DenseMatrix<float> pre_activated{1, 1};

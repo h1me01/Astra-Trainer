@@ -15,9 +15,13 @@ class SparseBatch {
     std::vector<Array<int>> features;
 
   public:
-    SparseBatch(int batch_size, int max_entries) : batch_size(batch_size), max_entries(max_entries) {
-        psqt_indices = Array<int>(batch_size);
-        feature_sizes = Array<int>(batch_size);
+    SparseBatch(int batch_size, int max_entries)
+        : batch_size(batch_size),   //
+          max_entries(max_entries), //
+          psqt_indices(batch_size), //
+          feature_sizes(batch_size) //
+    {
+        features.reserve(2);
         features.emplace_back(batch_size * max_entries); // stm_features
         features.emplace_back(batch_size * max_entries); // nstm_features
     }

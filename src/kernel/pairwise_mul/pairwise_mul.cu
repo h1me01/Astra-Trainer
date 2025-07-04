@@ -33,7 +33,7 @@ void pairwise_mul_fwd(                  //
     const int batch_size = output_v.cols();
     const int output_size = output_v.rows();
 
-    const int grid_size = std::ceil(output_size * batch_size / block_size);
+    const int grid_size = std::ceil(float(output_size * batch_size) / block_size);
 
     pairwise_mul_fwd_kernel<<<grid_size, block_size>>>( //
         inputs_v.dev_address(),                         //
@@ -82,7 +82,7 @@ void pairwise_mul_bwd(                //
     const int batch_size = output_g.cols();
     const int output_size = output_g.rows();
 
-    const int grid_size = std::ceil(output_size * batch_size / block_size);
+    const int grid_size = std::ceil(float(output_size * batch_size) / block_size);
 
     pairwise_mul_bwd_kernel<<<grid_size, block_size>>>( //
         inputs_v.dev_address(),                         //
