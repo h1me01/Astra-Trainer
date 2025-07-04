@@ -1,5 +1,7 @@
 #include "pairwise_mul.h"
 
+// FORWARD
+
 __global__ void pairwise_mul_fwd_kernel( //
     const float *input_v,                //
     float *output_v,                     //
@@ -20,6 +22,8 @@ __global__ void pairwise_mul_fwd_kernel( //
 
     output_v[output_size * batch_idx + output_idx] = a * b;
 }
+
+// BACKWARD
 
 __global__ void pairwise_mul_bwd_kernel( //
     const float *input_v,                //

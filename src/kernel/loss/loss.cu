@@ -1,5 +1,7 @@
 #include "loss.h"
 
+constexpr int block_size = 1024;
+
 // MPE
 
 __global__ void mpe_kernel(        //
@@ -42,10 +44,9 @@ void mpe_loss(                     //
            targets.dev_address() &&  //
            loss.dev_address());
 
-    constexpr int block_size = 1024;
-    dim3 grid(std::ceil((float) output_v.size() / block_size));
+    const int grid_size = std::ceil((float) output_v.size() / block_size);
 
-    mpe_kernel<<<grid, block_size>>>( //
+    mpe_kernel<<<grid_size, block_size>>>( //
         targets.dev_address(),
         output_v.dev_address(),
         output_g.dev_address(),
@@ -93,10 +94,9 @@ void mse_loss(                     //
            targets.dev_address() &&  //
            loss.dev_address());
 
-    constexpr int block_size = 1024;
-    dim3 grid(std::ceil((float) output_v.size() / block_size));
+    const int grid_size = std::ceil((float) output_v.size() / block_size);
 
-    mse_kernel<<<grid, block_size>>>( //
+    mse_kernel<<<grid_size, block_size>>>( //
         targets.dev_address(),
         output_v.dev_address(),
         output_g.dev_address(),

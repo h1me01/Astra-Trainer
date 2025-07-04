@@ -5,6 +5,8 @@ float getDecay(const float lr, const float decay) {
     return 1.0f - lr * decay;
 }
 
+const int block_size = 1024;
+
 // ADAM
 
 __global__ void adam_kernel( //
@@ -63,7 +65,6 @@ void adam_optim(               //
            moms.dev_address() &&  //
            vels.dev_address());
 
-    const int block_size = 1024;
     const int grid_size(std::ceil((float) vals.size() / block_size));
 
     adam_kernel<<<grid_size, block_size>>>( //
@@ -161,7 +162,6 @@ void radam_optim(              //
            moms.dev_address() &&  //
            vels.dev_address());
 
-    const int block_size = 1024;
     const int grid_size(std::ceil((float) vals.size() / block_size));
 
     radam_kernel<<<grid_size, block_size>>>( //
@@ -274,7 +274,6 @@ void ranger_optim(             //
            vels.dev_address() &&  //
            slow_buffer.dev_address());
 
-    const int block_size = 1024;
     const int grid_size(std::ceil((float) vals.size() / block_size));
 
     ranger_kernel<<<grid_size, block_size>>>( //

@@ -15,6 +15,8 @@ void destroy_cublas() {
     cublasDestroy(CUBLAS_HANDLE);
 }
 
+const int block_size = 128;
+
 // AFFINE
 __global__ void biases_fwd_kernel( //
     const float *biases_v,         //
@@ -75,7 +77,6 @@ void affine_fwd(                       //
     );
 
     // add biases to dot product
-    const int block_size = 128;
     const int grid_size = std::ceil((float) activated_v.size() / block_size);
 
     biases_fwd_kernel<<<grid_size, block_size>>>( //
@@ -144,7 +145,6 @@ void affine_bwd(                       //
 
     // update gradients with activation derivatives
     // and update biases gradients
-    const int block_size = 128;
     const int grid_size = std::ceil((float) activated_g.size() / block_size);
 
     biases_bwd_kernel<<<grid_size, block_size>>>( //

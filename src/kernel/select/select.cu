@@ -1,5 +1,7 @@
 #include "select.h"
 
+const int block_size = 128;
+
 // FORWARD
 
 __global__ void select_fwd_kernel( //
@@ -31,7 +33,6 @@ void select_fwd(                       //
     const int input_size,              //
     const int output_size              //
 ) {
-    const int block_size = 128;
     const int grid_size = std::ceil(batch_size * output_size / block_size);
 
     select_fwd_kernel<<<grid_size, block_size>>>( //
@@ -76,7 +77,6 @@ void select_bwd(                        //
 ) {
     ASSERT(batch_size == indices.size());
 
-    const int block_size = 128;
     const int grid_size = std::ceil(batch_size * output_size / block_size);
 
     // clear input gradient

@@ -77,7 +77,7 @@ int main() {
     );
 
     // set quantization for weights and biases
-    l1.get_params()[0]->quantize<QuantType::INT16>(64, true); // weights
+    l1.get_params()[0]->quantize<QuantType::INT16>(64, true); // weights (transposed)
     l1.get_params()[1]->quantize<QuantType::INT16>(255 * 64); // biases
 
     auto ob = OutputBuckets(&l1);

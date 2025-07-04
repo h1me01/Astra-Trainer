@@ -1,5 +1,7 @@
 #include "sparse_affine.h"
 
+const int block_size = 128;
+
 // FORWARD
 
 __global__ void sparse_affine_kernel( //
@@ -59,7 +61,6 @@ void sparse_affine_fwd(                  //
            features.dev_address() &&      //
            feature_sizes.dev_address());
 
-    const int block_size = 128;
     const int grid_size = std::ceil(float(weights_v.rows() * batch_size) / block_size);
 
     sparse_affine_kernel<<<grid_size, block_size>>>( //
@@ -140,7 +141,6 @@ void sparse_affine_bwd(                      //
            features.dev_address() &&      //
            feature_sizes.dev_address());
 
-    const int block_size = 128;
     const int grid_size = std::ceil(float(weights_g.rows() * batch_size) / block_size);
 
     sparse_affine_bp_kernel<<<grid_size, block_size>>>( //
