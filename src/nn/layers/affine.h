@@ -4,13 +4,12 @@
 #include <cstdint>
 #include <vector>
 
-#include "../../kernel/kernel.h"
+#include "../../kernel/include.h"
 #include "../../misc.h"
-#include "../data.h"
 #include "layer.h"
 
 template <int size, ActivationType act_type = Linear> //
-class FullyConnected : public LayerBase {
+class Affine : public LayerBase {
   private:
     Tensor weights{1, 1};
     Tensor biases{size, 1};
@@ -18,30 +17,23 @@ class FullyConnected : public LayerBase {
     LayerBase *previous;
 
   public:
-    FullyConnected(LayerBase *previous, WeightInitType init_type) : previous(previous) {
-        name = "FullyConnected";
+    Affine(LayerBase *previous, WeightInitType init_type) : previous(previous) {
+        name = "Affine";
 
         int input_size = previous->get_output_size();
 
         weights = Tensor(size, input_size);
-        switch(init_type) {
-        case WeightInitType::Uniform:
-            weights.init_uniformly();
-            break;
-        case WeightInitType::He:
-            weights.he_init(input_size);
-            break;
-        }
+        weights.init(init_type, input_size);
     }
 
     void forward() override {
         Tensor &inputs = previous->get_output().activated;
 
         affine_fwd( //
-            weights.get_vals(),
-            biases.get_vals(),
-            inputs.get_vals(),
-            output.activated.get_vals(),
+            weights.get_data(),
+            biases.get_data(),
+            inputs.get_data(),
+            output.activated.get_data(),
             output.pre_activated,
             act_type);
     }

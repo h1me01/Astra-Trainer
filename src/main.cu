@@ -68,40 +68,38 @@ int main() {
     network.set_input_bucket(input_bucket);
 
     // init hidden layers
-    auto ft = DualFeatureTransformer<256, SCReLU>( //
-        get_bucket_size(input_bucket) * 768,       // input size
-        WeightInitType::Uniform                    // weight initialization type
+
+    auto ft = FeatureTransformer<256, SCReLU>( //
+        get_bucket_size(input_bucket) * 768,   // input size
+        WeightInitType::Uniform                // weight initialization type
     );
 
-    auto l1 = FullyConnected<Bucketed::NUM_BUCKETS>( //
-        &ft,                                         // previous layer
-        WeightInitType::Uniform                      // weight initialization type
+    // set quantization schemes for weights and biases
+    ft.get_params()[0]->quantize<QuantType::INT16>(255);
+    ft.get_params()[1]->quantize<QuantType::INT16>(255);
+
+    auto l1 = Affine<OutputBuckets::NUM_BUCKETS>( //
+        &ft,                                      // previous layer
+        WeightInitType::Uniform                   // weight initialization type
     );
 
-    auto b = Bucketed(&l1);
+    // set quantization schemes for weights and biases
+    l1.get_params()[0]->quantize<QuantType::INT16>(64, true);
+    l1.get_params()[1]->quantize<QuantType::INT16>(255 * 64);
 
-    network.set_hidden_layers({&ft, &l1, &b});
+    auto ob = OutputBuckets(&l1);
 
-    // setup quantization scheme
-    network.set_quant_scheme([&](FILE *f) {
-        const int q1 = 255;
-        const int q2 = 64;
-
-        ft.get_params()[0]->quant<int16_t>(f, q1);       // weights
-        ft.get_params()[1]->quant<int16_t>(f, q1);       // biases
-        l1.get_params()[0]->quant<int16_t>(f, q2, true); // weights
-        l1.get_params()[1]->quant<int16_t>(f, q1 * q2);  // biases
-    });
+    network.set_hidden_layers({&ft, &l1, &ob});
 
     const string output_path = root_path + "/nn_output";
 
     // load weights only (if needed)
-    // network.loadWeights(output_path + "/training_5/checkpoint-final/weights.bin");
-    network.train( //
-        files,
-        output_path
-        // ,"training_4/checkpoint-100" // load checkpoint (if needed)
-    );
+    network.load_weights(output_path + "/training_6/checkpoint-final/weights.bin");
+    // network.train( //
+    //     files,
+    //     output_path
+    //     // ,"training_4/checkpoint-100" // load checkpoint (if needed)
+    //);
 
     // test network on some positions
     network.evaluate_positions({

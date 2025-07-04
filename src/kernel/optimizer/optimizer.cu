@@ -48,15 +48,15 @@ __global__ void adam_kernel( //
     grads[idx] = 0.0f;
 }
 
-void adam_optim(              //
-    DenseMatrix &vals,        //
-    DenseMatrix &grads,       //
-    Array<float> &moms,       //
-    Array<float> &vels,       //
-    const AdamParams &params, //
-    const float min_val,      //
-    const float max_val,      //
-    const float grad_scale    //
+void adam_optim(               //
+    DenseMatrix<float> &vals,  //
+    DenseMatrix<float> &grads, //
+    Array<float> &moms,        //
+    Array<float> &vels,        //
+    const AdamParams &params,  //
+    const float min_val,       //
+    const float max_val,       //
+    const float grad_scale     //
 ) {
     ASSERT(vals.dev_address() &&  //
            grads.dev_address() && //
@@ -145,8 +145,8 @@ __global__ void radam_kernel(  //
 }
 
 void radam_optim(              //
-    DenseMatrix &vals,         //
-    DenseMatrix &grads,        //
+    DenseMatrix<float> &vals,  //
+    DenseMatrix<float> &grads, //
     Array<float> &moms,        //
     Array<float> &vels,        //
     const AdamParams &params,  //
@@ -254,8 +254,8 @@ __global__ void ranger_kernel( //
 }
 
 void ranger_optim(             //
-    DenseMatrix &vals,         //
-    DenseMatrix &grads,        //
+    DenseMatrix<float> &vals,  //
+    DenseMatrix<float> &grads, //
     Array<float> &moms,        //
     Array<float> &vels,        //
     Array<float> &slow_buffer, //

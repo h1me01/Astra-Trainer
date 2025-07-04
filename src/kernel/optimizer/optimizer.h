@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../nn/data.h"
+#include "../../nn/data/include.h"
 
 struct AdamParams {
     float lr;
@@ -14,8 +14,8 @@ struct AdamParams {
 };
 
 void adam_optim( //
-    DenseMatrix &vals,
-    DenseMatrix &grads,
+    DenseMatrix<float> &vals,
+    DenseMatrix<float> &grads,
     Array<float> &moms,
     Array<float> &vels,
     const AdamParams &params,
@@ -24,8 +24,8 @@ void adam_optim( //
     const float grad_scale);
 
 void radam_optim( //
-    DenseMatrix &vals,
-    DenseMatrix &grads,
+    DenseMatrix<float> &vals,
+    DenseMatrix<float> &grads,
     Array<float> &moms,
     Array<float> &vels,
     const AdamParams &params,
@@ -36,8 +36,8 @@ void radam_optim( //
     const int step);
 
 void ranger_optim( //
-    DenseMatrix &vals,
-    DenseMatrix &grads,
+    DenseMatrix<float> &vals,
+    DenseMatrix<float> &grads,
     Array<float> &moms,
     Array<float> &vels,
     Array<float> &slow_buffer,

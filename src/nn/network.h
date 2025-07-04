@@ -1,14 +1,13 @@
 #pragma once
 
 #include <fstream>
-#include <functional>
 #include <vector>
 
 #include "../dataloader/dataloader.h"
-#include "data.h"
-#include "layers/bucketed.h"
+#include "data/include.h"
+#include "layers/affine.h"
 #include "layers/feature_transformer.h"
-#include "layers/fully_connected.h"
+#include "layers/output_buckets.h"
 #include "loss.h"
 #include "optimizer.h"
 
@@ -61,14 +60,11 @@ class Network {
 
     Array<float> targets;
 
-    std::function<void(FILE *)> quantFunc;
-
     void init() {
         if(is_initialized)
             return;
 
         ASSERT(!layers.empty());
-        ASSERT(quantFunc != nullptr);
         ASSERT(optim != nullptr && loss != nullptr);
 
         optim->init(layers);
@@ -117,58 +113,7 @@ class Network {
             layers[i]->backward();
     }
 
-    void save_checkpoint(const std::string &path) {
-        ASSERT(quantFunc != nullptr);
-
-        // create directory if it doesn't exist
-        try {
-            std::filesystem::create_directories(path);
-        } catch(const std::filesystem::filesystem_error &e) {
-            throw std::runtime_error("Failed to create directory " + path + ": " + e.what());
-        }
-
-        // save weights
-        try {
-            const std::string file = path + "/weights.bin";
-            FILE *f = fopen(file.c_str(), "wb");
-            if(!f)
-                throw std::runtime_error("Failed to write weights to " + file);
-
-            for(LayerBase *l : layers) {
-                for(Tensor *t : l->get_params()) {
-                    DenseMatrix &weights = t->get_vals();
-                    weights.dev_to_host();
-
-                    int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
-                    if(written != weights.size())
-                        throw std::runtime_error("Error writing weights to file");
-                }
-            }
-
-            fclose(f);
-        } catch(const std::exception &e) {
-            throw std::runtime_error(std::string("Failed to save weights: ") + e.what());
-        }
-
-        // save quantized weights
-        try {
-            FILE *f = fopen((path + "/qweights.net").c_str(), "wb");
-            if(!f)
-                throw std::runtime_error("Failed to write quantized weights");
-
-            quantFunc(f);
-
-            fclose(f);
-        } catch(const std::exception &e) {
-            throw std::runtime_error(std::string("Failed to save quantized weights: ") + e.what());
-        }
-
-        // save optimizer state
-        if(optim != nullptr)
-            optim->save(path);
-
-        std::cout << "Saved checkpoint" << std::endl;
-    }
+    void save_checkpoint(const std::string &path);
 
     int index(PieceType pt, Color pc, Square psq, Square ksq, Color view);
 
@@ -194,7 +139,7 @@ class Network {
         try {
             for(LayerBase *l : layers) {
                 for(Tensor *t : l->get_params()) {
-                    DenseMatrix &weights = t->get_vals();
+                    DenseMatrix<float> &weights = t->get_data();
 
                     f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
                     if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
@@ -210,6 +155,8 @@ class Network {
         } catch(const std::exception &e) {
             throw std::runtime_error("Failed to load weights from " + file + ": " + e.what());
         }
+
+        save_checkpoint("D:/Astra-Data/nn_output/training_8/test");
     }
 
     // assumes output activation is sigmoid
@@ -229,7 +176,7 @@ class Network {
 
         LayerBase *output_layer = layers.back();
 
-        DenseMatrix &output = get_output().get_vals();
+        DenseMatrix<float> &output = get_output().get_data();
         output.dev_to_host();
 
         return output(0) * hp.output_scalar;
@@ -242,11 +189,6 @@ class Network {
             std::cout << "FEN: " << fen << std::endl;
             std::cout << "Eval: " << predict(fen) << std::endl;
         }
-    }
-
-    template <typename Func> //
-    void set_quant_scheme(Func &&func) {
-        quantFunc = std::forward<Func>(func);
     }
 
     void set_loss(Loss *loss) {

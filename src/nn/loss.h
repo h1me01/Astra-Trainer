@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "../kernel/kernel.h"
-#include "data.h"
+#include "../kernel/include.h"
+#include "data/include.h"
 
 class Loss {
   protected:
@@ -41,7 +41,7 @@ struct MPELoss : Loss {
             output,
             m_power,
             act_type,
-            output.get_vals().size());
+            output.get_data().size());
     }
 
     std::string info() {
@@ -59,7 +59,7 @@ struct MSELoss : Loss {
             m_loss,
             output,
             act_type,
-            output.get_vals().size());
+            output.get_data().size());
     }
 
     std::string info() {

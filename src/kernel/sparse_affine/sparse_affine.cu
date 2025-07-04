@@ -38,17 +38,17 @@ __global__ void sparse_affine_kernel( //
     activated_v[output_idx] = activate(sum, act_type);
 }
 
-void sparse_affine_fwd(              //
-    DenseMatrix &activated_v,        //
-    DenseMatrix &pre_activated,      //
-    const DenseMatrix &weights_v,    //
-    const DenseMatrix &biases_v,     //
-    const Array<int> &features,      //
-    const Array<int> &feature_sizes, //
-    const int a_offset,              //
-    const int batch_size,            //
-    const int max_entries,           //
-    const ActivationType act_type    //
+void sparse_affine_fwd(                  //
+    DenseMatrix<float> &activated_v,     //
+    DenseMatrix<float> &pre_activated,   //
+    const DenseMatrix<float> &weights_v, //
+    const DenseMatrix<float> &biases_v,  //
+    const Array<int> &features,          //
+    const Array<int> &feature_sizes,     //
+    const int a_offset,                  //
+    const int batch_size,                //
+    const int max_entries,               //
+    const ActivationType act_type        //
 ) {
     ASSERT(batch_size == activated_v.num_cols());
 
@@ -119,17 +119,17 @@ __global__ void sparse_affine_bp_kernel( //
     }
 }
 
-void sparse_affine_bwd(               //
-    const DenseMatrix &activated_g,   //
-    const DenseMatrix &pre_activated, //
-    DenseMatrix &weights_g,           //
-    DenseMatrix &biases_g,            //
-    const Array<int> &features,       //
-    const Array<int> &feature_sizes,  //
-    const int a_offset,               //
-    const int batch_size,             //
-    const int max_entries,            //
-    const ActivationType act_type     //
+void sparse_affine_bwd(                      //
+    const DenseMatrix<float> &activated_g,   //
+    const DenseMatrix<float> &pre_activated, //
+    DenseMatrix<float> &weights_g,           //
+    DenseMatrix<float> &biases_g,            //
+    const Array<int> &features,              //
+    const Array<int> &feature_sizes,         //
+    const int a_offset,                      //
+    const int batch_size,                    //
+    const int max_entries,                   //
+    const ActivationType act_type            //
 ) {
     ASSERT(activated_g.num_cols() == batch_size);
 

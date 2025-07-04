@@ -48,6 +48,59 @@ SparseBatch LayerBase::sparse_batch{1, 1};
 
 // network class
 
+void Network::save_checkpoint(const std::string &path) {
+    // create directory if it doesn't exist
+    try {
+        std::filesystem::create_directories(path);
+    } catch(const std::filesystem::filesystem_error &e) {
+        throw std::runtime_error("Failed to create directory " + path + ": " + e.what());
+    }
+
+    // save weights
+    try {
+        const std::string file = path + "/weights.bin";
+        FILE *f = fopen(file.c_str(), "wb");
+        if(!f)
+            throw std::runtime_error("Failed to write weights to " + file);
+
+        for(LayerBase *l : layers) {
+            for(Tensor *t : l->get_params()) {
+                DenseMatrix<float> &weights = t->get_data();
+                weights.dev_to_host();
+
+                int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
+                if(written != weights.size())
+                    throw std::runtime_error("Error writing weights to file");
+            }
+        }
+
+        fclose(f);
+    } catch(const std::exception &e) {
+        throw std::runtime_error(std::string("Failed to save weights: ") + e.what());
+    }
+
+    // save quantized weights
+    try {
+        FILE *f = fopen((path + "/qweights.net").c_str(), "wb");
+        if(!f)
+            throw std::runtime_error("Failed to write quantized weights");
+
+        for(LayerBase *l : layers)
+            for(Tensor *t : l->get_params())
+                t->save_quantize(f);
+
+        fclose(f);
+    } catch(const std::exception &e) {
+        throw std::runtime_error(std::string("Failed to save quantized weights: ") + e.what());
+    }
+
+    // save optimizer state
+    if(optim != nullptr)
+        optim->save(path);
+
+    std::cout << "Saved checkpoint" << std::endl;
+}
+
 int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     int _psq = int(psq);
     int _ksq = int(ksq);

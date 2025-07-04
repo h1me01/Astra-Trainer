@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../nn/data.h"
+#include "../nn/data/include.h"
 #include "util.h"
 
 enum ActivationType { //

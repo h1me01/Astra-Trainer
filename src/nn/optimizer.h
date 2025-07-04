@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <string>
 
-#include "../kernel/kernel.h"
-#include "data.h"
+#include "../kernel/include.h"
+#include "data/include.h"
 #include "layers/layer.h"
 #include "lrscheduler.h"
 
@@ -35,9 +35,9 @@ class Optimizer {
         for(LayerBase *l : layers) {
             for(auto *t : l->get_params()) {
                 if(min_val != -1)
-                    t->clamp(min_val, t->max());
+                    t->clamp(min_val, t->upper_bound());
                 if(max_val != -1)
-                    t->clamp(t->min(), max_val);
+                    t->clamp(t->lower_bound(), max_val);
                 tunables.push_back(t);
             }
         }
@@ -134,7 +134,7 @@ class Optimizer {
 
     void init_buffers() {
         for(Tensor *t : tunables) {
-            int size = t->get_vals().size();
+            int size = t->get_data().size();
             momentum.push_back(Array<float>{size});
             velocity.push_back(Array<float>{size});
             slow_buffer.push_back(Array<float>{size});
@@ -169,13 +169,13 @@ struct Adam : Optimizer {
 
         for(size_t i = 0; i < tunables.size(); i++) {
             adam_optim( //
-                tunables[i]->get_vals(),
+                tunables[i]->get_data(),
                 tunables[i]->get_grads(),
                 momentum[i],
                 velocity[i],
                 params,
-                tunables[i]->min(),
-                tunables[i]->max(),
+                tunables[i]->lower_bound(),
+                tunables[i]->upper_bound(),
                 grad_scale);
         }
     }
@@ -197,13 +197,13 @@ class RAdam : public Optimizer {
 
         for(size_t i = 0; i < tunables.size(); i++) {
             radam_optim( //
-                tunables[i]->get_vals(),
+                tunables[i]->get_data(),
                 tunables[i]->get_grads(),
                 momentum[i],
                 velocity[i],
                 params,
-                tunables[i]->min(),
-                tunables[i]->max(),
+                tunables[i]->lower_bound(),
+                tunables[i]->upper_bound(),
                 grad_scale,
                 N_sma_threshold,
                 step);
@@ -233,14 +233,14 @@ class Ranger : public Optimizer {
 
         for(size_t i = 0; i < tunables.size(); i++) {
             ranger_optim( //
-                tunables[i]->get_vals(),
+                tunables[i]->get_data(),
                 tunables[i]->get_grads(),
                 momentum[i],
                 velocity[i],
                 slow_buffer[i],
                 params,
-                tunables[i]->min(),
-                tunables[i]->max(),
+                tunables[i]->lower_bound(),
+                tunables[i]->upper_bound(),
                 grad_scale,
                 alpha,
                 k,

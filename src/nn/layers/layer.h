@@ -1,12 +1,10 @@
 #pragma once
 
-#include "../../nn/data.h"
+#include "../../nn/data/include.h"
 
 #include <cstdint>
 #include <string>
 #include <vector>
-
-enum class WeightInitType { Uniform, He };
 
 class LayerBase {
   protected:
@@ -15,7 +13,7 @@ class LayerBase {
     static SparseBatch sparse_batch;
 
     struct Output {
-        DenseMatrix pre_activated{1, 1};
+        DenseMatrix<float> pre_activated{1, 1};
         Tensor activated{1, 1};
 
         Output() {}
@@ -33,9 +31,9 @@ class LayerBase {
             int i = 0;
             for(const Tensor *t : params) {
                 std::string prefix = (i++ == 0) ? "weights(" : "biases(";
-                info << "  -> " << prefix                   //
-                     << "min=" << format_number(t->min())   //
-                     << ", max=" << format_number(t->max()) //
+                info << "  -> " << prefix                           //
+                     << "min=" << format_number(t->lower_bound())   //
+                     << ", max=" << format_number(t->upper_bound()) //
                      << ")" << "\n";
             }
         }

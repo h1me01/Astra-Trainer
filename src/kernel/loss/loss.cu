@@ -34,8 +34,8 @@ void mpe_loss(                     //
     const ActivationType act_type, //
     const int size                 //
 ) {
-    const DenseMatrix &output_v = output.get_vals();
-    DenseMatrix &output_g = output.get_grads();
+    const DenseMatrix<float> &output_v = output.get_data();
+    DenseMatrix<float> &output_g = output.get_grads();
 
     ASSERT(output_v.dev_address() && //
            output_g.dev_address() && //
@@ -85,8 +85,8 @@ void mse_loss(                     //
     const ActivationType act_type, //
     const int size                 //
 ) {
-    const DenseMatrix &output_v = output.get_vals();
-    DenseMatrix &output_g = output.get_grads();
+    const DenseMatrix<float> &output_v = output.get_data();
+    DenseMatrix<float> &output_g = output.get_grads();
 
     ASSERT(output_v.dev_address() && //
            output_g.dev_address() && //

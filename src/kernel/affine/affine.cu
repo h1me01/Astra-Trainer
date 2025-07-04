@@ -36,13 +36,13 @@ __global__ void biases_fwd_kernel( //
     activated_v[idx] = activate(weighted_sum, act_type);
 }
 
-void affine_fwd(                  //
-    DenseMatrix &weights_v,       //
-    DenseMatrix &biases_v,        //
-    DenseMatrix &inputs_v,        //
-    DenseMatrix &activated_v,     //
-    DenseMatrix &pre_activated,   //
-    const ActivationType act_type //
+void affine_fwd(                       //
+    DenseMatrix<float> &weights_v,     //
+    DenseMatrix<float> &biases_v,      //
+    DenseMatrix<float> &inputs_v,      //
+    DenseMatrix<float> &activated_v,   //
+    DenseMatrix<float> &pre_activated, //
+    const ActivationType act_type      //
 ) {
     ASSERT(activated_v.num_rows() == biases_v.num_rows() && biases_v.num_cols() == 1);
 
@@ -108,24 +108,24 @@ __global__ void biases_bwd_kernel( //
     atomicAdd(&biases_g[neuron_idx], grad);
 }
 
-void affine_bwd(                  //
-    Tensor &weights,              //
-    Tensor &biases,               //
-    Tensor &inputs,               //
-    Tensor &activated,            //
-    DenseMatrix &pre_activated,   //
-    const ActivationType act_type //
+void affine_bwd(                       //
+    Tensor &weights,                   //
+    Tensor &biases,                    //
+    Tensor &inputs,                    //
+    Tensor &activated,                 //
+    DenseMatrix<float> &pre_activated, //
+    const ActivationType act_type      //
 ) {
-    const DenseMatrix &weights_v = weights.get_vals();
-    DenseMatrix &weights_g = weights.get_grads();
+    const DenseMatrix<float> &weights_v = weights.get_data();
+    DenseMatrix<float> &weights_g = weights.get_grads();
 
-    DenseMatrix &biases_g = biases.get_grads();
+    DenseMatrix<float> &biases_g = biases.get_grads();
 
-    const DenseMatrix &inputs_v = inputs.get_vals();
-    DenseMatrix &inputs_g = inputs.get_grads();
+    const DenseMatrix<float> &inputs_v = inputs.get_data();
+    DenseMatrix<float> &inputs_g = inputs.get_grads();
 
-    const DenseMatrix &activated_v = activated.get_vals();
-    const DenseMatrix &activated_g = activated.get_grads();
+    const DenseMatrix<float> &activated_v = activated.get_data();
+    const DenseMatrix<float> &activated_g = activated.get_grads();
 
     ASSERT(activated_g.num_rows() == biases_g.num_rows() && biases_g.num_cols() == 1);
 

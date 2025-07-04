@@ -4,31 +4,23 @@
 #include <cstdint>
 #include <vector>
 
-#include "../../kernel/kernel.h"
+#include "../../kernel/include.h"
 #include "../../misc.h"
-#include "../data.h"
 #include "layer.h"
 
 template <int size, ActivationType act_type> //
-class DualFeatureTransformer : public LayerBase {
+class FeatureTransformer : public LayerBase {
   private:
     int input_size;
     Tensor weights{1, 1};
     Tensor biases{size, 1};
 
   public:
-    DualFeatureTransformer(int input_size, WeightInitType init_type) : input_size(input_size) {
+    FeatureTransformer(int input_size, WeightInitType init_type) : input_size(input_size) {
         name = "FeatureTransformer";
 
         weights = Tensor(size, input_size);
-        switch(init_type) {
-        case WeightInitType::Uniform:
-            weights.init_uniformly();
-            break;
-        case WeightInitType::He:
-            weights.he_init(input_size);
-            break;
-        }
+        weights.init(init_type, input_size);
     }
 
     void forward() override {
@@ -37,10 +29,10 @@ class DualFeatureTransformer : public LayerBase {
         int i = 0;
         for(auto &feature : features) {
             sparse_affine_fwd( //
-                output.activated.get_vals(),
+                output.activated.get_data(),
                 output.pre_activated,
-                weights.get_vals(),
-                biases.get_vals(),
+                weights.get_data(),
+                biases.get_data(),
                 feature,
                 sparse_batch.get_feature_sizes(),
                 i * size,
