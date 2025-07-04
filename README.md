@@ -1,4 +1,4 @@
-# Astra-Net-Trainer
+# Astra-Trainer
 
 Super fast CUDA-Neural-Network Trainer for my chess engine Astra.
 
