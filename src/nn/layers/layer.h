@@ -45,6 +45,10 @@ class LayerBase {
     void init(int batch_size) {
         sparse_batch = SparseBatch(batch_size, 32);
         output = Output(get_output_size(), batch_size);
+
+        for(const Tensor *t : get_params())
+            if(!t->is_quantized())
+                error("Error: Layer parameters must be quantized before training.");
     }
 
     SparseBatch &get_sparse_batch() {

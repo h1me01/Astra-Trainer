@@ -53,7 +53,7 @@ void Network::save_checkpoint(const std::string &path) {
     try {
         std::filesystem::create_directories(path);
     } catch(const std::filesystem::filesystem_error &e) {
-        throw std::runtime_error("Failed to create directory " + path + ": " + e.what());
+        error("Failed to create directory " + path + ": " + e.what());
     }
 
     // save weights
@@ -61,7 +61,7 @@ void Network::save_checkpoint(const std::string &path) {
         const std::string file = path + "/weights.bin";
         FILE *f = fopen(file.c_str(), "wb");
         if(!f)
-            throw std::runtime_error("Failed to write weights to " + file);
+            error("Failed to write weights to " + file);
 
         for(LayerBase *l : layers) {
             for(Tensor *t : l->get_params()) {
@@ -70,20 +70,20 @@ void Network::save_checkpoint(const std::string &path) {
 
                 int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
                 if(written != weights.size())
-                    throw std::runtime_error("Error writing weights to file");
+                    error("Error writing weights to file");
             }
         }
 
         fclose(f);
     } catch(const std::exception &e) {
-        throw std::runtime_error(std::string("Failed to save weights: ") + e.what());
+        error(std::string("Failed to save weights: ") + e.what());
     }
 
     // save quantized weights
     try {
         FILE *f = fopen((path + "/qweights.net").c_str(), "wb");
         if(!f)
-            throw std::runtime_error("Failed to write quantized weights");
+            error("Failed to write quantized weights");
 
         for(LayerBase *l : layers)
             for(Tensor *t : l->get_params())
@@ -91,7 +91,7 @@ void Network::save_checkpoint(const std::string &path) {
 
         fclose(f);
     } catch(const std::exception &e) {
-        throw std::runtime_error(std::string("Failed to save quantized weights: ") + e.what());
+        error(std::string("Failed to save quantized weights: ") + e.what());
     }
 
     // save optimizer state
@@ -194,8 +194,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
         const std::string checkpoint_path = output_path + "/" + checkpoint_name;
 
         if(!std::filesystem::exists(checkpoint_path)) {
-            std::cerr << "Checkpoint path does not exist: " << checkpoint_path << std::endl;
-            return;
+            error("Checkpoint path does not exist: " + checkpoint_path);
         }
 
         load_weights(checkpoint_path + "/weights.bin");
@@ -226,8 +225,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
         info_file << dataloader.getInfo() << "\n";
         info_file.close();
     } else {
-        std::cerr << "Failed to save info file!\n";
-        return;
+        error("Failed to open info file for writing: " + training_folder + "/info.txt");
     }
 
     Timer timer;

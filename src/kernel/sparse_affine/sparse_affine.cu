@@ -50,7 +50,7 @@ void sparse_affine_fwd(                  //
     const int max_entries,               //
     const ActivationType act_type        //
 ) {
-    ASSERT(batch_size == activated_v.num_cols());
+    ASSERT(batch_size == activated_v.cols());
 
     ASSERT(weights_v.dev_address() &&     //
            biases_v.dev_address() &&      //
@@ -60,7 +60,7 @@ void sparse_affine_fwd(                  //
            feature_sizes.dev_address());
 
     const int block_size = 128;
-    const int grid_size = std::ceil(float(weights_v.num_rows() * batch_size) / block_size);
+    const int grid_size = std::ceil(float(weights_v.rows() * batch_size) / block_size);
 
     sparse_affine_kernel<<<grid_size, block_size>>>( //
         weights_v.dev_address(),
@@ -69,8 +69,8 @@ void sparse_affine_fwd(                  //
         pre_activated.dev_address(),
         features.dev_address(),
         feature_sizes.dev_address(),
-        weights_v.num_rows(),
-        activated_v.num_rows(),
+        weights_v.rows(),
+        activated_v.rows(),
         a_offset,
         batch_size,
         max_entries,
@@ -131,7 +131,7 @@ void sparse_affine_bwd(                      //
     const int max_entries,                   //
     const ActivationType act_type            //
 ) {
-    ASSERT(activated_g.num_cols() == batch_size);
+    ASSERT(activated_g.cols() == batch_size);
 
     ASSERT(weights_g.dev_address() &&     //
            biases_g.dev_address() &&      //
@@ -141,7 +141,7 @@ void sparse_affine_bwd(                      //
            feature_sizes.dev_address());
 
     const int block_size = 128;
-    const int grid_size = std::ceil(float(weights_g.num_rows() * batch_size) / block_size);
+    const int grid_size = std::ceil(float(weights_g.rows() * batch_size) / block_size);
 
     sparse_affine_bp_kernel<<<grid_size, block_size>>>( //
         activated_g.dev_address(),
@@ -150,8 +150,8 @@ void sparse_affine_bwd(                      //
         biases_g.dev_address(),
         features.dev_address(),
         feature_sizes.dev_address(),
-        weights_g.num_rows(),
-        activated_g.num_rows(),
+        weights_g.rows(),
+        activated_g.rows(),
         a_offset,
         batch_size,
         max_entries,

@@ -2,43 +2,44 @@
 
 #include "array.h"
 
+// column-major dense matrix
 template <typename T> //
 class DenseMatrix : public Array<T> {
   private:
-    int n_rows, n_cols;
+    int m_rows, m_cols;
 
   public:
     using Array<T>::operator();
 
-    DenseMatrix(int num_rows, int num_cols) //
-        : n_rows(num_rows), n_cols(num_cols), Array<T>(num_rows * num_cols) {}
+    DenseMatrix(int rows, int cols) //
+        : m_rows(rows), m_cols(cols), Array<T>(rows * cols) {}
 
     DenseMatrix(const DenseMatrix &other) //
-        : n_rows(other.n_rows), n_cols(other.n_cols), Array<T>(other) {}
+        : m_rows(other.m_rows), m_cols(other.m_cols), Array<T>(other) {}
 
     DenseMatrix &operator=(const DenseMatrix &other) {
         if(this != &other) {
-            n_rows = other.n_rows;
-            n_cols = other.n_cols;
+            m_rows = other.m_rows;
+            m_cols = other.m_cols;
             Array<T>::operator=(other);
         }
 
         return *this;
     }
 
-    int num_rows() const {
-        return n_rows;
+    int rows() const {
+        return m_rows;
     }
 
-    int num_cols() const {
-        return n_cols;
+    int cols() const {
+        return m_cols;
     }
 
-    T operator()(int row_idx, int col_idx) const {
-        return get(num_rows() * col_idx + row_idx);
+    T operator()(int r, int c) const {
+        return get(m_rows * c + r);
     }
 
-    T &operator()(int row_idx, int col_idx) {
-        return get(num_rows() * col_idx + row_idx);
+    T &operator()(int r, int c) {
+        return get(m_rows * c + r);
     }
 };

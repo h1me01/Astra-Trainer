@@ -57,6 +57,9 @@ class Optimizer {
     }
 
     void clamp(float min, float max) {
+        if(min > max)
+            error("Error: min cannot be greater than max.");
+
         this->min_val = min;
         this->max_val = max;
     }
@@ -68,19 +71,19 @@ class Optimizer {
     void load(const std::string &path) {
         std::string state_path = path + "/state";
         if(!std::filesystem::exists(state_path)) {
-            throw std::runtime_error("Optimizer state path does not exist: " + state_path);
+            error("Optimizer state path does not exist: " + state_path);
         }
 
         auto loadFile = [&](const std::string &filename, std::vector<Array<float>> &buffers, const std::string &name) {
             std::ifstream f(filename, std::ios::binary);
             if(!f.is_open())
-                throw std::runtime_error("Failed to open file " + filename);
+                error("Failed to open file " + filename);
 
             for(size_t i = 0; i < buffers.size(); i++) {
                 f.read(reinterpret_cast<char *>(buffers[i].host_address()), buffers[i].size() * sizeof(float));
                 if(f.gcount() != static_cast<std::streamsize>(buffers[i].size() * sizeof(float))) {
-                    throw std::runtime_error("Error: insufficient data read for " + name + ". Expected " +
-                                             std::to_string(buffers[i].size()) + " floats");
+                    error("Error: insufficient data read for " + name + ". Expected " +
+                          std::to_string(buffers[i].size()) + " floats");
                 }
                 buffers[i].host_to_dev();
             }
@@ -92,7 +95,7 @@ class Optimizer {
             if(name == "Ranger")
                 loadFile(state_path + "/slow_buffer.bin", slow_buffer, "slow_buffer");
         } catch(const std::exception &e) {
-            throw std::runtime_error("Failed to load optimizer state from " + state_path + ": " + e.what());
+            error("Failed to load optimizer state from " + state_path + ": " + e.what());
         }
 
         std::cout << "Loaded optimizer state from " << path << std::endl;
@@ -105,14 +108,14 @@ class Optimizer {
         auto saveFile = [&](const std::string &filename, std::vector<Array<float>> &buffers) {
             std::ofstream f(filename, std::ios::binary);
             if(!f.is_open()) {
-                throw std::runtime_error("Failed to open file " + filename + " for writing");
+                error("Failed to open file " + filename + " for writing");
             }
 
             for(auto &buffer : buffers) {
                 buffer.dev_to_host();
                 f.write(reinterpret_cast<const char *>(buffer.host_address()), buffer.size() * sizeof(float));
                 if(!f.good())
-                    throw std::runtime_error("Error writing to file " + filename);
+                    error("Error writing to file " + filename);
             }
         };
 
@@ -122,7 +125,7 @@ class Optimizer {
             if(name == "Ranger")
                 saveFile(state_path + "/slow_buffer.bin", slow_buffer);
         } catch(const std::exception &e) {
-            throw std::runtime_error("Failed to save optimizer state to " + state_path + ": " + e.what());
+            error("Failed to save optimizer state to " + state_path + ": " + e.what());
         }
     }
 

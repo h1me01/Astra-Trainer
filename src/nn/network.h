@@ -133,7 +133,7 @@ class Network {
 
         // check if the file exists
         if(!f) {
-            throw std::runtime_error("File " + file + " does not exist");
+            error("File " + file + " does not exist");
         }
 
         try {
@@ -143,8 +143,8 @@ class Network {
 
                     f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
                     if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
-                        throw std::runtime_error("Error: insufficient data read from file. Expected " +
-                                                 std::to_string(weights.size()) + " floats");
+                        error("Error: insufficient data read from file. Expected " + std::to_string(weights.size()) +
+                              " floats");
                     }
 
                     weights.host_to_dev();
@@ -153,10 +153,8 @@ class Network {
 
             std::cout << "Loaded weights from " << file << std::endl;
         } catch(const std::exception &e) {
-            throw std::runtime_error("Failed to load weights from " + file + ": " + e.what());
+            error("Failed to load weights from " + file + ": " + e.what());
         }
-
-        save_checkpoint("D:/Astra-Data/nn_output/training_8/test");
     }
 
     // assumes output activation is sigmoid

@@ -10,14 +10,14 @@ int main() {
 
     // init network
     Network network({
-        5,     // epochs
+        600,   // epochs
         16384, // batch size
         6104,  // batches per epoch
         100,   // save rate
         1,     // thread count for dataloader
         400,   // output scalar
-        1.0,   // wdl start lambda
-        1.0    // wdl end lambda
+        0.7,   // wdl start lambda
+        0.8    // wdl end lambda
     });
 
     // init loss
@@ -36,18 +36,11 @@ int main() {
     optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
 
     // init lr scheduler
-    StepDecay lr_sched( //
-        160,            // step size
-        0.1             // gamma
+    CosineAnnealing lr_sched(     //
+        network.get_batch_size(), // max epochs
+        0.001,                    // lr
+        0.001 * 0.3 * 0.3 * 0.3   // min lr
     );
-
-    // GradualDecay lr_sched(0.99); // 0.99 = gamma
-
-    // CosineAnnealing lr_sched(   //
-    //     network.getBatchSize(), // max epochs
-    //     0.001,                  // lr
-    //     0.001f * powf(0.3f, 5)  // min lr
-    //);
 
     optim.set_scheduler(&lr_sched);
 
@@ -69,37 +62,34 @@ int main() {
 
     // init hidden layers
 
-    auto ft = FeatureTransformer<256, SCReLU>( //
+    auto ft = FeatureTransformer<512, SCReLU>( //
         get_bucket_size(input_bucket) * 768,   // input size
         WeightInitType::Uniform                // weight initialization type
     );
 
-    // set quantization schemes for weights and biases
-    ft.get_params()[0]->quantize<QuantType::INT16>(255);
-    ft.get_params()[1]->quantize<QuantType::INT16>(255);
+    // set quantization for weights and biases
+    ft.get_params()[0]->quantize<QuantType::INT16>(255); // weights
+    ft.get_params()[1]->quantize<QuantType::INT16>(255); // biases
 
     auto l1 = Affine<OutputBuckets::NUM_BUCKETS>( //
         &ft,                                      // previous layer
         WeightInitType::Uniform                   // weight initialization type
     );
 
-    // set quantization schemes for weights and biases
-    l1.get_params()[0]->quantize<QuantType::INT16>(64, true);
-    l1.get_params()[1]->quantize<QuantType::INT16>(255 * 64);
+    // set quantization for weights and biases
+    l1.get_params()[0]->quantize<QuantType::INT16>(64, true); // weights
+    l1.get_params()[1]->quantize<QuantType::INT16>(255 * 64); // biases
 
     auto ob = OutputBuckets(&l1);
 
     network.set_hidden_layers({&ft, &l1, &ob});
 
-    const string output_path = root_path + "/nn_output";
-
-    // load weights only (if needed)
-    network.load_weights(output_path + "/training_6/checkpoint-final/weights.bin");
-    // network.train( //
-    //     files,
-    //     output_path
-    //     // ,"training_4/checkpoint-100" // load checkpoint (if needed)
-    //);
+    // start training
+    network.train(               //
+        files,                   // training files
+        root_path + "/nn_output" // output path
+        // ,"training_4/checkpoint-100" // load checkpoint (if needed)
+    );
 
     // test network on some positions
     network.evaluate_positions({

@@ -32,8 +32,8 @@ class OutputBuckets : public LayerBase {
         const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
         DenseMatrix<float> &input_v = input.get_data();
 
-        ASSERT(input_v.num_rows() == NUM_BUCKETS);
-        ASSERT(input_v.num_cols() == batch_size);
+        ASSERT(input_v.rows() == NUM_BUCKETS);
+        ASSERT(input_v.cols() == batch_size);
         ASSERT(batch_size == bucket_indices.size());
 
         select_fwd( //
@@ -54,8 +54,8 @@ class OutputBuckets : public LayerBase {
         const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
         DenseMatrix<float> &input_g = input.get_grads();
 
-        ASSERT(input_g.num_rows() == NUM_BUCKETS);
-        ASSERT(input_g.num_cols() == batch_size);
+        ASSERT(input_g.rows() == NUM_BUCKETS);
+        ASSERT(input_g.cols() == batch_size);
         ASSERT(batch_size == bucket_indices.size());
 
         select_bwd( //

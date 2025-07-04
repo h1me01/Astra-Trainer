@@ -33,6 +33,11 @@
         }                                                                                                              \
     }
 
+inline void error(const std::string &message) {
+    std::cerr << message << std::endl;
+    std::abort();
+}
+
 inline std::string get_activation_name(int type) {
     // clang-format off
     switch(type) 
@@ -83,8 +88,7 @@ inline std::vector<std::string> fetch_files_from_path(const std::string &path) {
     }
 
     if(files.empty()) {
-        std::cerr << "No training data found" << std::endl;
-        exit(1);
+        error("No training data found in the specified path: " + path);
     }
 
     return files;

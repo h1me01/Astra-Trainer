@@ -44,11 +44,11 @@ void affine_fwd(                       //
     DenseMatrix<float> &pre_activated, //
     const ActivationType act_type      //
 ) {
-    ASSERT(activated_v.num_rows() == biases_v.num_rows() && biases_v.num_cols() == 1);
+    ASSERT(activated_v.rows() == biases_v.rows() && biases_v.cols() == 1);
 
-    ASSERT(weights_v.num_cols() == inputs_v.num_rows() &&    //
-           weights_v.num_rows() == activated_v.num_rows() && //
-           inputs_v.num_cols() == activated_v.num_cols());
+    ASSERT(weights_v.cols() == inputs_v.rows() &&    //
+           weights_v.rows() == activated_v.rows() && //
+           inputs_v.cols() == activated_v.cols());
 
     ASSERT(weights_v.dev_address() &&   //
            biases_v.dev_address() &&    //
@@ -61,17 +61,17 @@ void affine_fwd(                       //
         CUBLAS_HANDLE,               // handle
         CUBLAS_OP_N,                 // transa
         CUBLAS_OP_N,                 // transb
-        pre_activated.num_rows(),    // m
-        pre_activated.num_cols(),    // n
-        inputs_v.num_rows(),         // k
+        pre_activated.rows(),        // m
+        pre_activated.cols(),        // n
+        inputs_v.rows(),             // k
         &alpha,                      // alpha
         weights_v.dev_address(),     // A
-        weights_v.num_rows(),        // lda
+        weights_v.rows(),            // lda
         inputs_v.dev_address(),      // B
-        inputs_v.num_rows(),         // ldb
+        inputs_v.rows(),             // ldb
         &beta,                       // beta
         pre_activated.dev_address(), // C
-        pre_activated.num_rows()     // ldc
+        pre_activated.rows()         // ldc
     );
 
     // add biases to dot product
@@ -82,8 +82,8 @@ void affine_fwd(                       //
         biases_v.dev_address(),
         activated_v.dev_address(),
         pre_activated.dev_address(),
-        activated_v.num_rows(),
-        activated_v.num_cols(),
+        activated_v.rows(),
+        activated_v.cols(),
         act_type);
 }
 
@@ -127,11 +127,11 @@ void affine_bwd(                       //
     const DenseMatrix<float> &activated_v = activated.get_data();
     const DenseMatrix<float> &activated_g = activated.get_grads();
 
-    ASSERT(activated_g.num_rows() == biases_g.num_rows() && biases_g.num_cols() == 1);
+    ASSERT(activated_g.rows() == biases_g.rows() && biases_g.cols() == 1);
 
-    ASSERT(weights_g.num_cols() == inputs_g.num_rows() &&    //
-           weights_g.num_rows() == activated_g.num_rows() && //
-           inputs_g.num_cols() == activated_g.num_cols());
+    ASSERT(weights_g.cols() == inputs_g.rows() &&    //
+           weights_g.rows() == activated_g.rows() && //
+           inputs_g.cols() == activated_g.cols());
 
     ASSERT(weights_v.dev_address() &&   //
            weights_g.dev_address() &&   //
@@ -151,8 +151,8 @@ void affine_bwd(                       //
         pre_activated.dev_address(),
         activated_g.dev_address(),
         biases_g.dev_address(),
-        activated_g.num_rows(),
-        activated_g.num_cols(),
+        activated_g.rows(),
+        activated_g.cols(),
         act_type);
 
     // update weights gradient
@@ -160,17 +160,17 @@ void affine_bwd(                       //
         CUBLAS_HANDLE,             // handle
         CUBLAS_OP_N,               // transa
         CUBLAS_OP_T,               // transb
-        weights_g.num_rows(),      // m
-        weights_g.num_cols(),      // n
-        activated_g.num_cols(),    // k
+        weights_g.rows(),          // m
+        weights_g.cols(),          // n
+        activated_g.cols(),        // k
         &alpha,                    // alpha
         activated_g.dev_address(), // A
-        activated_g.num_rows(),    // lda
+        activated_g.rows(),        // lda
         inputs_v.dev_address(),    // B
-        inputs_v.num_rows(),       // ldb
+        inputs_v.rows(),           // ldb
         &beta,                     // beta
         weights_g.dev_address(),   // C
-        weights_g.num_rows()       // ldc
+        weights_g.rows()           // ldc
     );
 
     // calculates delta for the layer before this one as well
@@ -178,16 +178,16 @@ void affine_bwd(                       //
         CUBLAS_HANDLE,             // handle
         CUBLAS_OP_T,               // transa
         CUBLAS_OP_N,               // transb
-        inputs_g.num_rows(),       // m
-        inputs_g.num_cols(),       // n
-        weights_v.num_rows(),      // k
+        inputs_g.rows(),           // m
+        inputs_g.cols(),           // n
+        weights_v.rows(),          // k
         &alpha,                    // alpha
         weights_v.dev_address(),   // A
-        weights_v.num_rows(),      // lda
+        weights_v.rows(),          // lda
         activated_g.dev_address(), // B
-        activated_g.num_rows(),    // ldb
+        activated_g.rows(),        // ldb
         &beta,                     // beta
         inputs_g.dev_address(),    // C
-        inputs_g.num_rows()        // ldc
+        inputs_g.rows()            // ldc
     );
 }
