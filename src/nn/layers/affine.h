@@ -20,7 +20,7 @@ class Affine : public LayerBase {
     Affine(LayerBase *previous, WeightInitType init_type) : previous(previous) {
         name = "Affine";
 
-        int input_size = previous->get_output_size();
+        const int input_size = previous->get_output_size();
 
         weights = Tensor(size, input_size);
         weights.init(init_type, input_size);

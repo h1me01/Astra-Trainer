@@ -5,9 +5,7 @@
 
 #include "../dataloader/dataloader.h"
 #include "data/include.h"
-#include "layers/affine.h"
-#include "layers/feature_transformer.h"
-#include "layers/output_buckets.h"
+#include "layers/include.h"
 #include "loss.h"
 #include "optimizer.h"
 
