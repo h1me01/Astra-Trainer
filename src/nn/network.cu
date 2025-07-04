@@ -162,8 +162,8 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     }
 
     // upload to device
-    targets.host_to_dev();
     sb.host_to_dev();
+    targets.host_to_dev();
 }
 
 void Network::train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name) {

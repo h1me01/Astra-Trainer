@@ -9,7 +9,7 @@
 #include "loss.h"
 #include "optimizer.h"
 
-struct Hyperparameters {
+struct Hyperparams {
     int epochs = 500;
     int batch_size = 16384;
     int batches_per_epoch = 6104;
@@ -19,9 +19,9 @@ struct Hyperparameters {
     float start_lambda = 0.7f;
     float end_lambda = 0.8f;
 
-    Hyperparameters() {}
+    Hyperparams() {}
 
-    Hyperparameters(           //
+    Hyperparams(               //
         int epochs,            //
         int batch_size,        //
         int batches_per_epoch, //
@@ -46,12 +46,12 @@ class Network {
   private:
     bool is_initialized = false;
 
-    Hyperparameters hp;
+    Hyperparams hp;
 
     std::stringstream info;
 
     std::vector<LayerBase *> layers;
-    std::array<int, 64> input_bucket;
+    std::array<int, 64> input_bucket = {};
 
     Loss *loss = nullptr;
     Optimizer *optim = nullptr;
@@ -62,8 +62,12 @@ class Network {
         if(is_initialized)
             return;
 
-        ASSERT(!layers.empty());
-        ASSERT(optim != nullptr && loss != nullptr);
+        if(layers.empty())
+            error("Error: No hidden layers set for the network.");
+        if(optim == nullptr)
+            error("Error: Optimizer is not set for the network.");
+        if(loss == nullptr)
+            error("Error: Loss function is not set for the network.");
 
         optim->init(layers);
         for(LayerBase *l : layers)
@@ -118,7 +122,7 @@ class Network {
     void fill(std::vector<DataEntry> &ds, float lambda);
 
   public:
-    explicit Network(Hyperparameters hp) : hp(hp), targets(hp.batch_size) {
+    explicit Network(Hyperparams hp) : hp(hp), targets(hp.batch_size) {
         create_cublas();
     }
 
@@ -130,9 +134,8 @@ class Network {
         std::ifstream f(file, std::ios::binary);
 
         // check if the file exists
-        if(!f) {
+        if(!f)
             error("File " + file + " does not exist");
-        }
 
         try {
             for(LayerBase *l : layers) {
@@ -141,8 +144,8 @@ class Network {
 
                     f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
                     if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
-                        error("Error: insufficient data read from file. Expected " + std::to_string(weights.size()) +
-                              " floats");
+                        error("Error: insufficient data read from file. Expected " + //
+                              std::to_string(weights.size()) + " floats");
                     }
 
                     weights.host_to_dev();
@@ -188,12 +191,10 @@ class Network {
     }
 
     void set_loss(Loss *loss) {
-        ASSERT(loss != nullptr);
         this->loss = loss;
     }
 
     void set_optim(Optimizer *optim) {
-        ASSERT(optim != nullptr);
         this->optim = optim;
     }
 
@@ -210,7 +211,7 @@ class Network {
     };
 
     Tensor &get_output() {
-        return layers[layers.size() - 1]->get_output().activated;
+        return layers.back()->get_output().activated;
     };
 
     std::vector<LayerBase *> get_layers() {
