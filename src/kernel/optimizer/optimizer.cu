@@ -60,10 +60,10 @@ void adam_optim(               //
     const float max_val,       //
     const float grad_scale     //
 ) {
-    ASSERT(vals.dev_address() &&  //
-           grads.dev_address() && //
-           moms.dev_address() &&  //
-           vels.dev_address());
+    ASSERT(vals.dev_address()     //
+           && grads.dev_address() //
+           && moms.dev_address()  //
+           && vels.dev_address());
 
     const int grid_size(std::ceil((float) vals.size() / block_size));
 
@@ -157,10 +157,10 @@ void radam_optim(              //
     const int N_sma_threshold, //
     const int step             //
 ) {
-    ASSERT(vals.dev_address() &&  //
-           grads.dev_address() && //
-           moms.dev_address() &&  //
-           vels.dev_address());
+    ASSERT(vals.dev_address()     //
+           && grads.dev_address() //
+           && moms.dev_address()  //
+           && vels.dev_address());
 
     const int grid_size(std::ceil((float) vals.size() / block_size));
 
@@ -268,11 +268,11 @@ void ranger_optim(             //
     const int N_sma_threshold, //
     const int step             //
 ) {
-    ASSERT(vals.dev_address() &&  //
-           grads.dev_address() && //
-           moms.dev_address() &&  //
-           vels.dev_address() &&  //
-           slow_buffer.dev_address());
+    ASSERT(vals.dev_address()     //
+           && grads.dev_address() //
+           && moms.dev_address()  //
+           && vels.dev_address()  //
+           && slow_buffer.dev_address());
 
     const int grid_size(std::ceil((float) vals.size() / block_size));
 

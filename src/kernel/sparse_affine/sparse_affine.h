@@ -11,7 +11,6 @@ void sparse_affine_fwd( //
     const Array<int> &features,
     const Array<int> &feature_sizes,
     const int a_offset,
-    const int batch_size,
     const int max_entries,
     const ActivationType act_type);
 
@@ -23,6 +22,5 @@ void sparse_affine_bwd( //
     const Array<int> &features,
     const Array<int> &feature_sizes,
     const int a_offset,
-    const int batch_size,
     const int max_entries,
     const ActivationType act_type);

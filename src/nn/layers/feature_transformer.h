@@ -36,7 +36,6 @@ class FeatureTransformer : public LayerBase {
                 feature,
                 sparse_batch.get_feature_sizes(),
                 i * size,
-                sparse_batch.get_batch_size(),
                 sparse_batch.get_max_entries(),
                 act_type);
 
@@ -57,7 +56,6 @@ class FeatureTransformer : public LayerBase {
                 feature,
                 sparse_batch.get_feature_sizes(),
                 i * size,
-                sparse_batch.get_batch_size(),
                 sparse_batch.get_max_entries(),
                 act_type);
 

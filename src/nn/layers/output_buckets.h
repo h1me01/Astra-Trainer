@@ -27,7 +27,6 @@ class OutputBuckets : public LayerBase {
         Tensor &input = previous->get_output().activated;
 
         const int batch_size = sparse_batch.get_batch_size();
-        const int input_size = previous->get_output_size();
 
         const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
         DenseMatrix<float> &input_v = input.get_data();
@@ -36,20 +35,13 @@ class OutputBuckets : public LayerBase {
         ASSERT(input_v.cols() == batch_size);
         ASSERT(batch_size == bucket_indices.size());
 
-        select_fwd( //
-            input_v,
-            output.activated.get_data(),
-            bucket_indices,
-            batch_size,
-            input_size,
-            size);
+        select_fwd(input_v, output.activated.get_data(), bucket_indices);
     }
 
     void backward() override {
         Tensor &input = previous->get_output().activated;
 
         const int batch_size = sparse_batch.get_batch_size();
-        const int input_size = previous->get_output_size();
 
         const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
         DenseMatrix<float> &input_g = input.get_grads();
@@ -58,13 +50,7 @@ class OutputBuckets : public LayerBase {
         ASSERT(input_g.cols() == batch_size);
         ASSERT(batch_size == bucket_indices.size());
 
-        select_bwd( //
-            input_g,
-            output.activated.get_grads(),
-            bucket_indices,
-            batch_size,
-            input_size,
-            size);
+        select_bwd(input_g, output.activated.get_grads(), bucket_indices);
     }
 
     ActivationType activation_type() const override {

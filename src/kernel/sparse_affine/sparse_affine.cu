@@ -48,18 +48,19 @@ void sparse_affine_fwd(                  //
     const Array<int> &features,          //
     const Array<int> &feature_sizes,     //
     const int a_offset,                  //
-    const int batch_size,                //
     const int max_entries,               //
     const ActivationType act_type        //
 ) {
+    const int batch_size = activated_v.cols();
+
     ASSERT(batch_size == activated_v.cols());
 
-    ASSERT(weights_v.dev_address() &&     //
-           biases_v.dev_address() &&      //
-           activated_v.dev_address() &&   //
-           pre_activated.dev_address() && //
-           features.dev_address() &&      //
-           feature_sizes.dev_address());
+    ASSERT(weights_v.dev_address()        //
+           && biases_v.dev_address()      //
+           && activated_v.dev_address()   //
+           && pre_activated.dev_address() //
+           && features.dev_address()      //
+           && feature_sizes.dev_address());
 
     const int grid_size = std::ceil(float(weights_v.rows() * batch_size) / block_size);
 
@@ -128,18 +129,19 @@ void sparse_affine_bwd(                      //
     const Array<int> &features,              //
     const Array<int> &feature_sizes,         //
     const int a_offset,                      //
-    const int batch_size,                    //
     const int max_entries,                   //
     const ActivationType act_type            //
 ) {
+    const int batch_size = activated_g.cols();
+
     ASSERT(activated_g.cols() == batch_size);
 
-    ASSERT(weights_g.dev_address() &&     //
-           biases_g.dev_address() &&      //
-           activated_g.dev_address() &&   //
-           pre_activated.dev_address() && //
-           features.dev_address() &&      //
-           feature_sizes.dev_address());
+    ASSERT(weights_g.dev_address()        //
+           && biases_g.dev_address()      //
+           && activated_g.dev_address()   //
+           && pre_activated.dev_address() //
+           && features.dev_address()      //
+           && feature_sizes.dev_address());
 
     const int grid_size = std::ceil(float(weights_g.rows() * batch_size) / block_size);
 

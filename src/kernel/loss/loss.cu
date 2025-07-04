@@ -39,10 +39,10 @@ void mpe_loss(                     //
     const DenseMatrix<float> &output_v = output.get_data();
     DenseMatrix<float> &output_g = output.get_grads();
 
-    ASSERT(output_v.dev_address() && //
-           output_g.dev_address() && //
-           targets.dev_address() &&  //
-           loss.dev_address());
+    ASSERT(output_v.dev_address()    //
+           && output_g.dev_address() //
+           && targets.dev_address()  //
+           && loss.dev_address());
 
     const int grid_size = std::ceil((float) output_v.size() / block_size);
 
@@ -89,10 +89,10 @@ void mse_loss(                     //
     const DenseMatrix<float> &output_v = output.get_data();
     DenseMatrix<float> &output_g = output.get_grads();
 
-    ASSERT(output_v.dev_address() && //
-           output_g.dev_address() && //
-           targets.dev_address() &&  //
-           loss.dev_address());
+    ASSERT(output_v.dev_address()    //
+           && output_g.dev_address() //
+           && targets.dev_address()  //
+           && loss.dev_address());
 
     const int grid_size = std::ceil((float) output_v.size() / block_size);
 
