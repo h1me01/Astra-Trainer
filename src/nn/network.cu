@@ -122,6 +122,8 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
 }
 
 void Network::fill(std::vector<DataEntry> &ds, float lambda) {
+    ASSERT(ds.size() == hp.batch_size || ds.size() == 1);
+
     SparseBatch &sb = layers[0]->get_sparse_batch();
 
     const int max_entries = sb.get_max_entries();
@@ -218,7 +220,7 @@ void Network::train(std::vector<std::string> &files, std::string output_path, st
     }
 
     // init dataloader
-    FeaturedBatchStream dataloader(files, hp.thread_count, hp.batch_size, false);
+    FeaturedBatchStream dataloader(files, hp.thread_count, hp.batch_size, true);
 
     std::cout << "\n=============================== Training Network ===============================\n\n";
 

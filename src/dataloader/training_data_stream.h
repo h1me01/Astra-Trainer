@@ -4,9 +4,11 @@
 #include "binpack.h"
 
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace training_data {
 
@@ -171,7 +173,7 @@ struct BinpackSfenInputParallelStream : BasicSfenInputStream {
     }
 
     void fill(std::vector<TrainingDataEntry> &v, std::size_t n) override {
-        std::size_t k = m_stream->fill(v, n);
+        auto k = m_stream->fill(v, n);
         if(n != k) {
             m_eof = true;
         }

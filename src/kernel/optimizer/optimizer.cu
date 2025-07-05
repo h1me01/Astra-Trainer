@@ -30,8 +30,7 @@ __global__ void adam_kernel( //
 
     const float grad = grads[idx] * grad_scale;
 
-    float val = vals[idx];
-    val *= decay;
+    float val = vals[idx] * decay;
 
     float mom = moms[idx];
     float vel = vels[idx];
@@ -107,8 +106,7 @@ __global__ void radam_kernel(  //
 
     const float grad = grads[idx] * grad_scale;
 
-    float val = vals[idx];
-    val *= decay;
+    float val = vals[idx] * decay;
 
     float mom = moms[idx];
     float vel = vels[idx];
@@ -206,8 +204,8 @@ __global__ void ranger_kernel( //
         return;
 
     const float grad = grads[idx] * grad_scale;
-    float val = vals[idx];
-    val *= decay;
+
+    float val = vals[idx] * decay;
 
     float mom = moms[idx];
     float vel = vels[idx];

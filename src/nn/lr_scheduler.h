@@ -14,7 +14,7 @@ class StepDecay : public LRScheduler {
     float gamma;
 
   public:
-    StepDecay(int step = 100, float gamma = 1.0) : step(step), gamma(gamma) {}
+    StepDecay(int step = 100, float gamma = 0.1) : step(step), gamma(gamma) {}
 
     float get_lr(int epoch, float lr) override {
         return epoch % step == 0 ? lr * gamma : lr;

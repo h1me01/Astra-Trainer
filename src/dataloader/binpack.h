@@ -37,6 +37,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cstring>
 #include <fstream>
 #include <functional>
+#include <ios>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -3703,6 +3704,8 @@ struct Position : public Board {
 
     [[nodiscard]] inline Bitboard checkers() const;
 
+    [[nodiscard]] inline std::int16_t simple_eval() const;
+
     [[nodiscard]] inline bool isCheckAfterMove(Move move) const;
 
     [[nodiscard]] inline bool isMoveLegal(Move move) const;
@@ -4169,6 +4172,14 @@ template <typename FuncT> inline void forEachLegalMove(const Position &pos, Func
     return BaseType::attackers(kingSquare(m_sideToMove), !m_sideToMove);
 }
 
+[[nodiscard]] inline std::int16_t Position::simple_eval() const {
+    return (m_sideToMove == Color::White ? 1 : -1) * (208 * (pieceCount(whitePawn) - pieceCount(blackPawn)) +
+                                                      781 * (pieceCount(whiteKnight) - pieceCount(blackKnight)) +
+                                                      825 * (pieceCount(whiteBishop) - pieceCount(blackBishop)) +
+                                                      1276 * (pieceCount(whiteRook) - pieceCount(blackRook)) +
+                                                      2538 * (pieceCount(whiteQueen) - pieceCount(blackQueen)));
+}
+
 [[nodiscard]] inline bool Position::isCheckAfterMove(Move move) const {
     return BaseType::isSquareAttackedAfterMove(move, kingSquare(!m_sideToMove), m_sideToMove);
 }
@@ -4395,8 +4406,9 @@ static constexpr EnumArray<PieceType, std::uint8_t (*)(const Position &, Square,
     pieceCompressorFunc_[PieceType::Rook] = detail::compressRook;
     pieceCompressorFunc_[PieceType::King] = detail::compressKing;
 
-    pieceCompressorFunc_[PieceType::None] = [](const Position &, Square, Piece) -> std::uint8_t { /* should never happen */
-                                                                                                  return 0;
+    pieceCompressorFunc_[PieceType::None] = [](const Position &, Square, Piece) -> std::uint8_t {
+        /* should never happen */
+        return 0;
     };
 
     return pieceCompressorFunc_;
@@ -5579,8 +5591,8 @@ struct CompressedTrainingDataFile {
         std::uint32_t chunkSize;
     };
 
-    CompressedTrainingDataFile(std::string path, std::ios_base::openmode om = std::ios_base::app)
-        : m_path(std::move(path)), m_file(m_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | om) {
+    CompressedTrainingDataFile(std::string path, std::ios_base::openmode om)
+        : m_path(std::move(path)), m_file(m_path, std::ios_base::binary | om) {
         // Racey but who cares
         m_sizeBytes = filesize(m_path.c_str());
     }
@@ -6151,7 +6163,7 @@ struct CompressedTrainingDataEntryWriter {
     static constexpr std::size_t chunkSize = suggestedChunkSize;
 
     CompressedTrainingDataEntryWriter(std::string path, std::ios_base::openmode om = std::ios_base::app)
-        : m_outputFile(path, om), m_lastEntry{}, m_movelist{}, m_packedSize(0),
+        : m_outputFile(path, om | std::ios_base::out), m_lastEntry{}, m_movelist{}, m_packedSize(0),
           m_packedEntries(chunkSize + maxMovelistSize), m_isFirst(true) {
         m_lastEntry.ply = 0xFFFF; // so it's never a continuation
         m_lastEntry.result = 0x7FFF;
@@ -6217,7 +6229,8 @@ struct CompressedTrainingDataEntryReader {
     static constexpr std::size_t chunkSize = suggestedChunkSize;
 
     CompressedTrainingDataEntryReader(std::string path, std::ios_base::openmode om = std::ios_base::app)
-        : m_inputFile(path, om), m_chunk(), m_movelistReader(std::nullopt), m_offset(0), m_isEnd(false) {
+        : m_inputFile(path, om | std::ios_base::in), m_chunk(), m_movelistReader(std::nullopt), m_offset(0),
+          m_isEnd(false) {
         if(!m_inputFile.hasNextChunk()) {
             m_isEnd = true;
         } else {
@@ -6292,7 +6305,7 @@ struct CompressedTrainingDataEntryParallelReader {
         m_numRunningWorkers.store(0);
         std::vector<double> sizes; // discrete distribution wants double weights
         for(const auto &path : paths) {
-            auto &file = m_inputFiles.emplace_back(path, om);
+            auto &file = m_inputFiles.emplace_back(path, om | std::ios_base::in);
 
             if(!file.hasNextChunk()) {
                 return;

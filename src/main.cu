@@ -42,6 +42,11 @@ int main() {
         0.001 * 0.3 * 0.3 * 0.3   // final lr
     );
 
+    // StepDecay lr_scheduler( //
+    //     100,                // step
+    //     0.1f                // gamma
+    //);
+
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
