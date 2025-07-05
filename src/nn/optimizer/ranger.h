@@ -9,7 +9,7 @@ class Ranger : public Optimizer {
     int N_sma_threshold = 6;
 
   public:
-    Ranger(AdamParams params = AdamParams{0.001, 0.95, 0.999, 1e-5, 0.01}) : Optimizer(params) {
+    Ranger(OptimParams params = OptimParams{0.001, 0.95, 0.999, 1e-5, 0.01}) : Optimizer(params) {
         name = "Ranger";
     }
 

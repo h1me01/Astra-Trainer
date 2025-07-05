@@ -19,7 +19,7 @@ class Optimizer {
 
     int step = 0;
 
-    AdamParams params;
+    OptimParams params;
 
     float min_val = -1;
     float max_val = -1;
@@ -27,7 +27,7 @@ class Optimizer {
     LRScheduler *lr_scheduler = nullptr;
 
   public:
-    Optimizer(AdamParams params) //
+    Optimizer(OptimParams params) //
         : params(params) {}
 
     void init(std::vector<LayerBase *> layers) {

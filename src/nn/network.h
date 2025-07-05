@@ -97,10 +97,9 @@ class Network {
                 info << "\n";
         }
 
-        info << "\nHidden Layers:" << std::endl;
-        for(LayerBase *l : layers)
-            info << " - " << l->get_info();
-        info << "\n";
+        info << "\nLayers:" << std::endl;
+        for(const auto &l : layers)
+            info << " -> " << l->get_info();
 
         std::cout << info.str();
     }
@@ -202,7 +201,7 @@ class Network {
         this->input_bucket = input_bucket;
     }
 
-    void set_hidden_layers(std::vector<LayerBase *> hidden_layers) {
+    void set_layers(std::vector<LayerBase *> hidden_layers) {
         this->layers = hidden_layers;
     }
 
@@ -218,5 +217,5 @@ class Network {
         return layers;
     }
 
-    void train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name = "");
+    void train(std::string data_path, std::string output_path, std::string checkpoint_name);
 };

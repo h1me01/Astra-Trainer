@@ -71,7 +71,7 @@ class Affine : public LayerBase {
         ss << name << "<";
         ss << get_activation_name(activation_type()) << ">(";
         ss << std::to_string(get_input_size());
-        ss << "->" << std::to_string(size) << ")\n";
+        ss << "->" << std::to_string(size) << "):\n";
         ss << params_info();
         return ss.str();
     }

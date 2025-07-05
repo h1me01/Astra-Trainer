@@ -72,28 +72,6 @@ inline int get_bucket_size(const std::array<int, 64> &bucket) {
     return max_value + 1;
 }
 
-inline std::vector<std::string> fetch_files_from_path(const std::string &path) {
-    std::cout << "================================= Training Data ================================\n\n";
-    std::cout << "Loading files from folder: " << path << std::endl;
-
-    std::vector<std::string> files;
-    try {
-        for(const auto &entry : std::filesystem::recursive_directory_iterator(path))
-            if(entry.is_regular_file()) {
-                files.push_back(entry.path().string());
-                std::cout << "Added: " << entry.path() << std::endl;
-            }
-    } catch(const std::filesystem::filesystem_error &e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
-    }
-
-    if(files.empty()) {
-        error("No training data found in the specified path: " + path);
-    }
-
-    return files;
-}
-
 class Logger {
   public:
     Logger() {}

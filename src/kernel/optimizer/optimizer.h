@@ -2,14 +2,14 @@
 
 #include "../../nn/data/include.h"
 
-struct AdamParams {
+struct OptimParams {
     float lr;
     float beta1;
     float beta2;
     float eps;
     float decay;
 
-    AdamParams(float lr, float beta1, float beta2, float eps, float decay)
+    OptimParams(float lr, float beta1, float beta2, float eps, float decay)
         : lr(lr), beta1(beta1), beta2(beta2), eps(eps), decay(decay) {}
 };
 
@@ -18,7 +18,7 @@ void adam_optim( //
     DenseMatrix<float> &grads,
     Array<float> &moms,
     Array<float> &vels,
-    const AdamParams &params,
+    const OptimParams &params,
     const float min_val,
     const float max_val,
     const float grad_scale);
@@ -28,7 +28,7 @@ void radam_optim( //
     DenseMatrix<float> &grads,
     Array<float> &moms,
     Array<float> &vels,
-    const AdamParams &params,
+    const OptimParams &params,
     const float min_val,
     const float max_val,
     const float grad_scale,
@@ -41,7 +41,7 @@ void ranger_optim( //
     Array<float> &moms,
     Array<float> &vels,
     Array<float> &slow_buffer,
-    const AdamParams &params,
+    const OptimParams &params,
     const float min_val,
     const float max_val,
     const float grad_scale,

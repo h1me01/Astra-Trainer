@@ -1,7 +1,33 @@
 #include "../misc.h"
 #include "network.h"
 
+// sparse batch definition
+
+SparseBatch LayerBase::sparse_batch{1, 1};
+
 // helper
+
+std::vector<std::string> files_from_path(const std::string &path) {
+    std::cout << "================================= Training Data ================================\n\n";
+    std::cout << "Loading files from folder: " << path << std::endl;
+
+    std::vector<std::string> files;
+    try {
+        for(const auto &entry : std::filesystem::recursive_directory_iterator(path))
+            if(entry.is_regular_file()) {
+                files.push_back(entry.path().string());
+                std::cout << "Added: " << entry.path() << std::endl;
+            }
+    } catch(const std::filesystem::filesystem_error &e) {
+        std::cerr << "Filesystem error: " << e.what() << std::endl;
+    }
+
+    if(files.empty()) {
+        error("No training data found in the specified path: " + path);
+    }
+
+    return files;
+}
 
 int epoch_from_checkpoint(const std::string &checkpoint_name) {
     size_t dash_pos = checkpoint_name.find_last_of('-');
@@ -45,10 +71,6 @@ int get_next_training_idx(const std::string &output_path) {
 
     return max_index + 1;
 }
-
-// sparse batch definition
-
-SparseBatch LayerBase::sparse_batch{1, 1};
 
 // network class
 
@@ -172,7 +194,9 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     targets.host_to_dev();
 }
 
-void Network::train(std::vector<std::string> &files, std::string output_path, std::string checkpoint_name) {
+void Network::train(std::string data_path, std::string output_path, std::string checkpoint_name) {
+    const std::vector<std::string> files = files_from_path(data_path);
+
     init();
     print_info();
 

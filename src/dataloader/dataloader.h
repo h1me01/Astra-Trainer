@@ -54,15 +54,6 @@ inline std::function<bool(const DataEntry &)> skipPredicate = [](const DataEntry
         return distrib(prng);
     };
 
-    auto do_skip = [&]() {
-        std::bernoulli_distribution distrib(prob);
-        auto &prng = rng::get_thread_local_rng();
-        return distrib(prng);
-    };
-
-    if(do_filter())
-        return true;
-
     if(do_wld_skip())
         return true;
     */

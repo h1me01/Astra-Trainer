@@ -30,11 +30,11 @@ class LayerBase {
         if(!params.empty()) {
             int i = 0;
             for(const Tensor *t : params) {
-                std::string prefix = (i++ == 0) ? "weights(" : "biases(";
-                info << "  -> " << prefix                           //
-                     << "min=" << format_number(t->lower_bound())   //
-                     << ", max=" << format_number(t->upper_bound()) //
-                     << ")" << "\n";
+                std::string prefix = (std::string((i++ == 0) ? "Weights:" : "Biases :") + " clipped to [");
+                info << "    - " << prefix                      //
+                     << format_number(t->lower_bound())         //
+                     << ", " << format_number(t->upper_bound()) //
+                     << "]" << "\n";
             }
         }
 

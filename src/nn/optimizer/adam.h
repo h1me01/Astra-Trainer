@@ -3,7 +3,7 @@
 #include "optimizer.h"
 
 struct Adam : Optimizer {
-    Adam(AdamParams params = AdamParams{0.001, 0.9, 0.999, 1e-8, 0.01}) : Optimizer(params) {
+    Adam(OptimParams params = OptimParams{0.001, 0.9, 0.999, 1e-8, 0.01}) : Optimizer(params) {
         name = "Adam";
     }
 

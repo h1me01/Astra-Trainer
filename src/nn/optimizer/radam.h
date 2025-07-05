@@ -7,7 +7,7 @@ class RAdam : public Optimizer {
     int N_sma_threshold = 5;
 
   public:
-    RAdam(AdamParams params = AdamParams{0.001, 0.9, 0.999, 1e-8, 0.01}) : Optimizer(params) {
+    RAdam(OptimParams params = OptimParams{0.001, 0.9, 0.999, 1e-8, 0.01}) : Optimizer(params) {
         name = "RAdam";
     }
 

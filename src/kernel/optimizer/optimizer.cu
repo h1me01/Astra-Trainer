@@ -50,7 +50,7 @@ void adam_optim(               //
     DenseMatrix<float> &grads, //
     Array<float> &moms,        //
     Array<float> &vels,        //
-    const AdamParams &params,  //
+    const OptimParams &params, //
     const float min_val,       //
     const float max_val,       //
     const float grad_scale     //
@@ -142,7 +142,7 @@ void radam_optim(              //
     DenseMatrix<float> &grads, //
     Array<float> &moms,        //
     Array<float> &vels,        //
-    const AdamParams &params,  //
+    const OptimParams &params, //
     const float min_val,       //
     const float max_val,       //
     const float grad_scale,    //
@@ -249,7 +249,7 @@ void ranger_optim(             //
     Array<float> &moms,        //
     Array<float> &vels,        //
     Array<float> &slow_buffer, //
-    const AdamParams &params,  //
+    const OptimParams &params, //
     const float min_val,       //
     const float max_val,       //
     const float grad_scale,    //

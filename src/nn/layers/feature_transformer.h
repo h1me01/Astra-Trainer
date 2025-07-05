@@ -17,6 +17,9 @@ class FeatureTransformer : public LayerBase {
 
   public:
     FeatureTransformer(int input_size, WeightInitType init_type) : input_size(input_size) {
+        if(input_size % 768 != 0)
+            error("Error: input size must be divisible by 768 to match standard chess inputs.");
+
         name = "FeatureTransformer";
 
         weights = Tensor(size, input_size);
@@ -80,11 +83,13 @@ class FeatureTransformer : public LayerBase {
     }
 
     std::string get_info() override {
+        int bucket_size = input_size / 768;
+
         std::stringstream ss;
         ss << name << "<";
-        ss << get_activation_name(activation_type()) << ">(";
-        ss << std::to_string(get_input_size());
-        ss << "->2x" << std::to_string(size) << ")\n";
+        ss << get_activation_name(activation_type()) << ">([";
+        ss << std::to_string(bucket_size) << "x768";
+        ss << "->" << std::to_string(size) << "]x2):\n";
         ss << params_info();
         return ss.str();
     }
