@@ -47,16 +47,6 @@ inline std::function<bool(const DataEntry &)> skipPredicate = [](const DataEntry
     if(e.isCapturingMove() || e.isInCheck())
         return true;
 
-    /*
-    auto do_wld_skip = [&]() {
-        std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
-        auto &prng = rng::get_thread_local_rng();
-        return distrib(prng);
-    };
-
-    if(do_wld_skip())
-        return true;
-    */
     return false;
 };
 

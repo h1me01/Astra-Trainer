@@ -96,10 +96,14 @@ class Optimizer {
         ss << ", eps=" << format_number(params.eps);
         if(params.decay != 0.0f)
             ss << ", decay=" << format_number(params.decay);
-        if(lr_scheduler != nullptr)
-            ss << ", lr_scheduler=" << lr_scheduler->get_info();
         ss << ")";
         return ss.str();
+    }
+
+    std::string get_lr_scheduler_info() {
+        if(lr_scheduler == nullptr)
+            return "No LR scheduler set";
+        return lr_scheduler->get_info();
     }
 };
 

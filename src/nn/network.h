@@ -77,17 +77,17 @@ class Network {
     }
 
     void print_info() {
-        // save and print network info
         info << "\n================================= Network Info =================================\n\n";
-        info << "Epochs: " << hp.epochs << std::endl;
-        info << "Batch Size: " << hp.batch_size << std::endl;
-        info << "Batches per Epoch: " << hp.batches_per_epoch << std::endl;
-        info << "Save Rate: " << hp.save_rate << std::endl;
+        info << "Epochs:        " << hp.epochs << std::endl;
+        info << "Batch Size:    " << hp.batch_size << std::endl;
+        info << "Batches/Epoch: " << hp.batches_per_epoch << std::endl;
+        info << "Save Rate:     " << hp.save_rate << std::endl;
         info << "Output Scalar: " << hp.output_scalar << std::endl;
-        info << "Start Lambda: " << hp.start_lambda << std::endl;
-        info << "End Lambda: " << hp.end_lambda << std::endl;
-        info << "Loss: " << loss->info() << std::endl;
-        info << "Optimizer: " << optim->get_info() << std::endl;
+        info << "Start Lambda:  " << hp.start_lambda << std::endl;
+        info << "End Lambda:    " << hp.end_lambda << std::endl;
+        info << "Loss:          " << loss->info() << std::endl;
+        info << "Optimizer:     " << optim->get_info() << std::endl;
+        info << "LR Scheduler:  " << optim->get_lr_scheduler_info() << std::endl;
 
         info << "\n============================= Network Architecture =============================\n\n";
         info << "Input Bucket: " << std::endl;
@@ -102,6 +102,8 @@ class Network {
             info << " -> " << l->get_info();
 
         std::cout << info.str();
+
+        std::cout << "\n================================================================================\n\n";
     }
 
     void forward() {
