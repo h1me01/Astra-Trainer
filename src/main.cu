@@ -10,7 +10,7 @@ int main() {
 
     // init network
     Network network({
-        300,   // epochs
+        100,   // epochs
         16384, // batch size
         6104,  // batches per epoch
         100,   // save rate
@@ -33,19 +33,14 @@ int main() {
         0.01   // decay
     });
 
-    optim.clamp(-1.99, 1.99); // all weights & biases range [-1.99, 1.99]
+    optim.clamp(-0.99, 0.99); // all weights & biases range
 
     // init lr scheduler
     CosineAnnealing lr_scheduler( //
-        300,                      // max epochs
+        100,                      // max epochs
         0.001,                    // lr
         0.001 * 0.3 * 0.3 * 0.3   // final lr
     );
-
-    // StepDecay lr_scheduler( //
-    //     100,                // step
-    //     0.1f                // gamma
-    //);
 
     optim.set_lr_scheduler(&lr_scheduler);
 
@@ -67,9 +62,9 @@ int main() {
 
     // init hidden layers
 
-    auto ft = FeatureTransformer<512, SCReLU>( //
-        get_bucket_size(input_bucket) * 768,   // input size
-        WeightInitType::Uniform                // weight initialization type
+    auto ft = FeatureTransformer<1536, SCReLU>( //
+        get_bucket_size(input_bucket) * 768,    // input size
+        WeightInitType::Uniform                 // weight initialization type
     );
 
     // set quantization for weights and biases

@@ -5,7 +5,7 @@
 
 #include "../../kernel/include.h"
 #include "../layers/layer.h"
-#include "../lr_scheduler.h"
+#include "lr_scheduler.h"
 
 class Optimizer {
   protected:
