@@ -35,14 +35,10 @@ using namespace chess;
 using DataEntry = binpack::TrainingDataEntry;
 using DataEntryReader = binpack::CompressedTrainingDataEntryParallelReader;
 
-inline std::function<bool(const DataEntry &)> skipPredicate = [](const DataEntry &e) {
+inline std::function<bool(const DataEntry &)> skip_predicate = [](const DataEntry &e) {
     if(e.score == 32002) // value none
         return true;
     if(e.ply < 20)
-        return true;
-    if(e.move.type != MoveType::Normal)
-        return true;
-    if(std::abs(e.score) > 10000)
         return true;
     if(e.isCapturingMove() || e.isInCheck())
         return true;
@@ -69,10 +65,10 @@ struct FeaturedBatchStream {
         m_concurrency(concurrency),
         m_batch_size(batch_size),
         m_cyclic(cyclic),
-        m_stream(training_data::open_sfen_input_file_parallel(std::max(1, concurrency / 2), filenames, cyclic, skipPredicate))
+        m_stream(training_data::open_sfen_input_file_parallel(std::max(1, concurrency / 2), filenames, cyclic, skip_predicate))
     {
         // clang-format on
-        std::cout << getInfo() << std::endl;
+        std::cout << get_info() << std::endl;
         m_stop_flag.store(false);
 
         auto worker = [this]() {
@@ -139,12 +135,11 @@ struct FeaturedBatchStream {
                 worker.join();
     }
 
-    std::string getInfo() const {
-        std::stringstream info;
-        info << "\nFeaturedBatchStream(concurrency=" << m_concurrency;
-        info << ", batch_size=" << m_batch_size;
-        info << ", cyclic=" << (m_cyclic ? "true" : "false") << ")";
-        return info.str();
+    std::string get_info() const {
+        std::stringstream ss;
+        ss << "\nFeaturedBatchStream(concurrency=" << m_concurrency;
+        ss << ", batch_size=" << m_batch_size << ")";
+        return ss.str();
     }
 
   private:

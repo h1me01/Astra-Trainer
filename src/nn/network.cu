@@ -16,14 +16,14 @@ std::vector<std::string> files_from_path(const std::string &path) {
         for(const auto &entry : std::filesystem::recursive_directory_iterator(path))
             if(entry.is_regular_file()) {
                 files.push_back(entry.path().string());
-                std::cout << "Added: " << entry.path() << std::endl;
+                std::cout << entry.path() << std::endl;
             }
     } catch(const std::filesystem::filesystem_error &e) {
         std::cerr << "Filesystem error: " << e.what() << std::endl;
     }
 
     if(files.empty()) {
-        error("Error: No training data found in the specified path: " + path);
+        error("No training data found in the specified path: " + path);
     }
 
     return files;
@@ -252,11 +252,13 @@ void Network::train(std::string data_path, std::string output_path, std::string 
     std::ofstream info_file(training_folder + "/info.txt");
     if(info_file.is_open()) {
         info_file << info.str();
-        info_file << dataloader.getInfo() << "\n";
+        info_file << dataloader.get_info() << "\n";
         info_file.close();
     } else {
         error("Failed opening info file for writing: " + training_folder + "/info.txt");
     }
+
+    const int positions_per_epoch = hp.batch_size * hp.batches_per_epoch;
 
     Timer timer;
     for(epoch = epoch + 1; epoch <= hp.epochs; epoch++) {
@@ -273,9 +275,12 @@ void Network::train(std::string data_path, std::string output_path, std::string 
             auto elapsed = timer.elapsed_time();
 
             if(batch == hp.batches_per_epoch || timer.is_time_reached(1000)) {
-                printf("\repoch/batch = %3d/%4d, ", epoch, batch);
-                printf("pos/sec = %7d, ", (int) round(1000.0f * hp.batch_size * batch / elapsed));
-                printf("time = %3ds", (int) elapsed / 1000);
+                printf("\repoch/batch = %3d/%4d, loss = %1.8f, pos/sec = %7d, time = %3ds",
+                       epoch,
+                       batch,
+                       loss->get_loss() / (hp.batch_size * batch),
+                       (int) round(1000.0f * hp.batch_size * batch / elapsed),
+                       (int) elapsed / 1000);
                 std::cout << std::flush;
             }
 
@@ -285,16 +290,18 @@ void Network::train(std::string data_path, std::string output_path, std::string 
             optim->apply(ds.size());
         }
 
-        float epoch_loss = loss->get_loss() / (hp.batch_size * hp.batches_per_epoch);
+        float epoch_loss = loss->get_loss() / positions_per_epoch;
 
         timer.stop();
         auto elapsed = timer.elapsed_time();
 
-        printf("\repoch/batch = %3d/%4d, ", epoch, hp.batches_per_epoch);
-        printf("loss = %1.8f, ", epoch_loss);
-        printf("pos/sec = %7d, ", (int) round(1000.0f * hp.batch_size * hp.batches_per_epoch / elapsed));
-        printf("time = %3ds", (int) elapsed / 1000);
-        std::cout << std::endl;
+        printf("\r\033[K"); // clear the current line
+        printf("epoch/batch = %3d/%4d, loss = %1.8f, pos/sec = %7d, time = %3ds\n",
+               epoch,
+               hp.batches_per_epoch,
+               epoch_loss,
+               (int) round(1000.0f * positions_per_epoch / elapsed),
+               (int) elapsed / 1000);
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 

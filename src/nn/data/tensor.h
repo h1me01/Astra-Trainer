@@ -122,18 +122,19 @@ class Tensor {
 inline void Tensor::init(WeightInitType type, int previous_size) {
     std::mt19937 gen{std::random_device{}()};
 
-    std::uniform_real_distribution<> dis;
-    if(type == WeightInitType::Uniform)
-        dis = std::uniform_real_distribution<>(-0.1f, 0.1f);
-    else if(type == WeightInitType::He)
-        dis = std::uniform_real_distribution<>(0, std::sqrt(2.0f / previous_size));
-    else
+    if(type == WeightInitType::Uniform) {
+        std::uniform_real_distribution<> dis(-0.1f, 0.1f);
+        for(int i = 0; i < data.size(); i++)
+            data(i) = dis(gen);
+    } else if(type == WeightInitType::He) {
+        std::normal_distribution<> dis(0.0f, std::sqrt(2.0f / previous_size));
+        for(int i = 0; i < data.size(); i++)
+            data(i) = dis(gen);
+    } else {
         error("Unknown weight initialization type");
+    }
 
-    for(int i = 0; i < data.size(); i++)
-        data(i) = dis(gen);
     data.host_to_dev();
-
     grads.clear();
 }
 

@@ -4,9 +4,9 @@ int main() {
 
     // HYPERPARAMETERS
 
-    const int EPOCHS = 300;
-    const int LR = 0.001;
-    const int L1_SIZE = 1536;
+    constexpr int EPOCHS = 100;
+    constexpr int L1_SIZE = 512;
+    constexpr float LR = 0.001;
 
     // NETWORK
 
@@ -14,11 +14,11 @@ int main() {
         EPOCHS, // epochs
         16384,  // batch size
         6104,   // batches per epoch
-        100,    // save rate
-        1,      // thread count for dataloader
+        20,     // save rate
+        2,      // thread count for dataloader
         400,    // output scalar
         1.0,    // wdl start lambda
-        0.75    // wdl end lambda
+        0.7     // wdl end lambda
     });
 
     // LOSS
@@ -41,7 +41,7 @@ int main() {
 
     CosineAnnealing lr_scheduler( //
         EPOCHS,                   // max epochs
-        LR,                       // lr
+        LR,                       // start lr
         LR * 0.3 * 0.3 * 0.3      // final lr
     );
     optim.set_lr_scheduler(&lr_scheduler);
@@ -66,7 +66,7 @@ int main() {
 
     auto ft = FeatureTransformer<L1_SIZE, SCReLU>( //
         get_bucket_size(input_bucket) * 768,       // input size
-        WeightInitType::Uniform                    //
+        WeightInitType::He                         //
     );
 
     ft.get_params()[0]->quantize<QuantType::INT16>(255); // weights
@@ -74,7 +74,7 @@ int main() {
 
     auto l1 = Affine<OutputBuckets::NUM_BUCKETS>( //
         &ft,                                      // previous layer
-        WeightInitType::Uniform                   //
+        WeightInitType::He                        //
     );
 
     l1.get_params()[0]->quantize<QuantType::INT16>(64, true); // weights (transposed)
@@ -88,12 +88,10 @@ int main() {
 
     const std::string root_path = "D:/Astra-Data";
 
-    // network.load_weights(root_path + "/nn_output/training_x/weights.bin");
-
-    network.train(                           //
-        root_path + "/training_data/step-1", // data path
-        root_path + "/nn_output",            // output path
-        ""                                   // checkpoint from output_path
+    network.train(                    //
+        root_path + "/training_data", // data path
+        root_path + "/nn_output",     // output path
+        ""                            // checkpoint from output_path
     );
 
     // TESTING
