@@ -23,7 +23,7 @@ std::vector<std::string> files_from_path(const std::string &path) {
     }
 
     if(files.empty()) {
-        error("No training data found in the specified path: " + path);
+        error("Error: No training data found in the specified path: " + path);
     }
 
     return files;
@@ -79,7 +79,7 @@ void Network::save_checkpoint(const std::string &path) {
     try {
         std::filesystem::create_directories(path);
     } catch(const std::filesystem::filesystem_error &e) {
-        error("Failed to create directory " + path + ": " + e.what());
+        error("Failed creating directory " + path + ": " + e.what());
     }
 
     // save weights
@@ -87,7 +87,7 @@ void Network::save_checkpoint(const std::string &path) {
         const std::string file = path + "/weights.bin";
         FILE *f = fopen(file.c_str(), "wb");
         if(!f)
-            error("Failed to write weights to " + file);
+            error("Failed writing weights to " + file);
 
         for(LayerBase *l : layers) {
             for(Tensor *t : l->get_params()) {
@@ -96,20 +96,20 @@ void Network::save_checkpoint(const std::string &path) {
 
                 int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
                 if(written != weights.size())
-                    error("Error writing weights to file");
+                    error("Failed writing weights to " + file);
             }
         }
 
         fclose(f);
     } catch(const std::exception &e) {
-        error(std::string("Failed to save weights: ") + e.what());
+        error(std::string("Failed saving weights: ") + e.what());
     }
 
     // save quantized weights
     try {
         FILE *f = fopen((path + "/qweights.net").c_str(), "wb");
         if(!f)
-            error("Failed to write quantized weights");
+            error("Failed writing quantized weights");
 
         for(LayerBase *l : layers)
             for(Tensor *t : l->get_params())
@@ -117,7 +117,7 @@ void Network::save_checkpoint(const std::string &path) {
 
         fclose(f);
     } catch(const std::exception &e) {
-        error(std::string("Failed to save quantized weights: ") + e.what());
+        error(std::string("Failed saving quantized weights: ") + e.what());
     }
 
     // save optimizer state
@@ -255,7 +255,7 @@ void Network::train(std::string data_path, std::string output_path, std::string 
         info_file << dataloader.getInfo() << "\n";
         info_file.close();
     } else {
-        error("Failed to open info file for writing: " + training_folder + "/info.txt");
+        error("Failed opening info file for writing: " + training_folder + "/info.txt");
     }
 
     Timer timer;

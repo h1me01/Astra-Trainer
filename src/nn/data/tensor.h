@@ -68,7 +68,7 @@ class Tensor {
     template <QuantType type> //
     void quantize(int scale, bool transpose = false) {
         if(scale <= 0)
-            error("Error: scale must be greater than 0.");
+            error("Quantize scale must be greater than 0");
 
         quant_scheme.scale = scale;
         quant_scheme.type = type;
@@ -90,13 +90,13 @@ class Tensor {
             write_quantized<float>(f);
             break;
         default:
-            error("Unknown quantization type!");
+            error("Unknown quantization type");
         }
     }
 
     void clamp(float min_val, float max_val) {
         if(min_val > max_val)
-            error("Error: min cannot be greater than max.");
+            error("Min in Tensor cannot be greater than max");
 
         this->m_lower_bound = min_val;
         this->m_upper_bound = max_val;
@@ -128,7 +128,7 @@ inline void Tensor::init(WeightInitType type, int previous_size) {
     else if(type == WeightInitType::He)
         dis = std::uniform_real_distribution<>(0, std::sqrt(2.0f / previous_size));
     else
-        error("Unknown weight initialization type!");
+        error("Unknown weight initialization type");
 
     for(int i = 0; i < data.size(); i++)
         data(i) = dis(gen);
@@ -148,7 +148,7 @@ void Tensor::write_quantized(FILE *f) {
 
             if(quant < std::numeric_limits<T>::min() || quant > std::numeric_limits<T>::max()) {
                 std::stringstream ss;
-                ss << "Error: Overflow/Underflow while quantizing value: " << orig;
+                ss << "Overflow/Underflow while quantizing value: " << orig;
                 ss << " with scale: " << quant_scheme.scale << ". ";
                 ss << "Quantized value: " << static_cast<long long>(quant) << ". ";
                 ss << "Type: " << typeid(T).name() << ".";
@@ -175,8 +175,8 @@ void Tensor::write_quantized(FILE *f) {
     int written = fwrite(quantized.host_address(), sizeof(T), quantized.size(), f);
     if(written != quantized.size()) {
         std::stringstream ss;
-        ss << "Error writing quantized data to file! ";
-        ss << "Expected " << quantized.size() << " elements, but wrote " << written << " elements.";
+        ss << "Failed writing quantized data to file! ";
+        ss << "Expected " << quantized.size() << " elements, but wrote " << written << " elements";
         error(ss.str());
     }
 }

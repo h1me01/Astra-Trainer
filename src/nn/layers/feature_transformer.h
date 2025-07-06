@@ -18,7 +18,7 @@ class FeatureTransformer : public LayerBase {
   public:
     FeatureTransformer(int input_size, WeightInitType init_type) : input_size(input_size) {
         if(input_size % 768 != 0)
-            error("Error: input size must be divisible by 768 to match standard chess inputs.");
+            error("Input size must be divisible by 768 to match standard chess inputs.");
 
         name = "FeatureTransformer";
 

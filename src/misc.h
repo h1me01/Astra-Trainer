@@ -34,7 +34,7 @@
     }
 
 inline void error(const std::string &message) {
-    std::cerr << message << std::endl;
+    std::cerr << "Error: " << message << std::endl;
     std::abort();
 }
 

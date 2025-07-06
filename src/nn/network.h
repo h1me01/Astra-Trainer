@@ -63,11 +63,11 @@ class Network {
             return;
 
         if(layers.empty())
-            error("Error: No hidden layers set for the network.");
+            error("No hidden layers set for the network.");
         if(optim == nullptr)
-            error("Error: Optimizer is not set for the network.");
+            error("Optimizer is not set for the network.");
         if(loss == nullptr)
-            error("Error: Loss function is not set for the network.");
+            error("Loss function is not set for the network.");
 
         optim->init(layers);
         for(LayerBase *l : layers)
@@ -145,7 +145,7 @@ class Network {
 
                     f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
                     if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
-                        error("Error: insufficient data read from file. Expected " + //
+                        error("insufficient data read from file. Expected " + //
                               std::to_string(weights.size()) + " floats");
                     }
 
@@ -155,7 +155,7 @@ class Network {
 
             std::cout << "Loaded weights from " << file << std::endl;
         } catch(const std::exception &e) {
-            error("Failed to load weights from " + file + ": " + e.what());
+            error("Failed loading weights from " + file + ": " + e.what());
         }
     }
 
