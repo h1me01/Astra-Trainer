@@ -4,9 +4,9 @@ int main() {
 
     // HYPERPARAMETERS
 
-    constexpr int EPOCHS = 100;
-    constexpr int L1_SIZE = 512;
-    constexpr float LR = 0.001;
+    constexpr int EPOCHS = 800;
+    constexpr int L1_SIZE = 1536;
+    constexpr float LR = 0.001 /*0.0004375*/;
 
     // NETWORK
 
@@ -14,8 +14,8 @@ int main() {
         EPOCHS, // epochs
         16384,  // batch size
         6104,   // batches per epoch
-        20,     // save rate
-        2,      // thread count for dataloader
+        100,    // save rate
+        1,      // thread count for dataloader
         400,    // output scalar
         1.0,    // wdl start lambda
         0.7     // wdl end lambda
@@ -39,11 +39,8 @@ int main() {
 
     // LEARNING RATE SCHEDULER
 
-    CosineAnnealing lr_scheduler( //
-        EPOCHS,                   // max epochs
-        LR,                       // start lr
-        LR * 0.3 * 0.3 * 0.3      // final lr
-    );
+    GradualDecay lr_scheduler(0.995);
+
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
@@ -69,18 +66,18 @@ int main() {
         WeightInitType::He                         //
     );
 
-    ft.get_params()[0]->quantize<QuantType::INT16>(255); // weights
-    ft.get_params()[1]->quantize<QuantType::INT16>(255); // biases
-
     auto l1 = Affine<OutputBuckets::NUM_BUCKETS>( //
         &ft,                                      // previous layer
         WeightInitType::He                        //
     );
 
+    auto ob = OutputBuckets(&l1);
+
+    ft.get_params()[0]->quantize<QuantType::INT16>(255); // weights
+    ft.get_params()[1]->quantize<QuantType::INT16>(255); // biases
+
     l1.get_params()[0]->quantize<QuantType::INT16>(64, true); // weights (transposed)
     l1.get_params()[1]->quantize<QuantType::INT16>(255 * 64); // biases
-
-    auto ob = OutputBuckets(&l1);
 
     network.set_layers({&ft, &l1, &ob});
 
@@ -88,10 +85,11 @@ int main() {
 
     const std::string root_path = "D:/Astra-Data";
 
-    network.train(                    //
-        root_path + "/training_data", // data path
-        root_path + "/nn_output",     // output path
-        ""                            // checkpoint from output_path
+    // network.load_weights(root_path + "/training_5/weights.bin");
+    network.train(                           //
+        root_path + "/training_data/step-1", // data path
+        root_path + "/nn_output",            // output path
+        "training_5/checkpoint-100"          // checkpoint from output_path
     );
 
     // TESTING
@@ -100,4 +98,6 @@ int main() {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         "rn1qk2r/ppp1bppp/5n2/3p1bB1/3P4/2N1P3/PP3PPP/R2QKBNR w KQkq - 1 7",
     });
+
+    return 0;
 }

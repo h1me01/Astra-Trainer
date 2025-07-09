@@ -8,12 +8,10 @@ void mpe_loss( //
     Array<float> &loss,
     Tensor &output,
     const float power,
-    const ActivationType act_type,
-    const int size);
+    const ActivationType act_type);
 
 void mse_loss( //
     const Array<float> &targets,
     Array<float> &loss,
     Tensor &output,
-    const ActivationType act_type,
-    const int size);
+    const ActivationType act_type);

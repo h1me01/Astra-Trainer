@@ -28,13 +28,12 @@ __global__ void mpe_kernel(        //
     atomicAdd(loss, powf(abs_diff, power));
 }
 
-void mpe_loss(                     //
-    const Array<float> &targets,   //
-    Array<float> &loss,            //
-    Tensor &output,                //
-    const float power,             //
-    const ActivationType act_type, //
-    const int size                 //
+void mpe_loss(                    //
+    const Array<float> &targets,  //
+    Array<float> &loss,           //
+    Tensor &output,               //
+    const float power,            //
+    const ActivationType act_type //
 ) {
     const DenseMatrix<float> &output_v = output.get_data();
     DenseMatrix<float> &output_g = output.get_grads();
@@ -79,12 +78,11 @@ __global__ void mse_kernel(        //
     atomicAdd(loss, diff * diff);
 }
 
-void mse_loss(                     //
-    const Array<float> &targets,   //
-    Array<float> &loss,            //
-    Tensor &output,                //
-    const ActivationType act_type, //
-    const int size                 //
+void mse_loss(                    //
+    const Array<float> &targets,  //
+    Array<float> &loss,           //
+    Tensor &output,               //
+    const ActivationType act_type //
 ) {
     const DenseMatrix<float> &output_v = output.get_data();
     DenseMatrix<float> &output_g = output.get_grads();

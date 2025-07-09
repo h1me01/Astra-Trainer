@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../misc.h"
+#include "../../misc.h"
 
 class LRScheduler {
   public:

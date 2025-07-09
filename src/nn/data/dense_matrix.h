@@ -9,6 +9,7 @@ class DenseMatrix : public Array<T> {
     int m_rows, m_cols;
 
   public:
+    using Array<T>::get;
     using Array<T>::operator();
 
     DenseMatrix(int rows, int cols) //

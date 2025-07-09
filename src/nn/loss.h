@@ -34,13 +34,7 @@ struct MPELoss : Loss {
     MPELoss(float power) : Loss(), m_power(power) {}
 
     void apply(const Array<float> &targets, Tensor &output) {
-        mpe_loss( //
-            targets,
-            loss,
-            output,
-            m_power,
-            act_type,
-            output.get_data().size());
+        mpe_loss(targets, loss, output, m_power, act_type);
     }
 
     std::string info() {
@@ -53,12 +47,7 @@ struct MSELoss : Loss {
     MSELoss() : Loss() {}
 
     void apply(const Array<float> &targets, Tensor &output) {
-        mse_loss( //
-            targets,
-            loss,
-            output,
-            act_type,
-            output.get_data().size());
+        mse_loss(targets, loss, output, act_type);
     }
 
     std::string info() {

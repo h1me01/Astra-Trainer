@@ -6,7 +6,7 @@
 
 #include "dense_matrix.h"
 
-enum class WeightInitType { Uniform, He };
+enum class WeightInitType { Uniform, He, Xavier };
 
 enum class QuantType { //
     INT8,
@@ -122,15 +122,22 @@ class Tensor {
 inline void Tensor::init(WeightInitType type, int previous_size) {
     std::mt19937 gen{std::random_device{}()};
 
-    if(type == WeightInitType::Uniform) {
-        std::uniform_real_distribution<> dis(-0.1f, 0.1f);
+    auto fill_data = [&](auto distribution) {
         for(int i = 0; i < data.size(); i++)
-            data(i) = dis(gen);
-    } else if(type == WeightInitType::He) {
-        std::normal_distribution<> dis(0.0f, std::sqrt(2.0f / previous_size));
-        for(int i = 0; i < data.size(); i++)
-            data(i) = dis(gen);
-    } else {
+            data(i) = distribution(gen);
+    };
+
+    switch(type) {
+    case WeightInitType::Uniform:
+        fill_data(std::uniform_real_distribution<>(-0.1f, 0.1f));
+        break;
+    case WeightInitType::He:
+        fill_data(std::normal_distribution<>(0.0f, std::sqrt(2.0f / previous_size)));
+        break;
+    case WeightInitType::Xavier:
+        fill_data(std::normal_distribution<>(0.0f, std::sqrt(1.0f / previous_size)));
+        break;
+    default:
         error("Unknown weight initialization type");
     }
 
