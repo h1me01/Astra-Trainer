@@ -245,6 +245,11 @@ void Network::train(std::string data_path, std::string output_path, std::string 
 
     // init dataloader
     FeaturedBatchStream dataloader(files, hp.thread_count, hp.batch_size, true);
+    // for(int n = 1; n <= epoch; n++) {
+    //     std::cout << "Skipping epoch " << n << " data loading, already done.\n";
+    //     for(int m = 1; m <= hp.batches_per_epoch; m++)
+    //         dataloader.next();
+    // }
 
     std::cout << "\n=============================== Training Network ===============================\n\n";
 

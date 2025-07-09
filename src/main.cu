@@ -4,9 +4,9 @@ int main() {
 
     // HYPERPARAMETERS
 
-    constexpr int EPOCHS = 800;
-    constexpr int L1_SIZE = 1536;
-    constexpr float LR = 0.001 /*0.0004375*/;
+    constexpr int EPOCHS = 100;
+    constexpr int L1_SIZE = 512;
+    constexpr float LR = 0.001;
 
     // NETWORK
 
@@ -15,7 +15,7 @@ int main() {
         16384,  // batch size
         6104,   // batches per epoch
         100,    // save rate
-        1,      // thread count for dataloader
+        2,      // thread count for dataloader
         400,    // output scalar
         1.0,    // wdl start lambda
         0.7     // wdl end lambda
@@ -40,7 +40,6 @@ int main() {
     // LEARNING RATE SCHEDULER
 
     GradualDecay lr_scheduler(0.995);
-
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
@@ -85,11 +84,10 @@ int main() {
 
     const std::string root_path = "D:/Astra-Data";
 
-    // network.load_weights(root_path + "/training_5/weights.bin");
-    network.train(                           //
-        root_path + "/training_data/step-1", // data path
-        root_path + "/nn_output",            // output path
-        "training_5/checkpoint-100"          // checkpoint from output_path
+    network.train(                    //
+        root_path + "/training_data", // data path
+        root_path + "/nn_output",     // output path
+        ""                            // checkpoint from output_path
     );
 
     // TESTING
