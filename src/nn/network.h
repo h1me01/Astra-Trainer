@@ -77,17 +77,22 @@ class Network {
     }
 
     void print_info() {
+        std::string loaded_weights_path = info.str();
+
+        info.str(""); // clear the stringstream
         info << "\n================================= Network Info =================================\n\n";
-        info << "Epochs:        " << hp.epochs << std::endl;
-        info << "Batch Size:    " << hp.batch_size << std::endl;
-        info << "Batches/Epoch: " << hp.batches_per_epoch << std::endl;
-        info << "Save Rate:     " << hp.save_rate << std::endl;
-        info << "Output Scalar: " << hp.output_scalar << std::endl;
-        info << "Start Lambda:  " << hp.start_lambda << std::endl;
-        info << "End Lambda:    " << hp.end_lambda << std::endl;
-        info << "Loss:          " << loss->info() << std::endl;
-        info << "Optimizer:     " << optim->get_info() << std::endl;
-        info << "LR Scheduler:  " << optim->get_lr_scheduler_info() << std::endl;
+        info << "Epochs:         " << hp.epochs << std::endl;
+        info << "Batch Size:     " << hp.batch_size << std::endl;
+        info << "Batches/Epoch:  " << hp.batches_per_epoch << std::endl;
+        info << "Save Rate:      " << hp.save_rate << std::endl;
+        info << "Output Scalar:  " << hp.output_scalar << std::endl;
+        info << "Start Lambda:   " << hp.start_lambda << std::endl;
+        info << "End Lambda:     " << hp.end_lambda << std::endl;
+        info << "Loss:           " << loss->info() << std::endl;
+        info << "Optimizer:      " << optim->get_info() << std::endl;
+        info << "LR Scheduler:   " << optim->get_lr_scheduler_info() << std::endl;
+        if(!loaded_weights_path.empty())
+            info << "Loaded Weights: " << loaded_weights_path << std::endl;
 
         info << "\n============================= Network Architecture =============================\n\n";
         info << "Input Bucket: " << std::endl;
@@ -153,7 +158,7 @@ class Network {
                 }
             }
 
-            std::cout << "Loaded weights from " << file << std::endl;
+            info << file;
         } catch(const std::exception &e) {
             error("Failed loading weights from " + file + ": " + e.what());
         }
@@ -219,5 +224,5 @@ class Network {
         return layers;
     }
 
-    void train(std::string data_path, std::string output_path, std::string checkpoint_name);
+    void train(std::vector<std::string> data_path, std::string output_path, std::string checkpoint_name);
 };

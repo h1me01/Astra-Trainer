@@ -38,7 +38,7 @@ using DataEntryReader = binpack::CompressedTrainingDataEntryParallelReader;
 inline std::function<bool(const DataEntry &)> skip_predicate = [](const DataEntry &e) {
     if(e.score == 32002) // value none
         return true;
-    if(e.ply < 20)
+    if(e.ply < 28)
         return true;
     if(e.isCapturingMove() || e.isInCheck())
         return true;

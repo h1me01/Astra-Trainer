@@ -1,29 +1,40 @@
 #include "../misc.h"
 #include "network.h"
 
+using namespace std::filesystem;
+
 // sparse batch definition
 
 SparseBatch LayerBase::sparse_batch{1, 1};
 
 // helper
 
-std::vector<std::string> files_from_path(const std::string &path) {
+std::vector<std::string> files_from_path(const std::vector<std::string> &paths) {
     std::cout << "================================= Training Data ================================\n\n";
-    std::cout << "Loading files from folder: " << path << std::endl;
+    std::cout << "Loading files from folder(s):\n";
+    for(const auto &p : paths)
+        std::cout << p << std::endl;
+    std::cout << std::endl;
 
     std::vector<std::string> files;
-    try {
-        for(const auto &entry : std::filesystem::recursive_directory_iterator(path))
-            if(entry.is_regular_file()) {
-                files.push_back(entry.path().string());
-                std::cout << entry.path() << std::endl;
+    for(const auto &path : paths) {
+        try {
+            for(const auto &entry : recursive_directory_iterator(path)) {
+                if(entry.is_regular_file()) {
+                    files.push_back(entry.path().string());
+                    std::cout << entry.path() << std::endl;
+                }
             }
-    } catch(const std::filesystem::filesystem_error &e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
+        } catch(const filesystem_error &e) {
+            std::cerr << "Filesystem error in path " << path << ": " << e.what() << std::endl;
+        }
     }
 
     if(files.empty()) {
-        error("No training data found in the specified path: " + path);
+        std::string all_paths;
+        for(const auto &p : paths)
+            all_paths += p + " ";
+        error("No training data found in the specified paths: " + all_paths);
     }
 
     return files;
@@ -54,7 +65,7 @@ int epoch_from_checkpoint(const std::string &checkpoint_name) {
 int get_next_training_idx(const std::string &output_path) {
     int max_index = 0;
 
-    for(const auto &entry : std::filesystem::directory_iterator(output_path)) {
+    for(const auto &entry : directory_iterator(output_path)) {
         if(!entry.is_directory())
             continue;
 
@@ -77,8 +88,8 @@ int get_next_training_idx(const std::string &output_path) {
 void Network::save_checkpoint(const std::string &path) {
     // create directory if it doesn't exist
     try {
-        std::filesystem::create_directories(path);
-    } catch(const std::filesystem::filesystem_error &e) {
+        create_directories(path);
+    } catch(const filesystem_error &e) {
         error("Failed creating directory " + path + ": " + e.what());
     }
 
@@ -194,7 +205,7 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     targets.host_to_dev();
 }
 
-void Network::train(std::string data_path, std::string output_path, std::string checkpoint_name) {
+void Network::train(std::vector<std::string> data_path, std::string output_path, std::string checkpoint_name) {
     const std::vector<std::string> files = files_from_path(data_path);
 
     init();
@@ -212,7 +223,7 @@ void Network::train(std::string data_path, std::string output_path, std::string 
         new_folder_path << output_path << "/training_" << next_training_index;
         training_folder = new_folder_path.str();
 
-        std::filesystem::create_directory(training_folder);
+        create_directory(training_folder);
         std::cout << "Created folder: " << training_folder << std::endl;
 
         log.open(training_folder + "/log.txt", false);
@@ -223,7 +234,7 @@ void Network::train(std::string data_path, std::string output_path, std::string 
         std::cout << "Loading checkpoint from " << checkpoint_name << " ..." << std::endl;
         const std::string checkpoint_path = output_path + "/" + checkpoint_name;
 
-        if(!std::filesystem::exists(checkpoint_path)) {
+        if(!exists(checkpoint_path)) {
             error("Checkpoint path does not exist: " + checkpoint_path);
         }
 

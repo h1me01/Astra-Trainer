@@ -19,11 +19,13 @@ class OutputBuckets : public LayerBase {
   public:
     OutputBuckets(LayerBase *previous) : previous(previous) {
         name = "OutputBuckets";
-        size = previous->get_output_size() / NUM_BUCKETS;
-        if(size != 1) {
-            error("OutputBuckets layer needs its previous layer to have exactly " + //
-                  std::to_string(NUM_BUCKETS) + " outputs.");
+
+        const int input_size = previous->get_output_size();
+        if(input_size % NUM_BUCKETS != 0) {
+            error("The OutputBuckets layer requires its input size to be divisible by NUM_BUCKETS with no remainder.");
         }
+
+        size = input_size / NUM_BUCKETS;
     }
 
     void forward() override {

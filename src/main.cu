@@ -4,9 +4,9 @@ int main() {
 
     // HYPERPARAMETERS
 
-    constexpr int EPOCHS = 100;
+    constexpr int EPOCHS = 300;
     constexpr int L1_SIZE = 512;
-    constexpr float LR = 0.001;
+    constexpr float LR = 0.0004375;
 
     // NETWORK
 
@@ -17,7 +17,7 @@ int main() {
         100,    // save rate
         2,      // thread count for dataloader
         400,    // output scalar
-        1.0,    // wdl start lambda
+        0.8,    // wdl start lambda
         0.7     // wdl end lambda
     });
 
@@ -39,7 +39,11 @@ int main() {
 
     // LEARNING RATE SCHEDULER
 
-    GradualDecay lr_scheduler(0.995);
+    CosineAnnealing lr_scheduler( //
+        EPOCHS,                   // max epochs
+        LR,                       // start lr
+        LR * 0.3 * 0.3 * 0.3      // final lr
+    );
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
@@ -84,10 +88,14 @@ int main() {
 
     const std::string root_path = "D:/Astra-Data";
 
-    network.train(                    //
-        root_path + "/training_data", // data path
-        root_path + "/nn_output",     // output path
-        ""                            // checkpoint from output_path
+    network.train( //
+        {
+            // data path(s)
+            root_path + "/training_data-1", //
+            root_path + "/training_data-2"  //
+        },                                  //
+        root_path + "/nn_output",           // output path
+        ""                                  // checkpoint from output path
     );
 
     // TESTING
