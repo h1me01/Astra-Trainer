@@ -100,7 +100,7 @@ void Network::save_checkpoint(const std::string &path) {
         if(!f)
             error("Failed writing weights to " + file);
 
-        for(LayerBase *l : layers) {
+        for(LayerBase *l : hp.layers) {
             for(Tensor *t : l->get_params()) {
                 DenseMatrix<float> &weights = t->get_data();
                 weights.dev_to_host();
@@ -122,7 +122,7 @@ void Network::save_checkpoint(const std::string &path) {
         if(!f)
             error("Failed writing quantized weights");
 
-        for(LayerBase *l : layers)
+        for(LayerBase *l : hp.layers)
             for(Tensor *t : l->get_params())
                 t->save_quantize(f);
 
@@ -132,8 +132,8 @@ void Network::save_checkpoint(const std::string &path) {
     }
 
     // save optimizer state
-    if(optim != nullptr)
-        optim->save(path);
+    if(hp.optim != nullptr)
+        hp.optim->save(path);
 
     std::cout << "Saved checkpoint" << std::endl;
 }
@@ -145,7 +145,7 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     int _pt = int(pt);
     int _view = int(view);
 
-    const int ksIndex = input_bucket[(56 * _view) ^ _ksq];
+    const int ksIndex = hp.input_bucket[(56 * _view) ^ _ksq];
     // relative square
     _psq = _psq ^ (56 * _view);
     // horizontal flip if king is on other half
@@ -157,7 +157,7 @@ int Network::index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
 void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     ASSERT(ds.size() == hp.batch_size || ds.size() == 1);
 
-    SparseBatch &sb = layers[0]->get_sparse_batch();
+    SparseBatch &sb = hp.layers[0]->get_sparse_batch();
 
     const int max_entries = sb.get_max_entries();
 
@@ -209,7 +209,6 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
     const std::vector<std::string> files = files_from_path(data_path);
 
     init();
-    print_info();
 
     std::string training_folder;
     Logger log;
@@ -239,35 +238,34 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
         }
 
         load_weights(checkpoint_path + "/weights.bin");
-        optim->load(checkpoint_path);
+        hp.optim->load(checkpoint_path);
         std::cout << std::endl;
 
         epoch = epoch_from_checkpoint(checkpoint_name);
-        optim->lr_from_epoch(epoch);
+        hp.optim->lr_from_epoch(epoch);
 
         if(epoch > 0)
-            std::cout << "Resuming from epoch " << epoch << " with learning rate " << optim->get_lr() << std::endl;
+            std::cout << "Resuming from epoch " << epoch << " with learning rate " << hp.optim->get_lr() << std::endl;
 
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
 
         std::cout << "Using existing folder: " << training_folder << std::endl;
         log.open(training_folder + "/log.txt", true);
+
+        hp.loaded_checkpoint = checkpoint_name;
     }
+
+    hp.print_info();
 
     // init dataloader
     FeaturedBatchStream dataloader(files, hp.thread_count, hp.batch_size, true);
-    // for(int n = 1; n <= epoch; n++) {
-    //     std::cout << "Skipping epoch " << n << " data loading, already done.\n";
-    //     for(int m = 1; m <= hp.batches_per_epoch; m++)
-    //         dataloader.next();
-    // }
 
     std::cout << "\n=============================== Training Network ===============================\n\n";
 
     // save/update network info
     std::ofstream info_file(training_folder + "/info.txt");
     if(info_file.is_open()) {
-        info_file << info.str();
+        info_file << hp.info.str();
         info_file << dataloader.get_info() << "\n";
         info_file.close();
     } else {
@@ -279,7 +277,7 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
     Timer timer;
     for(epoch = epoch + 1; epoch <= hp.epochs; epoch++) {
         timer.start();
-        loss->reset();
+        hp.loss->reset();
 
         float lambda = hp.start_lambda + (hp.end_lambda - hp.start_lambda) * (epoch / float(hp.epochs));
 
@@ -294,19 +292,19 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
                 printf("\repoch/batch = %3d/%4d, loss = %1.8f, pos/sec = %7d, time = %3ds",
                        epoch,
                        batch,
-                       loss->get_loss() / (hp.batch_size * batch),
+                       hp.loss->get_loss() / (hp.batch_size * batch),
                        (int) round(1000.0f * hp.batch_size * batch / elapsed),
                        (int) elapsed / 1000);
                 std::cout << std::flush;
             }
 
             forward();
-            loss->apply(targets, get_output());
+            hp.loss->apply(targets, get_output());
             backward();
-            optim->apply(ds.size());
+            hp.optim->apply(ds.size());
         }
 
-        float epoch_loss = loss->get_loss() / positions_per_epoch;
+        float epoch_loss = hp.loss->get_loss() / positions_per_epoch;
 
         timer.stop();
         auto elapsed = timer.elapsed_time();
@@ -326,6 +324,6 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
             save_checkpoint(training_folder + "/checkpoint-" + suffix);
         }
 
-        optim->update_lr(epoch);
+        hp.optim->update_lr(epoch);
     }
 }

@@ -33,7 +33,6 @@
 using namespace chess;
 
 using DataEntry = binpack::TrainingDataEntry;
-using DataEntryReader = binpack::CompressedTrainingDataEntryParallelReader;
 
 inline std::function<bool(const DataEntry &)> skip_predicate = [](const DataEntry &e) {
     if(e.score == 32002) // value none

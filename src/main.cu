@@ -6,7 +6,7 @@ int main() {
 
     constexpr int EPOCHS = 300;
     constexpr int L1_SIZE = 512;
-    constexpr float LR = 0.0004375;
+    constexpr float LR = 0.001;
 
     // NETWORK
 
@@ -39,11 +39,7 @@ int main() {
 
     // LEARNING RATE SCHEDULER
 
-    CosineAnnealing lr_scheduler( //
-        EPOCHS,                   // max epochs
-        LR,                       // start lr
-        LR * 0.3 * 0.3 * 0.3      // final lr
-    );
+    GradualDecay lr_scheduler(0.995);
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
@@ -90,7 +86,7 @@ int main() {
 
     network.train( //
         {
-            // data path(s)
+            // data paths
             root_path + "/training_data-1", //
             root_path + "/training_data-2"  //
         },                                  //

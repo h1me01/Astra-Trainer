@@ -10,6 +10,8 @@
 #include "optimizer/include.h"
 
 struct Hyperparams {
+    std::stringstream info;
+
     int epochs = 500;
     int batch_size = 16384;
     int batches_per_epoch = 6104;
@@ -18,6 +20,15 @@ struct Hyperparams {
     float output_scalar = 400.0f;
     float start_lambda = 0.7f;
     float end_lambda = 0.8f;
+
+    std::string loaded_weights = "";
+    std::string loaded_checkpoint = "";
+
+    Loss *loss = nullptr;
+    Optimizer *optim = nullptr;
+
+    std::vector<LayerBase *> layers = {};
+    std::array<int, 64> input_bucket = {};
 
     Hyperparams() {}
 
@@ -40,59 +51,43 @@ struct Hyperparams {
         this->start_lambda = start_lambda;
         this->end_lambda = end_lambda;
     }
-};
 
-class Network {
-  private:
-    bool is_initialized = false;
+    Hyperparams(const Hyperparams &other) {
+        this->epochs = other.epochs;
+        this->batch_size = other.batch_size;
+        this->batches_per_epoch = other.batches_per_epoch;
+        this->save_rate = other.save_rate;
+        this->thread_count = other.thread_count;
+        this->output_scalar = other.output_scalar;
+        this->start_lambda = other.start_lambda;
+        this->end_lambda = other.end_lambda;
 
-    Hyperparams hp;
+        this->loaded_weights = other.loaded_weights;
+        this->loaded_checkpoint = other.loaded_checkpoint;
 
-    std::stringstream info;
+        this->loss = other.loss;
+        this->optim = other.optim;
 
-    std::vector<LayerBase *> layers;
-    std::array<int, 64> input_bucket = {};
-
-    Loss *loss = nullptr;
-    Optimizer *optim = nullptr;
-
-    Array<float> targets;
-
-    void init() {
-        if(is_initialized)
-            return;
-
-        if(layers.empty())
-            error("No hidden layers set for the network.");
-        if(optim == nullptr)
-            error("Optimizer is not set for the network.");
-        if(loss == nullptr)
-            error("Loss function is not set for the network.");
-
-        optim->init(layers);
-        for(LayerBase *l : layers)
-            l->init(hp.batch_size);
-
-        is_initialized = true;
+        this->layers = other.layers;
+        this->input_bucket = other.input_bucket;
     }
 
     void print_info() {
-        std::string loaded_weights_path = info.str();
-
-        info.str(""); // clear the stringstream
         info << "\n================================= Network Info =================================\n\n";
-        info << "Epochs:         " << hp.epochs << std::endl;
-        info << "Batch Size:     " << hp.batch_size << std::endl;
-        info << "Batches/Epoch:  " << hp.batches_per_epoch << std::endl;
-        info << "Save Rate:      " << hp.save_rate << std::endl;
-        info << "Output Scalar:  " << hp.output_scalar << std::endl;
-        info << "Start Lambda:   " << hp.start_lambda << std::endl;
-        info << "End Lambda:     " << hp.end_lambda << std::endl;
-        info << "Loss:           " << loss->info() << std::endl;
-        info << "Optimizer:      " << optim->get_info() << std::endl;
-        info << "LR Scheduler:   " << optim->get_lr_scheduler_info() << std::endl;
-        if(!loaded_weights_path.empty())
-            info << "Loaded Weights: " << loaded_weights_path << std::endl;
+        info << "Epochs:            " << epochs << std::endl;
+        info << "Batch Size:        " << batch_size << std::endl;
+        info << "Batches/Epoch:     " << batches_per_epoch << std::endl;
+        info << "Save Rate:         " << save_rate << std::endl;
+        info << "Output Scalar:     " << output_scalar << std::endl;
+        info << "Start Lambda:      " << start_lambda << std::endl;
+        info << "End Lambda:        " << end_lambda << std::endl;
+        info << "Loss:              " << loss->info() << std::endl;
+        info << "Optimizer:         " << optim->get_info() << std::endl;
+        info << "LR Scheduler:      " << optim->get_lr_scheduler_info() << std::endl;
+        if(!loaded_checkpoint.empty())
+            info << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
+        else if(!loaded_weights.empty())
+            info << "Loaded Weights:    " << loaded_weights << std::endl;
 
         info << "\n============================= Network Architecture =============================\n\n";
         info << "Input Bucket: " << std::endl;
@@ -107,18 +102,44 @@ class Network {
             info << " -> " << l->get_info();
 
         std::cout << info.str();
+        std::cout << "\n================================================================================\n";
+    }
+};
 
-        std::cout << "\n================================================================================\n\n";
+class Network {
+  private:
+    bool is_initialized = false;
+
+    Hyperparams hp;
+
+    Array<float> targets;
+
+    void init() {
+        if(is_initialized)
+            return;
+
+        if(hp.layers.empty())
+            error("No hidden layers set for the network.");
+        if(hp.optim == nullptr)
+            error("Optimizer is not set for the network.");
+        if(hp.loss == nullptr)
+            error("Loss function is not set for the network.");
+
+        hp.optim->init(hp.layers);
+        for(LayerBase *l : hp.layers)
+            l->init(hp.batch_size);
+
+        is_initialized = true;
     }
 
     void forward() {
-        for(size_t i = 0; i < layers.size(); i++)
-            layers[i]->forward();
+        for(size_t i = 0; i < hp.layers.size(); i++)
+            hp.layers[i]->forward();
     }
 
     void backward() {
-        for(int i = layers.size() - 1; i >= 0; i--)
-            layers[i]->backward();
+        for(int i = hp.layers.size() - 1; i >= 0; i--)
+            hp.layers[i]->backward();
     }
 
     void save_checkpoint(const std::string &path);
@@ -128,7 +149,7 @@ class Network {
     void fill(std::vector<DataEntry> &ds, float lambda);
 
   public:
-    explicit Network(Hyperparams hp) : hp(hp), targets(hp.batch_size) {
+    explicit Network(const Hyperparams &hp) : hp(hp), targets(hp.batch_size) {
         create_cublas();
     }
 
@@ -144,7 +165,7 @@ class Network {
             error("File " + file + " does not exist");
 
         try {
-            for(LayerBase *l : layers) {
+            for(LayerBase *l : hp.layers) {
                 for(Tensor *t : l->get_params()) {
                     DenseMatrix<float> &weights = t->get_data();
 
@@ -158,7 +179,7 @@ class Network {
                 }
             }
 
-            info << file;
+            hp.loaded_weights = file;
         } catch(const std::exception &e) {
             error("Failed loading weights from " + file + ": " + e.what());
         }
@@ -179,7 +200,7 @@ class Network {
         fill(ds, 1);
         forward();
 
-        LayerBase *output_layer = layers.back();
+        LayerBase *output_layer = hp.layers.back();
 
         DenseMatrix<float> &output = get_output().get_data();
         output.dev_to_host();
@@ -197,19 +218,19 @@ class Network {
     }
 
     void set_loss(Loss *loss) {
-        this->loss = loss;
+        this->hp.loss = loss;
     }
 
     void set_optim(Optimizer *optim) {
-        this->optim = optim;
+        this->hp.optim = optim;
     }
 
     void set_input_bucket(std::array<int, 64> input_bucket) {
-        this->input_bucket = input_bucket;
+        this->hp.input_bucket = input_bucket;
     }
 
     void set_layers(std::vector<LayerBase *> hidden_layers) {
-        this->layers = hidden_layers;
+        this->hp.layers = hidden_layers;
     }
 
     int get_batch_size() {
@@ -217,11 +238,11 @@ class Network {
     }
 
     Tensor &get_output() {
-        return layers.back()->get_output().activated;
+        return hp.layers.back()->get_output().activated;
     }
 
     std::vector<LayerBase *> get_layers() {
-        return layers;
+        return hp.layers;
     }
 
     void train(std::vector<std::string> data_path, std::string output_path, std::string checkpoint_name);
