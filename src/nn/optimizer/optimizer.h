@@ -15,7 +15,6 @@ class Optimizer {
 
     std::vector<Array<float>> momentum{};
     std::vector<Array<float>> velocity{};
-    std::vector<Array<float>> slow_buffer{}; // used by ranger
 
     int step = 0;
 
@@ -81,9 +80,6 @@ class Optimizer {
             int size = t->get_data().size();
             momentum.push_back(Array<float>{size});
             velocity.push_back(Array<float>{size});
-
-            if(name == "Ranger")
-                slow_buffer.push_back(Array<float>{size});
         }
     }
 
@@ -131,8 +127,6 @@ inline void Optimizer::load(const std::string &path) {
     try {
         loadFile(state_path + "/momentum.bin", momentum, "momentum");
         loadFile(state_path + "/velocity.bin", velocity, "velocity");
-        if(name == "Ranger")
-            loadFile(state_path + "/slow_buffer.bin", slow_buffer, "slow_buffer");
     } catch(const std::exception &e) {
         error("Failed loading optimizer state from " + state_path + ": " + e.what());
     }
@@ -161,8 +155,6 @@ inline void Optimizer::save(const std::string &path) {
     try {
         saveFile(state_path + "/momentum.bin", momentum);
         saveFile(state_path + "/velocity.bin", velocity);
-        if(name == "Ranger")
-            saveFile(state_path + "/slow_buffer.bin", slow_buffer);
     } catch(const std::exception &e) {
         error("Failed saving optimizer state to " + state_path + ": " + e.what());
     }

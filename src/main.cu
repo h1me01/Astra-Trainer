@@ -15,9 +15,9 @@ int main() {
         16384,  // batch size
         6104,   // batches per epoch
         100,    // save rate
-        2,      // thread count for dataloader
+        1,      // thread count for dataloader
         400,    // output scalar
-        0.8,    // wdl start lambda
+        1.0,    // wdl start lambda
         0.7     // wdl end lambda
     });
 
@@ -87,11 +87,11 @@ int main() {
     network.train( //
         {
             // data paths
-            root_path + "/training_data-1", //
-            root_path + "/training_data-2"  //
-        },                                  //
-        root_path + "/nn_output",           // output path
-        ""                                  // checkpoint from output path
+            root_path + "/training_data/step-1", //
+            root_path + "/training_data/step-2"  //
+        },                                       //
+        root_path + "/nn_output",                // output path
+        ""                                       // checkpoint from output path
     );
 
     // TESTING

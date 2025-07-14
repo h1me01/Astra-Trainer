@@ -22,30 +22,3 @@ void adam_optim( //
     const float min_val,
     const float max_val,
     const float grad_scale);
-
-void radam_optim( //
-    DenseMatrix<float> &vals,
-    DenseMatrix<float> &grads,
-    Array<float> &moms,
-    Array<float> &vels,
-    const OptimParams &params,
-    const float min_val,
-    const float max_val,
-    const float grad_scale,
-    const int N_sma_threshold,
-    const int step);
-
-void ranger_optim( //
-    DenseMatrix<float> &vals,
-    DenseMatrix<float> &grads,
-    Array<float> &moms,
-    Array<float> &vels,
-    Array<float> &slow_buffer,
-    const OptimParams &params,
-    const float min_val,
-    const float max_val,
-    const float grad_scale,
-    const float alpha,
-    const int k,
-    const int N_sma_threshold,
-    const int step);
