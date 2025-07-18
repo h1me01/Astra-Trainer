@@ -7,9 +7,7 @@ struct Adam : Optimizer {
         name = "Adam";
     }
 
-    void apply(int batch_size) override {
-        step++;
-
+    void step(int batch_size) override {
         const float grad_scale = 1.0f / batch_size;
 
         for(size_t i = 0; i < tunables.size(); i++) {

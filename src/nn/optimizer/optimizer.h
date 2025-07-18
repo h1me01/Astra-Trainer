@@ -16,8 +16,6 @@ class Optimizer {
     std::vector<Array<float>> momentum{};
     std::vector<Array<float>> velocity{};
 
-    int step = 0;
-
     OptimParams params;
 
     float min_val = -1;
@@ -73,7 +71,7 @@ class Optimizer {
     void load(const std::string &path);
     void save(const std::string &path);
 
-    virtual void apply(int batch_size) = 0;
+    virtual void step(int batch_size) = 0;
 
     void init_buffers() {
         for(Tensor *t : tunables) {

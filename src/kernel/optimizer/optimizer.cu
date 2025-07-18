@@ -1,7 +1,7 @@
 #include "../util.h"
 #include "optimizer.h"
 
-float getDecay(const float lr, const float decay) {
+float get_decay(const float lr, const float decay) {
     return 1.0f - lr * decay;
 }
 
@@ -71,7 +71,7 @@ void adam_optim(               //
         params.beta1,
         params.beta2,
         params.eps,
-        getDecay(params.lr, params.decay),
+        get_decay(params.lr, params.decay),
         min_val,
         max_val,
         grad_scale,

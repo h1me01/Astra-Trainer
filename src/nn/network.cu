@@ -299,9 +299,9 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
             }
 
             forward();
-            hp.loss->apply(targets, get_output());
+            hp.loss->compute(targets, get_output());
             backward();
-            hp.optim->apply(ds.size());
+            hp.optim->step(ds.size());
         }
 
         float epoch_loss = hp.loss->get_loss() / positions_per_epoch;

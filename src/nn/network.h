@@ -6,7 +6,7 @@
 #include "../dataloader/dataloader.h"
 #include "data/include.h"
 #include "layers/include.h"
-#include "loss.h"
+#include "loss/include.h"
 #include "optimizer/include.h"
 
 struct Hyperparams {
@@ -81,7 +81,7 @@ struct Hyperparams {
         info << "Output Scalar:     " << output_scalar << std::endl;
         info << "Start Lambda:      " << start_lambda << std::endl;
         info << "End Lambda:        " << end_lambda << std::endl;
-        info << "Loss:              " << loss->info() << std::endl;
+        info << "Loss:              " << loss->get_info() << std::endl;
         info << "Optimizer:         " << optim->get_info() << std::endl;
         info << "LR Scheduler:      " << optim->get_lr_scheduler_info() << std::endl;
         if(!loaded_checkpoint.empty())

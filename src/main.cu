@@ -15,7 +15,7 @@ int main() {
         16384,  // batch size
         6104,   // batches per epoch
         100,    // save rate
-        1,      // thread count for dataloader
+        2,      // thread count for dataloader
         400,    // output scalar
         1.0,    // wdl start lambda
         0.7     // wdl end lambda
@@ -39,7 +39,11 @@ int main() {
 
     // LEARNING RATE SCHEDULER
 
-    GradualDecay lr_scheduler(0.995);
+    CosineAnnealing lr_scheduler( //
+        300,                      // max epochs
+        LR,                       // start lr
+        0.000027                  // final lr
+    );
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
