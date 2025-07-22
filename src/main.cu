@@ -39,11 +39,7 @@ int main() {
 
     // LEARNING RATE SCHEDULER
 
-    CosineAnnealing lr_scheduler( //
-        300,                      // max epochs
-        LR,                       // start lr
-        0.000027                  // final lr
-    );
+    GradualDecay lr_scheduler(0.995);
     optim.set_lr_scheduler(&lr_scheduler);
 
     network.set_optim(&optim);
