@@ -11,7 +11,7 @@ class Optimizer {
   protected:
     std::string name = "Optimizer";
 
-    std::vector<Tensor *> tunables{};
+    std::vector<Tensor<float> *> tunables{};
 
     std::vector<Array<float>> momentum{};
     std::vector<Array<float>> velocity{};
@@ -28,7 +28,7 @@ class Optimizer {
         : params(params) {}
 
     void init(std::vector<LayerBase *> layers) {
-        for(LayerBase *l : layers) {
+        for(auto *l : layers) {
             for(auto *t : l->get_params()) {
                 if(min_val != -1)
                     t->clamp(min_val, t->upper_bound());
@@ -74,7 +74,7 @@ class Optimizer {
     virtual void step(int batch_size) = 0;
 
     void init_buffers() {
-        for(Tensor *t : tunables) {
+        for(auto *t : tunables) {
             int size = t->get_data().size();
             momentum.push_back(Array<float>{size});
             velocity.push_back(Array<float>{size});

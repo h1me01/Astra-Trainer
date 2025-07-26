@@ -7,7 +7,7 @@ template <ActivationType act_type> //
 struct MSELoss : Loss {
     MSELoss() : Loss() {}
 
-    void compute(const Array<float> &targets, Tensor &output) {
+    void compute(const Array<float> &targets, Tensor<float> &output) {
         mse_loss(targets, loss, output, act_type);
     }
 

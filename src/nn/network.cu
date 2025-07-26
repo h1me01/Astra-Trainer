@@ -101,8 +101,8 @@ void Network::save_checkpoint(const std::string &path) {
             error("Failed writing weights to " + file);
 
         for(LayerBase *l : hp.layers) {
-            for(Tensor *t : l->get_params()) {
-                DenseMatrix<float> &weights = t->get_data();
+            for(auto *t : l->get_params()) {
+                auto &weights = t->get_data();
                 weights.dev_to_host();
 
                 int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
@@ -123,7 +123,7 @@ void Network::save_checkpoint(const std::string &path) {
             error("Failed writing quantized weights");
 
         for(LayerBase *l : hp.layers)
-            for(Tensor *t : l->get_params())
+            for(auto *t : l->get_params())
                 t->save_quantize(f);
 
         fclose(f);

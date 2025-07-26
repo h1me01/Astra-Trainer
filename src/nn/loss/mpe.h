@@ -11,7 +11,7 @@ struct MPELoss : Loss {
   public:
     MPELoss(float power) : Loss(), m_power(power) {}
 
-    void compute(const Array<float> &targets, Tensor &output) {
+    void compute(const Array<float> &targets, Tensor<float> &output) {
         mpe_loss(targets, loss, output, m_power, act_type);
     }
 

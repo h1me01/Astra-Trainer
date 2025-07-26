@@ -12,22 +12,22 @@ template <int size, ActivationType act_type> //
 class FeatureTransformer : public LayerBase {
   private:
     int input_size;
-    Tensor weights{1, 1};
-    Tensor biases{size, 1};
+    Tensor<float> weights{1, 1};
+    Tensor<float> biases{size, 1};
 
   public:
-    FeatureTransformer(int input_size, WeightInitType init_type) : input_size(input_size) {
+    FeatureTransformer(int input_size, WeightInitType winit_type) : input_size(input_size) {
         if(input_size % 768 != 0)
             error("Input size must be divisible by 768 to match standard chess inputs.");
 
         name = "FeatureTransformer";
 
-        weights = Tensor(size, input_size);
-        weights.init(init_type, input_size);
+        weights = Tensor<float>(size, input_size);
+        weights.init(winit_type, input_size);
     }
 
     void forward() override {
-        const std::vector<Array<int>> &features = sparse_batch.get_features();
+        const auto &features = sparse_batch.get_features();
 
         int i = 0;
         for(auto &feature : features) {
@@ -47,7 +47,7 @@ class FeatureTransformer : public LayerBase {
     }
 
     void backward() override {
-        const std::vector<Array<int>> &features = sparse_batch.get_features();
+        const auto &features = sparse_batch.get_features();
 
         int i = 0;
         for(auto &feature : features) {
@@ -78,7 +78,7 @@ class FeatureTransformer : public LayerBase {
         return input_size;
     }
 
-    std::vector<Tensor *> get_params() override {
+    std::vector<Tensor<float> *> get_params() override {
         return {&weights, &biases};
     }
 

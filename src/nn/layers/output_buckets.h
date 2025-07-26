@@ -29,12 +29,12 @@ class OutputBuckets : public LayerBase {
     }
 
     void forward() override {
-        Tensor &input = previous->get_output().activated;
+        auto &input = previous->get_output().activated;
 
         const int batch_size = sparse_batch.get_batch_size();
 
-        const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
-        DenseMatrix<float> &input_v = input.get_data();
+        const auto &bucket_indices = sparse_batch.get_psqt_indices();
+        auto &input_v = input.get_data();
 
         ASSERT(input_v.rows() == NUM_BUCKETS);
         ASSERT(input_v.cols() == batch_size);
@@ -44,12 +44,12 @@ class OutputBuckets : public LayerBase {
     }
 
     void backward() override {
-        Tensor &input = previous->get_output().activated;
+        auto &input = previous->get_output().activated;
 
         const int batch_size = sparse_batch.get_batch_size();
 
-        const Array<int> &bucket_indices = sparse_batch.get_psqt_indices();
-        DenseMatrix<float> &input_g = input.get_grads();
+        const auto &bucket_indices = sparse_batch.get_psqt_indices();
+        auto &input_g = input.get_grads();
 
         ASSERT(input_g.rows() == NUM_BUCKETS);
         ASSERT(input_g.cols() == batch_size);
@@ -70,7 +70,7 @@ class OutputBuckets : public LayerBase {
         return previous->get_output_size();
     }
 
-    std::vector<Tensor *> get_params() override {
+    std::vector<Tensor<float> *> get_params() override {
         return {};
     }
 

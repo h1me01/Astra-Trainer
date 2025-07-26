@@ -11,7 +11,7 @@ class Loss {
   public:
     Loss() {}
 
-    virtual void compute(const Array<float> &target, Tensor &output) = 0;
+    virtual void compute(const Array<float> &target, Tensor<float> &output) = 0;
     virtual std::string get_info() = 0;
 
     float get_loss() {

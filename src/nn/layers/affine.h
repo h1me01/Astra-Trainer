@@ -11,8 +11,8 @@
 template <int size, ActivationType act_type = Linear> //
 class Affine : public LayerBase {
   private:
-    Tensor weights{1, 1};
-    Tensor biases{size, 1};
+    Tensor<float> weights{1, 1};
+    Tensor<float> biases{size, 1};
 
     LayerBase *previous;
 
@@ -22,12 +22,12 @@ class Affine : public LayerBase {
 
         const int input_size = previous->get_output_size();
 
-        weights = Tensor(size, input_size);
+        weights = Tensor<float>(size, input_size);
         weights.init(init_type, input_size);
     }
 
     void forward() override {
-        Tensor &inputs = previous->get_output().activated;
+        auto &inputs = previous->get_output().activated;
 
         affine_fwd( //
             weights.get_data(),
@@ -39,7 +39,7 @@ class Affine : public LayerBase {
     }
 
     void backward() override {
-        Tensor &inputs = previous->get_output().activated;
+        auto &inputs = previous->get_output().activated;
 
         affine_bwd( //
             weights,
@@ -62,7 +62,7 @@ class Affine : public LayerBase {
         return previous->get_output_size();
     }
 
-    std::vector<Tensor *> get_params() override {
+    std::vector<Tensor<float> *> get_params() override {
         return {&weights, &biases};
     }
 

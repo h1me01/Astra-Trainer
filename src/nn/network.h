@@ -165,9 +165,9 @@ class Network {
             error("File " + file + " does not exist");
 
         try {
-            for(LayerBase *l : hp.layers) {
-                for(Tensor *t : l->get_params()) {
-                    DenseMatrix<float> &weights = t->get_data();
+            for(auto *l : hp.layers) {
+                for(auto *t : l->get_params()) {
+                    auto &weights = t->get_data();
 
                     f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
                     if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
@@ -202,7 +202,7 @@ class Network {
 
         LayerBase *output_layer = hp.layers.back();
 
-        DenseMatrix<float> &output = get_output().get_data();
+        auto &output = get_output().get_data();
         output.dev_to_host();
 
         return output(0) * hp.output_scalar;
@@ -237,7 +237,7 @@ class Network {
         return hp.batch_size;
     }
 
-    Tensor &get_output() {
+    Tensor<float> &get_output() {
         return hp.layers.back()->get_output().activated;
     }
 

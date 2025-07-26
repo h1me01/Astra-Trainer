@@ -30,9 +30,9 @@ void select_fwd(                        //
     DenseMatrix<float> &output_v,       //
     const Array<int> &indices           //
 ) {
-    ASSERT(inputs_v.dev_address()    //
-           && output_v.dev_address() //
-           && indices.dev_address());
+    ASSERT(inputs_v.dev_address() && //
+           output_v.dev_address() && //
+           indices.dev_address());
 
     const int batch_size = output_v.cols();
     const int output_size = output_v.rows();
@@ -76,9 +76,9 @@ void select_bwd(                        //
     const DenseMatrix<float> &output_g, //
     const Array<int> &indices           //
 ) {
-    ASSERT(inputs_g.dev_address()    //
-           && output_g.dev_address() //
-           && indices.dev_address());
+    ASSERT(inputs_g.dev_address() && //
+           output_g.dev_address() && //
+           indices.dev_address());
 
     const int batch_size = output_g.cols();
     const int output_size = output_g.rows();

@@ -55,10 +55,10 @@ void adam_optim(               //
     const float max_val,       //
     const float grad_scale     //
 ) {
-    ASSERT(vals.dev_address()     //
-           && grads.dev_address() //
-           && moms.dev_address()  //
-           && vels.dev_address());
+    ASSERT(vals.dev_address() &&  //
+           grads.dev_address() && //
+           moms.dev_address() &&  //
+           vels.dev_address());
 
     const int grid_size(std::ceil((float) vals.size() / block_size));
 

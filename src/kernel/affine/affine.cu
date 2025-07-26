@@ -118,23 +118,23 @@ __global__ void biases_bwd_kernel( //
 }
 
 void affine_bwd(                       //
-    Tensor &weights,                   //
-    Tensor &biases,                    //
-    Tensor &inputs,                    //
-    Tensor &activated,                 //
+    Tensor<float> &weights,            //
+    Tensor<float> &biases,             //
+    Tensor<float> &inputs,             //
+    Tensor<float> &activated,          //
     DenseMatrix<float> &pre_activated, //
     const ActivationType act_type      //
 ) {
-    const DenseMatrix<float> &weights_v = weights.get_data();
-    DenseMatrix<float> &weights_g = weights.get_grads();
+    const auto &weights_v = weights.get_data();
+    auto &weights_g = weights.get_grads();
 
-    DenseMatrix<float> &biases_g = biases.get_grads();
+    auto &biases_g = biases.get_grads();
 
-    const DenseMatrix<float> &inputs_v = inputs.get_data();
-    DenseMatrix<float> &inputs_g = inputs.get_grads();
+    const auto &inputs_v = inputs.get_data();
+    auto &inputs_g = inputs.get_grads();
 
-    const DenseMatrix<float> &activated_v = activated.get_data();
-    const DenseMatrix<float> &activated_g = activated.get_grads();
+    const auto &activated_v = activated.get_data();
+    const auto &activated_g = activated.get_grads();
 
     ASSERT(activated_g.rows() == biases_g.rows() && biases_g.cols() == 1);
 
@@ -152,7 +152,6 @@ void affine_bwd(                       //
            pre_activated.dev_address());
 
     // update gradients with activation derivatives
-    // and update biases gradients
     const int grid_size = std::ceil((float) activated_g.size() / block_size);
 
     activation_grad_kernel<<<grid_size, block_size>>>( //
@@ -161,8 +160,7 @@ void affine_bwd(                       //
         activated_g.size(),
         act_type);
 
-    cudaDeviceSynchronize();
-
+    // update biases gradients
     biases_bwd_kernel<<<grid_size, block_size>>>( //
         activated_g.dev_address(),
         biases_g.dev_address(),

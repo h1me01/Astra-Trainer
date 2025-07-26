@@ -15,9 +15,9 @@ void affine_fwd( //
     const ActivationType act_type);
 
 void affine_bwd( //
-    Tensor &weights,
-    Tensor &biases,
-    Tensor &inputs,
-    Tensor &activated,
+    Tensor<float> &weights,
+    Tensor<float> &biases,
+    Tensor<float> &inputs,
+    Tensor<float> &activated,
     DenseMatrix<float> &pre_activated,
     const ActivationType act_type);

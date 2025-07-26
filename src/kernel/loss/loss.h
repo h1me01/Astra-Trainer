@@ -6,12 +6,12 @@
 void mpe_loss( //
     const Array<float> &targets,
     Array<float> &loss,
-    Tensor &output,
+    Tensor<float> &output,
     const float power,
     const ActivationType act_type);
 
 void mse_loss( //
     const Array<float> &targets,
     Array<float> &loss,
-    Tensor &output,
+    Tensor<float> &output,
     const ActivationType act_type);

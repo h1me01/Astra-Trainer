@@ -14,7 +14,7 @@ class LayerBase {
 
     struct Output {
         DenseMatrix<float> pre_activated{1, 1};
-        Tensor activated{1, 1};
+        Tensor<float> activated{1, 1};
 
         Output() {}
         Output(int output_size, int batch_size)
@@ -26,10 +26,10 @@ class LayerBase {
     std::string params_info() {
         std::stringstream info;
 
-        const std::vector<Tensor *> &params = this->get_params();
+        const auto &params = this->get_params();
         if(!params.empty()) {
             int i = 0;
-            for(const Tensor *t : params) {
+            for(const auto *t : params) {
                 std::string prefix = (std::string((i++ == 0) ? "Weights:" : "Biases :") + " clipped to [");
                 info << "    - " << prefix                      //
                      << format_number(t->lower_bound())         //
@@ -68,7 +68,7 @@ class LayerBase {
     virtual int get_output_size() const = 0;
     virtual int get_input_size() const = 0;
 
-    virtual std::vector<Tensor *> get_params() = 0;
+    virtual std::vector<Tensor<float> *> get_params() = 0;
 
     virtual void forward() = 0;
     virtual void backward() = 0;

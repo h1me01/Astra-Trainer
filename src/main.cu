@@ -39,8 +39,12 @@ int main() {
 
     // LEARNING RATE SCHEDULER
 
-    GradualDecay lr_scheduler(0.995);
-    optim.set_lr_scheduler(&lr_scheduler);
+    CosineAnnealing lr_sched( //
+        EPOCHS,               // max epochs
+        0.001,                // start lr
+        0.000027              // final lr
+    );
+    optim.set_lr_scheduler(&lr_sched);
 
     network.set_optim(&optim);
 
@@ -87,11 +91,10 @@ int main() {
     network.train( //
         {
             // data paths
-            root_path + "/training_data/step-1", //
-            root_path + "/training_data/step-2"  //
-        },                                       //
-        root_path + "/nn_output",                // output path
-        ""                                       // checkpoint from output path
+            root_path + "/training_data", //
+        },                                //
+        root_path + "/nn_output",         // output path
+        ""                                // checkpoint from output path
     );
 
     // TESTING

@@ -31,17 +31,17 @@ __global__ void mpe_kernel(        //
 void mpe_loss(                    //
     const Array<float> &targets,  //
     Array<float> &loss,           //
-    Tensor &output,               //
+    Tensor<float> &output,        //
     const float power,            //
     const ActivationType act_type //
 ) {
-    const DenseMatrix<float> &output_v = output.get_data();
-    DenseMatrix<float> &output_g = output.get_grads();
+    const auto &output_v = output.get_data();
+    auto &output_g = output.get_grads();
 
-    ASSERT(output_v.dev_address()    //
-           && output_g.dev_address() //
-           && targets.dev_address()  //
-           && loss.dev_address());
+    ASSERT(output_v.dev_address() && //
+           output_g.dev_address() && //
+           targets.dev_address() &&  //
+           loss.dev_address());
 
     const int grid_size = std::ceil((float) output_v.size() / block_size);
 
@@ -81,16 +81,16 @@ __global__ void mse_kernel(        //
 void mse_loss(                    //
     const Array<float> &targets,  //
     Array<float> &loss,           //
-    Tensor &output,               //
+    Tensor<float> &output,        //
     const ActivationType act_type //
 ) {
-    const DenseMatrix<float> &output_v = output.get_data();
-    DenseMatrix<float> &output_g = output.get_grads();
+    const auto &output_v = output.get_data();
+    auto &output_g = output.get_grads();
 
-    ASSERT(output_v.dev_address()    //
-           && output_g.dev_address() //
-           && targets.dev_address()  //
-           && loss.dev_address());
+    ASSERT(output_v.dev_address() && //
+           output_g.dev_address() && //
+           targets.dev_address() &&  //
+           loss.dev_address());
 
     const int grid_size = std::ceil((float) output_v.size() / block_size);
 
