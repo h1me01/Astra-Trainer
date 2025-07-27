@@ -5,15 +5,6 @@
 #include "array.h"
 
 class SparseBatch {
-  private:
-    int batch_size;
-    int max_entries;
-
-    Array<int> psqt_indices;
-
-    Array<int> feature_sizes;
-    std::vector<Array<int>> features;
-
   public:
     SparseBatch(int batch_size, int max_entries)
         : batch_size(batch_size),   //
@@ -70,4 +61,13 @@ class SparseBatch {
         for(auto &feature : features)
             feature.host_to_dev();
     }
+
+  private:
+    int batch_size;
+    int max_entries;
+
+    Array<int> psqt_indices;
+
+    Array<int> feature_sizes;
+    std::vector<Array<int>> features;
 };

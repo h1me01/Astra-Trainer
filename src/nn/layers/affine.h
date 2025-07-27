@@ -10,12 +10,6 @@
 
 template <int size, ActivationType act_type = Linear> //
 class Affine : public LayerBase {
-  private:
-    Tensor<float> weights{1, 1};
-    Tensor<float> biases{size, 1};
-
-    LayerBase *previous;
-
   public:
     Affine(LayerBase *previous, WeightInitType init_type) : previous(previous) {
         name = "Affine";
@@ -75,4 +69,10 @@ class Affine : public LayerBase {
         ss << params_info();
         return ss.str();
     }
+
+  private:
+    Tensor<float> weights{1, 1};
+    Tensor<float> biases{size, 1};
+
+    LayerBase *previous;
 };

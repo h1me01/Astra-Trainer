@@ -111,14 +111,6 @@ class Logger {
 };
 
 class Timer {
-  private:
-    using ms = std::chrono::milliseconds;
-    using steady_clock = std::chrono::steady_clock;
-
-    steady_clock::time_point start_point, end_point;
-
-    long long prev_duration = 0;
-
   public:
     void start() {
         start_point = steady_clock::now();
@@ -144,4 +136,12 @@ class Timer {
 
         return false;
     }
+
+  private:
+    using ms = std::chrono::milliseconds;
+    using steady_clock = std::chrono::steady_clock;
+
+    steady_clock::time_point start_point, end_point;
+
+    long long prev_duration = 0;
 };

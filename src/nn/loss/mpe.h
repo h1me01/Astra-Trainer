@@ -5,9 +5,6 @@
 
 template <ActivationType act_type> //
 struct MPELoss : Loss {
-  private:
-    float m_power;
-
   public:
     MPELoss(float power) : Loss(), m_power(power) {}
 
@@ -18,4 +15,7 @@ struct MPELoss : Loss {
     std::string get_info() {
         return "MPELoss<" + get_activation_name(act_type) + ">(power=" + format_number(m_power) + ")";
     }
+
+  private:
+    float m_power;
 };

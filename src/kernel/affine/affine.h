@@ -3,6 +3,8 @@
 #include "../../nn/data/include.h"
 #include "../activation.h"
 
+extern cublasHandle_t CUBLAS_HANDLE;
+
 void create_cublas();
 void destroy_cublas();
 

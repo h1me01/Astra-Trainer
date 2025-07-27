@@ -8,21 +8,6 @@
 #include "lr_scheduler.h"
 
 class Optimizer {
-  protected:
-    std::string name = "Optimizer";
-
-    std::vector<Tensor<float> *> tunables{};
-
-    std::vector<Array<float>> momentum{};
-    std::vector<Array<float>> velocity{};
-
-    OptimParams params;
-
-    float min_val = -1;
-    float max_val = -1;
-
-    LRScheduler *lr_scheduler = nullptr;
-
   public:
     Optimizer(OptimParams params) //
         : params(params) {}
@@ -99,6 +84,21 @@ class Optimizer {
             return "No LR scheduler set";
         return lr_scheduler->get_info();
     }
+
+  protected:
+    std::string name = "Optimizer";
+
+    std::vector<Tensor<float> *> tunables{};
+
+    std::vector<Array<float>> momentum{};
+    std::vector<Array<float>> velocity{};
+
+    OptimParams params;
+
+    float min_val = -1;
+    float max_val = -1;
+
+    LRScheduler *lr_scheduler = nullptr;
 };
 
 inline void Optimizer::load(const std::string &path) {

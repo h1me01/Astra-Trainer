@@ -12,17 +12,13 @@ class OutputBuckets : public LayerBase {
   public:
     static constexpr int NUM_BUCKETS = 8; // for now only supports 8 buckets
 
-  private:
-    int size;
-    LayerBase *previous;
-
   public:
     OutputBuckets(LayerBase *previous) : previous(previous) {
         name = "OutputBuckets";
 
         const int input_size = previous->get_output_size();
         if(input_size % NUM_BUCKETS != 0) {
-            error("The OutputBuckets layer requires its input size to be divisible by NUM_BUCKETS with no remainder.");
+            error("OutputBuckets requires its input size to be divisible by NUM_BUCKETS with no remainder");
         }
 
         size = input_size / NUM_BUCKETS;
@@ -81,4 +77,8 @@ class OutputBuckets : public LayerBase {
         ss << "->" << std::to_string(size) << ")\n";
         return ss.str();
     }
+
+  private:
+    int size;
+    LayerBase *previous;
 };

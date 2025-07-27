@@ -1,0 +1,121 @@
+#include "affine.h"
+
+constexpr float alpha = 1;
+constexpr float beta = 0;
+
+constexpr int block_size = 128;
+
+__global__ void activation_grad_kernel( //
+    const float *pre_activated_v,       //
+    float *activated_g,                 //
+    const int size,                     //
+    const ActivationType act_type       //
+) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if(idx >= size)
+        return;
+
+    activated_g[idx] *= activate_der(pre_activated_v[idx], act_type);
+}
+
+__global__ void biases_bwd_kernel( //
+    const float *activated_g,      //
+    float *biases_g,               //
+    const int r,                   //
+    const int c                    //
+) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if(idx >= r * c)
+        return;
+
+    const int neuron_idx = idx / c;
+
+    atomicAdd(&biases_g[neuron_idx], activated_g[idx]);
+}
+
+void affine_bwd(                       //
+    Tensor<float> &weights,            //
+    Tensor<float> &biases,             //
+    Tensor<float> &inputs,             //
+    Tensor<float> &activated,          //
+    DenseMatrix<float> &pre_activated, //
+    const ActivationType act_type      //
+) {
+    const auto &weights_v = weights.get_data();
+    auto &weights_g = weights.get_grads();
+
+    auto &biases_g = biases.get_grads();
+
+    const auto &inputs_v = inputs.get_data();
+    auto &inputs_g = inputs.get_grads();
+
+    const auto &activated_v = activated.get_data();
+    const auto &activated_g = activated.get_grads();
+
+    ASSERT(activated_g.rows() == biases_g.rows() && biases_g.cols() == 1);
+
+    ASSERT(weights_g.cols() == inputs_g.rows() &&    //
+           weights_g.rows() == activated_g.rows() && //
+           inputs_g.cols() == activated_g.cols());
+
+    ASSERT(weights_v.dev_address() &&   //
+           weights_g.dev_address() &&   //
+           biases_g.dev_address() &&    //
+           inputs_v.dev_address() &&    //
+           inputs_g.dev_address() &&    //
+           activated_v.dev_address() && //
+           activated_g.dev_address() && //
+           pre_activated.dev_address());
+
+    const int grid_size = std::ceil((float) activated_g.size() / block_size);
+
+    // update gradients with activation derivatives
+    activation_grad_kernel<<<grid_size, block_size>>>( //
+        pre_activated.dev_address(),
+        activated_g.dev_address(),
+        activated_g.size(),
+        act_type);
+
+    // update biases gradients
+    biases_bwd_kernel<<<grid_size, block_size>>>( //
+        activated_g.dev_address(),
+        biases_g.dev_address(),
+        activated_g.rows(),
+        activated_g.cols());
+
+    // update weights gradient
+    cublasSgemm(                   //
+        CUBLAS_HANDLE,             // handle
+        CUBLAS_OP_N,               // transa
+        CUBLAS_OP_T,               // transb
+        weights_g.rows(),          // m
+        weights_g.cols(),          // n
+        activated_g.cols(),        // k
+        &alpha,                    // alpha
+        activated_g.dev_address(), // A
+        activated_g.rows(),        // lda
+        inputs_v.dev_address(),    // B
+        inputs_v.rows(),           // ldb
+        &beta,                     // beta
+        weights_g.dev_address(),   // C
+        weights_g.rows()           // ldc
+    );
+
+    // calculates delta for the layer before this one as well
+    cublasSgemm(                   //
+        CUBLAS_HANDLE,             // handle
+        CUBLAS_OP_T,               // transa
+        CUBLAS_OP_N,               // transb
+        inputs_g.rows(),           // m
+        inputs_g.cols(),           // n
+        weights_v.rows(),          // k
+        &alpha,                    // alpha
+        weights_v.dev_address(),   // A
+        weights_v.rows(),          // lda
+        activated_g.dev_address(), // B
+        activated_g.rows(),        // ldb
+        &beta,                     // beta
+        inputs_g.dev_address(),    // C
+        inputs_g.rows()            // ldc
+    );
+}

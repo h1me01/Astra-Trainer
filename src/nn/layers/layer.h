@@ -8,8 +8,6 @@
 
 class LayerBase {
   protected:
-    std::string name;
-
     static SparseBatch sparse_batch; // all layers must share the same sparse batch
 
     struct Output {
@@ -20,26 +18,6 @@ class LayerBase {
         Output(int output_size, int batch_size)
             : pre_activated(output_size, batch_size), activated(output_size, batch_size) {}
     };
-
-    Output output;
-
-    std::string params_info() {
-        std::stringstream info;
-
-        const auto &params = this->get_params();
-        if(!params.empty()) {
-            int i = 0;
-            for(const auto *t : params) {
-                std::string prefix = (std::string((i++ == 0) ? "Weights:" : "Biases :") + " clipped to [");
-                info << "    - " << prefix                      //
-                     << format_number(t->lower_bound())         //
-                     << ", " << format_number(t->upper_bound()) //
-                     << "]" << "\n";
-            }
-        }
-
-        return info.str();
-    }
 
   public:
     void init(int batch_size) {
@@ -74,4 +52,26 @@ class LayerBase {
     virtual void backward() = 0;
 
     virtual std::string get_info() = 0;
+
+  protected:
+    std::string name;
+    Output output;
+
+    std::string params_info() {
+        std::stringstream info;
+
+        const auto &params = this->get_params();
+        if(!params.empty()) {
+            int i = 0;
+            for(const auto *t : params) {
+                std::string prefix = (std::string((i++ == 0) ? "Weights:" : "Biases :") + " clipped to [");
+                info << "    - " << prefix                      //
+                     << format_number(t->lower_bound())         //
+                     << ", " << format_number(t->upper_bound()) //
+                     << "]" << "\n";
+            }
+        }
+
+        return info.str();
+    }
 };

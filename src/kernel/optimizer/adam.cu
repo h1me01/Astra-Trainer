@@ -1,13 +1,11 @@
 #include "../util.h"
 #include "optimizer.h"
 
+constexpr int block_size = 1024;
+
 float get_decay(const float lr, const float decay) {
     return 1.0f - lr * decay;
 }
-
-constexpr int block_size = 1024;
-
-// ADAM
 
 __global__ void adam_kernel( //
     float *vals,             //

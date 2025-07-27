@@ -37,19 +37,20 @@ std::vector<std::string> files_from_path(const std::vector<std::string> &paths) 
         error("No training data found in the specified paths: " + all_paths);
     }
 
+    std::cout << "\nFound " << files.size() << " training file(s)\n\n";
     return files;
 }
 
 int epoch_from_checkpoint(const std::string &checkpoint_name) {
     size_t dash_pos = checkpoint_name.find_last_of('-');
     if(dash_pos == std::string::npos) {
-        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0.\n";
+        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
         return 0;
     }
 
     std::string epoch_str = checkpoint_name.substr(dash_pos + 1);
     if(epoch_str == "final") {
-        std::cout << "Loading from final checkpoint, starting new training cycle.\n";
+        std::cout << "Loading from final checkpoint, starting new training cycle\n";
         return 0;
     }
 
@@ -57,7 +58,7 @@ int epoch_from_checkpoint(const std::string &checkpoint_name) {
         int parsed_epoch = std::stoi(epoch_str);
         return parsed_epoch;
     } catch(...) {
-        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0.\n";
+        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
         return 0;
     }
 }
@@ -215,7 +216,7 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
     int epoch;
 
     if(checkpoint_name.empty()) {
-        std::cout << "No checkpoint path provided, training from scratch.\n";
+        std::cout << "No checkpoint path provided, training from scratch\n";
 
         int next_training_index = get_next_training_idx(output_path);
         std::stringstream new_folder_path;

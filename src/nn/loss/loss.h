@@ -5,9 +5,6 @@
 #include "data/include.h"
 
 class Loss {
-  protected:
-    Array<float> loss{1};
-
   public:
     Loss() {}
 
@@ -22,4 +19,7 @@ class Loss {
     void reset() {
         loss.clear();
     }
+
+  protected:
+    Array<float> loss{1};
 };

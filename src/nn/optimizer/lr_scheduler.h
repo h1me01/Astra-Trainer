@@ -9,10 +9,6 @@ class LRScheduler {
 };
 
 class StepDecay : public LRScheduler {
-  private:
-    int step;
-    float gamma;
-
   public:
     StepDecay(int step = 100, float gamma = 0.1) : step(step), gamma(gamma) {}
 
@@ -23,12 +19,13 @@ class StepDecay : public LRScheduler {
     std::string get_info() override {
         return "StepDecay(gamma=" + format_number(gamma) + ", step=" + std::to_string(step) + ")";
     }
+
+  private:
+    int step;
+    float gamma;
 };
 
 class GradualDecay : public LRScheduler {
-  private:
-    float gamma;
-
   public:
     GradualDecay(float gamma = 0.92) : gamma(gamma) {}
 
@@ -39,16 +36,12 @@ class GradualDecay : public LRScheduler {
     std::string get_info() override {
         return "GradualDecay(gamma=" + format_number(gamma) + ")";
     }
+
+  private:
+    float gamma;
 };
 
 class CosineAnnealing : public LRScheduler {
-  private:
-    int max_epochs;
-    float start_lr;
-    float final_lr;
-
-    const float pi = 3.14159265358979f;
-
   public:
     CosineAnnealing(int max_epochs, float start_lr, float final_lr)
         : max_epochs(max_epochs), start_lr(start_lr), final_lr(final_lr) {}
@@ -68,4 +61,11 @@ class CosineAnnealing : public LRScheduler {
         ss << ", final_lr=" << format_number(final_lr) << ")";
         return ss.str();
     }
+
+  private:
+    int max_epochs;
+    float start_lr;
+    float final_lr;
+
+    const float pi = 3.14159265358979f;
 };

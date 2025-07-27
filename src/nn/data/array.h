@@ -4,55 +4,6 @@
 
 template <typename T> //
 class Array {
-  private:
-    int m_size = 0;
-    T *host_data = nullptr;
-    T *dev_data = nullptr;
-
-    void alloc_host() {
-        if(m_size <= 0)
-            return;
-        if(is_host_allocated())
-            free_host();
-        host_data = new T[m_size]();
-    }
-
-    void alloc_dev() {
-        if(m_size <= 0)
-            return;
-        if(is_dev_allocated())
-            free_dev();
-        CUDA_ASSERT(cudaMalloc(&dev_data, m_size * sizeof(T)));
-    }
-
-    void free_host() {
-        if(!is_host_allocated())
-            return;
-        delete[] host_data;
-        host_data = nullptr;
-    }
-
-    void free_dev() {
-        if(!is_dev_allocated())
-            return;
-        CUDA_ASSERT(cudaFree(dev_data));
-        dev_data = nullptr;
-    }
-
-    void from_host(const T *data, int size) {
-        ASSERT(size == m_size);
-        if(host_data == nullptr)
-            alloc_host();
-        memcpy(host_data, data, sizeof(T) * size);
-    }
-
-    void from_dev(const T *data, int size) {
-        ASSERT(size == m_size);
-        if(dev_data == nullptr)
-            alloc_dev();
-        CUDA_ASSERT(cudaMemcpy(dev_data, data, sizeof(T) * size, cudaMemcpyDeviceToDevice));
-    }
-
   public:
     Array() : m_size(0) {
         host_data = nullptr;
@@ -166,5 +117,54 @@ class Array {
 
     int size() const {
         return m_size;
+    }
+
+  private:
+    int m_size = 0;
+    T *host_data = nullptr;
+    T *dev_data = nullptr;
+
+    void alloc_host() {
+        if(m_size <= 0)
+            return;
+        if(is_host_allocated())
+            free_host();
+        host_data = new T[m_size]();
+    }
+
+    void alloc_dev() {
+        if(m_size <= 0)
+            return;
+        if(is_dev_allocated())
+            free_dev();
+        CUDA_ASSERT(cudaMalloc(&dev_data, m_size * sizeof(T)));
+    }
+
+    void free_host() {
+        if(!is_host_allocated())
+            return;
+        delete[] host_data;
+        host_data = nullptr;
+    }
+
+    void free_dev() {
+        if(!is_dev_allocated())
+            return;
+        CUDA_ASSERT(cudaFree(dev_data));
+        dev_data = nullptr;
+    }
+
+    void from_host(const T *data, int size) {
+        ASSERT(size == m_size);
+        if(host_data == nullptr)
+            alloc_host();
+        memcpy(host_data, data, sizeof(T) * size);
+    }
+
+    void from_dev(const T *data, int size) {
+        ASSERT(size == m_size);
+        if(dev_data == nullptr)
+            alloc_dev();
+        CUDA_ASSERT(cudaMemcpy(dev_data, data, sizeof(T) * size, cudaMemcpyDeviceToDevice));
     }
 };

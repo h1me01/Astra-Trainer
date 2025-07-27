@@ -10,15 +10,10 @@
 
 template <int size, ActivationType act_type> //
 class FeatureTransformer : public LayerBase {
-  private:
-    int input_size;
-    Tensor<float> weights{1, 1};
-    Tensor<float> biases{size, 1};
-
   public:
     FeatureTransformer(int input_size, WeightInitType winit_type) : input_size(input_size) {
         if(input_size % 768 != 0)
-            error("Input size must be divisible by 768 to match standard chess inputs.");
+            error("Input size must be divisible by 768 to match standard chess inputs");
 
         name = "FeatureTransformer";
 
@@ -93,4 +88,9 @@ class FeatureTransformer : public LayerBase {
         ss << params_info();
         return ss.str();
     }
+
+  private:
+    int input_size;
+    Tensor<float> weights{1, 1};
+    Tensor<float> biases{size, 1};
 };

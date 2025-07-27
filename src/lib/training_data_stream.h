@@ -1,7 +1,7 @@
 #ifndef _SFEN_STREAM_H_
 #define _SFEN_STREAM_H_
 
-#include "binpack.h"
+#include "training_data_formats.h"
 
 #include <fstream>
 #include <functional>

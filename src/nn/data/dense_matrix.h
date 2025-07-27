@@ -5,9 +5,6 @@
 // column-major dense matrix
 template <typename T> //
 class DenseMatrix : public Array<T> {
-  private:
-    int m_rows, m_cols;
-
   public:
     using Array<T>::get;
     using Array<T>::operator();
@@ -43,4 +40,7 @@ class DenseMatrix : public Array<T> {
     T &operator()(int r, int c) {
         return get(m_rows * c + r);
     }
+
+  private:
+    int m_rows, m_cols;
 };

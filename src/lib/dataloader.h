@@ -8,7 +8,7 @@
 #pragma GCC diagnostic ignored "-Wextra"
 #endif
 
-#include "binpack.h"
+#include "training_data_formats.h"
 #include "training_data_stream.h"
 
 #ifdef _MSC_VER
@@ -54,19 +54,19 @@ inline std::function<bool(const DataEntry &)> skip_predicate = [](const DataEntr
     return false;
 };
 
-struct FeaturedBatchStream {
-    // clang-format off
-    FeaturedBatchStream(
-        const std::vector<std::string> &filenames, 
-        int concurrency, 
-        int batch_size, 
-        bool cyclic) : 
-        m_concurrency(concurrency),
-        m_batch_size(batch_size),
-        m_cyclic(cyclic),
-        m_stream(training_data::open_sfen_input_file_parallel(std::max(1, concurrency / 2), filenames, cyclic, skip_predicate))
+class FeaturedBatchStream {
+  public:
+    FeaturedBatchStream(                           //
+        const std::vector<std::string> &filenames, //
+        int concurrency,                           //
+        int batch_size,                            //
+        bool cyclic)
+        : m_concurrency(concurrency), //
+          m_batch_size(batch_size),   //
+          m_cyclic(cyclic),           //
+          m_stream(training_data::open_sfen_input_file_parallel(
+              std::max(1, concurrency / 2), filenames, cyclic, skip_predicate)) //
     {
-        // clang-format on
         std::cout << get_info() << std::endl;
         m_stop_flag.store(false);
 
