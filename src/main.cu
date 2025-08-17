@@ -64,9 +64,9 @@ int main() {
 
     // LAYERS
 
-    auto ft = FeatureTransformer<L1_SIZE, SCReLU>( //
-        get_bucket_size(input_bucket) * 768,       // input size
-        WeightInitType::He                         //
+    auto ft = DualFeatureTransformer<L1_SIZE, SCReLU>( //
+        get_bucket_size(input_bucket) * 768,           // input size
+        WeightInitType::He                             //
     );
 
     auto l1 = Affine<OutputBuckets::NUM_BUCKETS>( //

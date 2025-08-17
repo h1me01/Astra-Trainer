@@ -9,9 +9,9 @@
 #include "layer.h"
 
 template <int size, ActivationType act_type> //
-class FeatureTransformer : public LayerBase {
+class DualFeatureTransformer : public LayerBase {
   public:
-    FeatureTransformer(int input_size, WeightInitType winit_type) : input_size(input_size) {
+    DualFeatureTransformer(int input_size, WeightInitType winit_type) : input_size(input_size) {
         if(input_size % 768 != 0)
             error("Input size must be divisible by 768 to match standard chess inputs");
 
@@ -32,7 +32,6 @@ class FeatureTransformer : public LayerBase {
                 weights.get_data(),
                 biases.get_data(),
                 feature,
-                sparse_batch.get_feature_sizes(),
                 i * size,
                 sparse_batch.get_max_entries(),
                 act_type);
@@ -52,7 +51,6 @@ class FeatureTransformer : public LayerBase {
                 weights.get_grads(),
                 biases.get_grads(),
                 feature,
-                sparse_batch.get_feature_sizes(),
                 i * size,
                 sparse_batch.get_max_entries(),
                 act_type);

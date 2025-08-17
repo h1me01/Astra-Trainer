@@ -9,8 +9,7 @@ class SparseBatch {
     SparseBatch(int batch_size, int max_entries)
         : batch_size(batch_size),   //
           max_entries(max_entries), //
-          psqt_indices(batch_size), //
-          feature_sizes(batch_size) //
+          psqt_indices(batch_size)  //
     {
         features.reserve(2);
         features.emplace_back(batch_size * max_entries); // stm_features
@@ -18,10 +17,9 @@ class SparseBatch {
     }
 
     SparseBatch(const SparseBatch &other)
-        : batch_size(other.batch_size),       //
-          max_entries(other.max_entries),     //
-          psqt_indices(other.psqt_indices),   //
-          feature_sizes(other.feature_sizes), //
+        : batch_size(other.batch_size),     //
+          max_entries(other.max_entries),   //
+          psqt_indices(other.psqt_indices), //
           features(other.features) {}
 
     SparseBatch &operator=(const SparseBatch &other) {
@@ -29,7 +27,6 @@ class SparseBatch {
             batch_size = other.batch_size;
             max_entries = other.max_entries;
             psqt_indices = other.psqt_indices;
-            feature_sizes = other.feature_sizes;
             features = other.features;
         }
         return *this;
@@ -47,17 +44,12 @@ class SparseBatch {
         return psqt_indices;
     }
 
-    Array<int> &get_feature_sizes() {
-        return feature_sizes;
-    }
-
     std::vector<Array<int>> &get_features() {
         return features;
     }
 
     void host_to_dev() {
         psqt_indices.host_to_dev();
-        feature_sizes.host_to_dev();
         for(auto &feature : features)
             feature.host_to_dev();
     }
@@ -67,7 +59,5 @@ class SparseBatch {
     int max_entries;
 
     Array<int> psqt_indices;
-
-    Array<int> feature_sizes;
     std::vector<Array<int>> features;
 };

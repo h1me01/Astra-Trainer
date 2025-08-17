@@ -8,7 +8,6 @@ __global__ void sparse_affine_bp_kernel( //
     float *weights_g,                    //
     float *biases_g,                     //
     const int *features,                 //
-    const int *feature_sizes,            //
     const int w_r,                       // weight rows
     const int a_r,                       // activated rows
     const int a_offset,                  // activated offset
@@ -29,11 +28,12 @@ __global__ void sparse_affine_bp_kernel( //
 
     if(grad != 0) {
         const int offset = batch_idx * max_entries;
-        const int feature_size = feature_sizes[batch_idx];
 
         atomicAdd(&biases_g[neuron_idx], grad);
-        for(int i = 0; i < feature_size; i++) {
+        for(int i = 0; i < max_entries; i++) {
             int sparse_idx = features[i + offset];
+            if(sparse_idx == -1)
+                break;
             atomicAdd(&weights_g[w_r * sparse_idx + neuron_idx], grad);
         }
     }
@@ -47,7 +47,6 @@ void sparse_affine_bwd(                      //
     DenseMatrix<float> &weights_g,           //
     DenseMatrix<float> &biases_g,            //
     const Array<int> &features,              //
-    const Array<int> &feature_sizes,         //
     const int a_offset,                      //
     const int max_entries,                   //
     const ActivationType act_type            //
@@ -58,8 +57,7 @@ void sparse_affine_bwd(                      //
            biases_g.dev_address() &&      //
            activated_g.dev_address() &&   //
            pre_activated.dev_address() && //
-           features.dev_address() &&      //
-           feature_sizes.dev_address());
+           features.dev_address());
 
     const int grid_size = std::ceil(float(weights_g.rows() * batch_size) / block_size);
 
@@ -69,7 +67,6 @@ void sparse_affine_bwd(                      //
         weights_g.dev_address(),
         biases_g.dev_address(),
         features.dev_address(),
-        feature_sizes.dev_address(),
         weights_g.rows(),
         activated_g.rows(),
         a_offset,

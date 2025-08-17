@@ -163,7 +163,6 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
     const int max_entries = sb.get_max_entries();
 
     auto &psqt_indices = sb.get_psqt_indices();
-    auto &features_sizes = sb.get_feature_sizes();
     auto &stm_features = sb.get_features()[0];
     auto &nstm_features = sb.get_features()[1];
 
@@ -193,7 +192,13 @@ void Network::fill(std::vector<DataEntry> &ds, float lambda) {
         psqt_indices(i) = (count - 2) / 4;
         ASSERT(psqt_indices(i) >= 0 && psqt_indices(i) < 8);
 
-        features_sizes(i) = count;
+        if(count < max_entries) {
+            for(int i = count; i < max_entries; i++) {
+                int idx = offset + i;
+                stm_features(idx) = -1;
+                nstm_features(idx) = -1;
+            }
+        }
 
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / hp.output_scalar));
         float wdl_target = (ds[i].result + 1) / 2.0f;

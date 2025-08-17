@@ -8,7 +8,6 @@ __global__ void sparse_affine_kernel( //
     float *activated_v,               //
     float *pre_activated,             //
     const int *features,              //
-    const int *feature_sizes,         //
     const int w_r,                    // weight rows
     const int a_r,                    // activated rows
     const int a_offset,               // activated offset
@@ -24,11 +23,12 @@ __global__ void sparse_affine_kernel( //
     const int neuron_idx = idx % w_r;
 
     const int offset = batch_idx * max_entries;
-    const int feature_size = feature_sizes[batch_idx];
 
     float sum = biases_v[neuron_idx];
-    for(int i = 0; i < feature_size; i++) {
+    for(int i = 0; i < max_entries; i++) {
         int sparse_idx = features[i + offset];
+        if(sparse_idx == -1)
+            break;
         sum += weights_v[w_r * sparse_idx + neuron_idx];
     }
 
@@ -44,7 +44,6 @@ void sparse_affine_fwd(                  //
     const DenseMatrix<float> &weights_v, //
     const DenseMatrix<float> &biases_v,  //
     const Array<int> &features,          //
-    const Array<int> &feature_sizes,     //
     const int a_offset,                  //
     const int max_entries,               //
     const ActivationType act_type        //
@@ -55,8 +54,7 @@ void sparse_affine_fwd(                  //
            biases_v.dev_address() &&      //
            activated_v.dev_address() &&   //
            pre_activated.dev_address() && //
-           features.dev_address() &&      //
-           feature_sizes.dev_address());
+           features.dev_address());
 
     const int grid_size = std::ceil(float(weights_v.rows() * batch_size) / block_size);
 
@@ -66,7 +64,6 @@ void sparse_affine_fwd(                  //
         activated_v.dev_address(),
         pre_activated.dev_address(),
         features.dev_address(),
-        feature_sizes.dev_address(),
         weights_v.rows(),
         activated_v.rows(),
         a_offset,
