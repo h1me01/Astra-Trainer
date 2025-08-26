@@ -305,7 +305,6 @@ void Network::train(std::vector<std::string> data_path, std::string output_path,
             }
 
             forward();
-            hp.loss->compute(targets, get_output());
             backward();
             hp.optim->step(ds.size());
         }

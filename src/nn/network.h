@@ -133,6 +133,7 @@ class Network {
     }
 
     void backward() {
+        hp.loss->compute(targets, get_output());
         for(int i = hp.layers.size() - 1; i >= 0; i--)
             hp.layers[i]->backward();
     }
