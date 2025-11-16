@@ -20,7 +20,7 @@ __global__ void select_bwd_kernel( //
     const int bucket = indices[batch_idx];
     const int input_offset = input_size * batch_idx + output_size * bucket + output_idx;
 
-    inputs_g[input_offset] = output_g[output_size * batch_idx + output_idx];
+    inputs_g[input_offset] += output_g[output_size * batch_idx + output_idx];
 }
 
 void select_bwd(                        //

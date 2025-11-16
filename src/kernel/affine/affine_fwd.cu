@@ -17,7 +17,7 @@ __global__ void biases_fwd_kernel( //
     if(idx >= r * c)
         return;
 
-    const int neuron_idx = idx / c;
+    const int neuron_idx = idx % r;
 
     float weighted_sum = pre_activated_v[idx] + biases_v[neuron_idx];
 

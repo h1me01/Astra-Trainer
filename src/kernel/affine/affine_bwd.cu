@@ -28,7 +28,7 @@ __global__ void biases_bwd_kernel( //
     if(idx >= r * c)
         return;
 
-    const int neuron_idx = idx / c;
+    const int neuron_idx = idx % r;
 
     atomicAdd(&biases_g[neuron_idx], activated_g[idx]);
 }

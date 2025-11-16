@@ -167,7 +167,7 @@ class Tensor {
             }
         };
 
-        Array<T> quantized = Array<T>(data.size());
+        Array<QT> quantized = Array<QT>(data.size());
 
         if(quant_scheme.trans) {
             const int rows = data.rows();
