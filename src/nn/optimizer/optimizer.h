@@ -5,8 +5,7 @@
 #include <unordered_set>
 
 #include "../../kernel/include.h"
-#include "../layers/layer.h"
-#include "../types.h"
+#include "../layer/layer.h"
 
 namespace nn {
 
@@ -15,7 +14,7 @@ class Optimizer {
     Optimizer() = default;
     virtual ~Optimizer() = default;
 
-    void init(const std::vector<LayerPtr> &layers) {
+    void init(const std::vector<Ptr<Layer>> &layers) {
         for(const auto &l : layers) {
             for(auto &t : l->get_params()) {
                 if(min_val != -1)

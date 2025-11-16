@@ -8,16 +8,17 @@
 #include "../../kernel/include.h"
 #include "../../misc.h"
 #include "../batch_data/batch_data.h"
+#include "../utils/utils.h"
 #include "activation.h"
 
 namespace nn {
 
-class LayerBase : public std::enable_shared_from_this<LayerBase> {
+class Layer : public std::enable_shared_from_this<Layer> {
   public:
-    LayerBase() = default;
-    virtual ~LayerBase() = default;
+    Layer() = default;
+    virtual ~Layer() = default;
 
-    LayerBase(int input_size, int output_size, WeightInitType init_type)
+    Layer(int input_size, int output_size, WeightInitType init_type)
         : input_size(input_size), output_size(output_size) {
         is_main = true;
         weights = Tensor<float>(output_size, input_size);
@@ -44,22 +45,22 @@ class LayerBase : public std::enable_shared_from_this<LayerBase> {
         biases.clamp(min, max);
     }
 
-    LayerPtr relu() {
+    Ptr<Layer> relu() {
         activation.set_activation_type(ActivationType::ReLU);
         return shared_from_this();
     }
 
-    LayerPtr crelu() {
+    Ptr<Layer> crelu() {
         activation.set_activation_type(ActivationType::CReLU);
         return shared_from_this();
     }
 
-    LayerPtr screlu() {
+    Ptr<Layer> screlu() {
         activation.set_activation_type(ActivationType::SCReLU);
         return shared_from_this();
     }
 
-    LayerPtr sigmoid() {
+    Ptr<Layer> sigmoid() {
         activation.set_activation_type(ActivationType::Sigmoid);
         return shared_from_this();
     }
@@ -83,14 +84,14 @@ class LayerBase : public std::enable_shared_from_this<LayerBase> {
             return {};
     }
 
-    LayerPtr get_main() {
+    Ptr<Layer> get_main() {
         if(is_main)
             return shared_from_this();
         else
             return main;
     }
 
-    virtual std::vector<LayerPtr> get_inputs() = 0;
+    virtual std::vector<Ptr<Layer>> get_inputs() = 0;
 
   protected:
     int input_size = 0;
@@ -103,9 +104,9 @@ class LayerBase : public std::enable_shared_from_this<LayerBase> {
 
     // main layers are created by the user (not including helper layers)
     bool is_main = false;
-    LayerPtr main;
+    Ptr<Layer> main;
 
-    void set_main(const LayerPtr &main_layer) {
+    void set_main(const Ptr<Layer> &main_layer) {
         this->main = main_layer;
     }
 };

@@ -4,9 +4,9 @@
 
 namespace nn {
 
-class Select : public LayerBase {
+class Select : public Layer {
   public:
-    Select(const LayerPtr &input, const std::function<int(const Position &)> &select_fn) //
+    Select(const Ptr<Layer> &input, const std::function<int(const Position &)> &select_fn) //
         : input(input), select_fn(select_fn) {}
 
     void init(int batch_size) override {
@@ -19,7 +19,7 @@ class Select : public LayerBase {
             error("Select layer input size must be divisible by select size!");
         output_size = input->get_output_size() / max_indices;
 
-        LayerBase::init(batch_size);
+        Layer::init(batch_size);
     }
 
     void step() override {
@@ -51,14 +51,14 @@ class Select : public LayerBase {
             indices);
     }
 
-    std::vector<LayerPtr> get_inputs() override {
+    std::vector<Ptr<Layer>> get_inputs() override {
         return {input};
     }
 
   private:
     int max_indices;
 
-    LayerPtr input;
+    Ptr<Layer> input;
     Array<int> indices;
     std::function<int(const Position &)> select_fn;
 };

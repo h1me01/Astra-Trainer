@@ -78,9 +78,9 @@ class Trainer {
     Model *model;
     HyperParams params;
 
-    LossPtr loss;
-    OptimizerPtr optim;
-    LRSchedulerPtr lr_sched;
+    Ptr<Loss> loss;
+    Ptr<Optimizer> optim;
+    Ptr<LRScheduler> lr_sched;
     std::unique_ptr<Network> network;
 
     std::string loaded_weights = "";

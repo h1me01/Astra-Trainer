@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../types.h"
 #include "affine.h"
 #include "concat.h"
 #include "feature_transformer.h"

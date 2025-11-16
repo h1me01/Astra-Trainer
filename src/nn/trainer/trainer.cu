@@ -71,7 +71,7 @@ void Trainer::train(std::vector<std::string> data_path, std::string output_path,
     print_info(output_path);
 
     // init dataloader
-    Dataloader dataloader(files, params.batch_size, params.thread_count, true);
+    dataloader::Dataloader dataloader(files, params.batch_size, params.thread_count, true);
 
     std::cout << "\n================================ Training ================================\n\n";
 

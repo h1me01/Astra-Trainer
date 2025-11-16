@@ -35,31 +35,12 @@
         }                                                                                                              \
     }
 
+template <typename T> //
+using Ptr = std::shared_ptr<T>;
+
 inline void error(const std::string &message) {
     std::cerr << "Error: " << message << std::endl;
     std::abort();
-}
-
-inline std::string get_activation_name(int type) {
-    // clang-format off
-    switch(type) 
-    {
-    case 0: return "Linear";
-    case 1: return "ReLU";
-    case 2: return "CReLU";
-    case 3: return "SRelu";
-    case 4: return "SCReLU";
-    case 5: return "Sigmoid";
-    case 6: return "Tanh";
-    default: return "Unknown";
-    }
-    // clang-format on
-}
-
-inline std::string format_number(float num) {
-    std::ostringstream oss;
-    oss << num;
-    return oss.str();
 }
 
 class Logger {

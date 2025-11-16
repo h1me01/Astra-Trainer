@@ -3,16 +3,19 @@
 #include <string>
 #include <vector>
 
-#include "../nn/types.h"
+#include "../misc.h"
 #include "../training_data_formats/include.h"
 
 namespace nn {
+
 class Trainer;
 class Input;
-class LayerBase;
+class Layer;
 class Loss;
 class Optimizer;
 class Trainer;
+class LRScheduler;
+
 } // namespace nn
 
 using namespace nn;
@@ -36,7 +39,7 @@ class Model {
     Model(std::string name) : name(name) {}
     virtual ~Model() = default;
 
-    virtual LayerPtr build(const InputPtr &stm_in, const InputPtr &nstm_in) = 0;
+    virtual Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) = 0;
 
     void load_weights(const std::string &file);
     void save_weights(const std::string &file);
@@ -46,15 +49,15 @@ class Model {
 
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
 
-    virtual LossPtr get_loss() {
+    virtual Ptr<Loss> get_loss() {
         return nullptr;
     }
 
-    virtual OptimizerPtr get_optim() {
+    virtual Ptr<Optimizer> get_optim() {
         return nullptr;
     }
 
-    virtual LRSchedulerPtr get_lr_scheduler() {
+    virtual Ptr<LRScheduler> get_lr_scheduler() {
         return nullptr;
     }
 

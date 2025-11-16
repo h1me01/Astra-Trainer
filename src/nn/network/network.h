@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "../layers/include.h"
+#include "../layer/include.h"
 
 namespace nn {
 
@@ -57,7 +57,7 @@ class Network {
             architecture[i]->backward();
     }
 
-    void set_output_layer(const LayerPtr &output_layer) {
+    void set_output_layer(const Ptr<Layer> &output_layer) {
         if(output_layer == nullptr)
             error("Output layer is null!");
 
@@ -70,7 +70,7 @@ class Network {
         this->feature_index_fn = fn;
     }
 
-    std::pair<InputPtr, InputPtr> &get_inputs() {
+    std::pair<Ptr<Input>, Ptr<Input>> &get_inputs() {
         return inputs;
     }
 
@@ -82,9 +82,9 @@ class Network {
         return architecture.back()->get_output();
     }
 
-    std::vector<LayerPtr> get_layers() {
-        std::vector<LayerPtr> main_layers;
-        std::unordered_set<LayerBase *> seen;
+    std::vector<Ptr<Layer>> get_layers() {
+        std::vector<Ptr<Layer>> main_layers;
+        std::unordered_set<Layer *> seen;
 
         for(auto &l : architecture) {
             auto m = l->get_main();
@@ -98,12 +98,12 @@ class Network {
   private:
     Array<float> targets;
 
-    std::vector<LayerPtr> architecture;
-    std::pair<InputPtr, InputPtr> inputs;
+    std::vector<Ptr<Layer>> architecture;
+    std::pair<Ptr<Input>, Ptr<Input>> inputs;
 
     std::function<int(PieceType, Color, Square, Square, Color)> feature_index_fn;
 
-    void init_layers(const std::vector<LayerPtr> &layers) {
+    void init_layers(const std::vector<Ptr<Layer>> &layers) {
         if(layers.empty())
             return;
 

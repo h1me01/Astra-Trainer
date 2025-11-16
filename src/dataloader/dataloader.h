@@ -32,6 +32,8 @@
 
 using DataEntry = binpack::TrainingDataEntry;
 
+namespace dataloader {
+
 inline std::function<bool(const DataEntry &)> skip_predicate = [](const DataEntry &e) {
     if(e.score == 32002) // value none
         return true;
@@ -148,3 +150,5 @@ class Dataloader {
 
     std::unique_ptr<training_data::BasicSfenInputStream> m_stream;
 };
+
+} // namespace dataloader

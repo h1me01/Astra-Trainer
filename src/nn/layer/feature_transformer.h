@@ -9,16 +9,16 @@
 
 namespace nn {
 
-class FeatureTransformer : public LayerBase {
+class FeatureTransformer : public Layer {
   public:
     FeatureTransformer(int input_size, int output_size, WeightInitType winit_type = WeightInitType::He)
-        : LayerBase(input_size, output_size, winit_type) {
+        : Layer(input_size, output_size, winit_type) {
 
         if(input_size % 768 != 0)
             error("Input size must be divisible by 768 to match standard chess inputs!");
     }
 
-    FeatureTransformer(FeatureTransformer &other, const InputPtr &input) {
+    FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input) {
         this->main = other.get_main();
         ASSERT(this->main != nullptr);
         this->input = input;
@@ -26,7 +26,7 @@ class FeatureTransformer : public LayerBase {
         this->output_size = other.output_size;
     }
 
-    FeatureTransformerPtr forward(const InputPtr &input) {
+    Ptr<FeatureTransformer> forward(const Ptr<Input> &input) {
         if(input == nullptr)
             error("Feature Transformer: Input layer is null!");
         if(!is_main)
@@ -72,12 +72,12 @@ class FeatureTransformer : public LayerBase {
             input->get_size());
     }
 
-    std::vector<LayerPtr> get_inputs() override {
+    std::vector<Ptr<Layer>> get_inputs() override {
         return {};
     }
 
   private:
-    InputPtr input;
+    Ptr<Input> input;
 };
 
 } // namespace nn

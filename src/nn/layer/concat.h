@@ -4,15 +4,15 @@
 
 namespace nn {
 
-class Concat : public LayerBase {
+class Concat : public Layer {
   public:
-    Concat(const LayerPtr &input1, const LayerPtr &input2) //
+    Concat(const Ptr<Layer> &input1, const Ptr<Layer> &input2) //
         : input1(input1), input2(input2) {}
 
     void init(int batch_size) override {
         input_size = input1->get_output_size() + input2->get_output_size();
         output_size = input1->get_output_size() + input2->get_output_size();
-        LayerBase::init(batch_size);
+        Layer::init(batch_size);
     }
 
     void forward() override {
@@ -33,13 +33,13 @@ class Concat : public LayerBase {
             output.get_gradients());
     }
 
-    std::vector<LayerPtr> get_inputs() override {
+    std::vector<Ptr<Layer>> get_inputs() override {
         return {input1, input2};
     }
 
   private:
-    LayerPtr input1;
-    LayerPtr input2;
+    Ptr<Layer> input1;
+    Ptr<Layer> input2;
 };
 
 } // namespace nn

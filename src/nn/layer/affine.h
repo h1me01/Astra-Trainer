@@ -8,12 +8,12 @@
 
 namespace nn {
 
-class Affine : public LayerBase {
+class Affine : public Layer {
   public:
     Affine(int input_size, int output_size, WeightInitType init_type = WeightInitType::He) //
-        : LayerBase(input_size, output_size, init_type) {}
+        : Layer(input_size, output_size, init_type) {}
 
-    Affine(Affine &other, const LayerPtr &input) {
+    Affine(Affine &other, const Ptr<Layer> &input) {
         this->main = other.get_main();
         ASSERT(this->main != nullptr);
         this->input = input;
@@ -21,7 +21,7 @@ class Affine : public LayerBase {
         this->output_size = other.output_size;
     }
 
-    AffinePtr forward(const LayerPtr &input) {
+    Ptr<Affine> forward(const Ptr<Layer> &input) {
         if(input == nullptr)
             error("Affine: Input layer is null!");
         if(!is_main)
@@ -65,12 +65,12 @@ class Affine : public LayerBase {
             output);
     }
 
-    std::vector<LayerPtr> get_inputs() override {
+    std::vector<Ptr<Layer>> get_inputs() override {
         return {input};
     }
 
   private:
-    LayerPtr input;
+    Ptr<Layer> input;
 };
 
 } // namespace nn

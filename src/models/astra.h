@@ -33,7 +33,24 @@ struct Astra : Model {
         params.lambda_end = 0.7;
     }
 
-    LayerPtr build(const InputPtr &stm_in, const InputPtr &nstm_in) override {
+    int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
+        // if king is on opposite side, flip psq horizontally
+        if(ksq.file() > fileD)
+            psq.flipHorizontally();
+
+        // relative squares
+        if(view == Color::Black) {
+            psq.flipVertically();
+            ksq.flipVertically();
+        }
+
+        return int(psq) +                        //
+               int(pt) * 64 +                    //
+               (int(pc) != int(view)) * 64 * 6 + //
+               input_bucket[int(ksq)] * 768;
+    }
+
+    Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
         const int FT_SIZE = 512;
         const int OUTPUT_BUCKETS = 8;
 
@@ -62,35 +79,18 @@ struct Astra : Model {
         return l1_select;
     }
 
-    LossPtr get_loss() override {
+    Ptr<Loss> get_loss() override {
         return make<MPE>(ActivationType::Sigmoid, 2.5);
     }
 
-    OptimizerPtr get_optim() override {
+    Ptr<Optimizer> get_optim() override {
         auto optim = make<Adam>(0.9, 0.999, 1e-8, 0.01);
         optim->clamp(-0.99, 0.99);
         return optim;
     }
 
-    LRSchedulerPtr get_lr_scheduler() override {
+    Ptr<LRScheduler> get_lr_scheduler() override {
         return make<CosineAnnealing>(params.epochs, params.lr, 0.000027);
-    }
-
-    int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
-        // if king is on opposite side, flip psq horizontally
-        if(ksq.file() > fileD)
-            psq.flipHorizontally();
-
-        // relative squares
-        if(view == Color::Black) {
-            psq.flipVertically();
-            ksq.flipVertically();
-        }
-
-        return int(psq) +                        //
-               int(pt) * 64 +                    //
-               (int(pc) != int(view)) * 64 * 6 + //
-               input_bucket[int(ksq)] * 768;
     }
 };
 

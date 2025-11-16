@@ -4,16 +4,16 @@
 
 namespace nn {
 
-class PairwiseMul : public LayerBase {
+class PairwiseMul : public Layer {
   public:
-    explicit PairwiseMul(const LayerPtr &input) : input(input) {}
+    explicit PairwiseMul(const Ptr<Layer> &input) : input(input) {}
 
     void init(int batch_size) override {
         input_size = input->get_output_size();
         if(input_size % 2 != 0)
             error("PairwiseMul layer input size must be even!");
         output_size = input->get_output_size() / 2;
-        LayerBase::init(batch_size);
+        Layer::init(batch_size);
     }
 
     void forward() override {
@@ -32,12 +32,12 @@ class PairwiseMul : public LayerBase {
             output.get_gradients());
     }
 
-    std::vector<LayerPtr> get_inputs() override {
+    std::vector<Ptr<Layer>> get_inputs() override {
         return {input};
     }
 
   private:
-    LayerPtr input;
+    Ptr<Layer> input;
 };
 
 } // namespace nn
