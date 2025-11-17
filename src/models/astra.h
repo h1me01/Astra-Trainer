@@ -5,7 +5,7 @@
 
 namespace model {
 
-const int FT_SIZE = 256;
+const int FT_SIZE = 512;
 const int OUTPUT_BUCKETS = 8;
 
 constexpr std::array<int, 64> input_bucket = {
@@ -67,7 +67,6 @@ struct Astra : Model {
         auto l1 = make<Affine>(2 * FT_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
-
         ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
         ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
 
@@ -75,11 +74,9 @@ struct Astra : Model {
         l1->get_params()[1]->quant_type(QuantType::INT16).quant_scale(64 * 255);       // biases
 
         // connect layers
-        auto stm_l0 = ft->forward(stm_in)->screlu();
-        auto nstm_l0 = ft->forward(nstm_in)->screlu();
-        auto merged_l0 = make<Concat>(stm_l0, nstm_l0);
+        auto ft_out = ft->forward(stm_in, nstm_in)->screlu();
 
-        auto l1_out = l1->forward(merged_l0);
+        auto l1_out = l1->forward(ft_out);
         auto l1_select = make<Select>(l1_out, bucket_index);
 
         return l1_select;
@@ -104,11 +101,11 @@ struct Astra : Model {
         l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
 
         // connect layers
-        auto stm_l0 = ft->forward(stm_in)->crelu();
-        auto nstm_l0 = ft->forward(nstm_in)->crelu();
+        auto stm_ft = ft->forward(stm_in)->crelu();
+        auto nstm_ft = ft->forward(nstm_in)->crelu();
 
-        auto stm_pwm = make<PairwiseMul>(stm_l0);
-        auto nstm_pwm = make<PairwiseMul>(nstm_l0);
+        auto stm_pwm = make<PairwiseMul>(stm_ft);
+        auto nstm_pwm = make<PairwiseMul>(nstm_ft);
         auto merged_l0 = make<Concat>(stm_pwm, nstm_pwm);
 
         auto l1_out = l1->forward(merged_l0);
@@ -142,11 +139,11 @@ struct Astra : Model {
         l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
 
         // connect layers
-        auto stm_l0 = ft->forward(stm_in)->crelu();
-        auto nstm_l0 = ft->forward(nstm_in)->crelu();
+        auto stm_ft = ft->forward(stm_in)->crelu();
+        auto nstm_ft = ft->forward(nstm_in)->crelu();
 
-        auto stm_pwm = make<PairwiseMul>(stm_l0);
-        auto nstm_pwm = make<PairwiseMul>(nstm_l0);
+        auto stm_pwm = make<PairwiseMul>(stm_ft);
+        auto nstm_pwm = make<PairwiseMul>(nstm_ft);
         auto merged_l0 = make<Concat>(stm_pwm, nstm_pwm);
 
         auto l1_out = l1->forward(merged_l0)->screlu();

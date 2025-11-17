@@ -20,10 +20,16 @@ class FeatureTransformer : public Layer {
 
     FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input) {
         this->main = other.get_main();
-        ASSERT(this->main != nullptr);
-        this->input = input;
+        this->inputs = {input};
         this->input_size = other.input_size;
         this->output_size = other.output_size;
+        ASSERT(main != nullptr);
+    }
+
+    FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input1, const Ptr<Input> &input2)
+        : FeatureTransformer(other, input1) {
+        this->inputs.push_back(input2);
+        this->output_size = 2 * other.output_size;
     }
 
     Ptr<FeatureTransformer> forward(const Ptr<Input> &input) {
@@ -32,6 +38,14 @@ class FeatureTransformer : public Layer {
         if(!is_main)
             error("Feature Transformer: Forward can only be used by user defined layers!");
         return std::make_shared<FeatureTransformer>(*this, input);
+    }
+
+    Ptr<FeatureTransformer> forward(const Ptr<Input> &input1, const Ptr<Input> &input2) {
+        if(input1 == nullptr || input2 == nullptr)
+            error("Feature Transformer: One of the input layers is null!");
+        if(!is_main)
+            error("Feature Transformer: Forward can only be used by user defined layers!");
+        return std::make_shared<FeatureTransformer>(*this, input1, input2);
     }
 
     void forward() override {
@@ -43,12 +57,15 @@ class FeatureTransformer : public Layer {
         Tensor &weights = *params[0];
         Tensor &biases = *params[1];
 
-        kernel::feature_transformer_fwd( //
-            weights.get_values(),
-            biases.get_values(),
-            output.get_values(),
-            input->get_output(),
-            input->get_size());
+        for(int i = 0; i < inputs.size(); i++) {
+            kernel::feature_transformer_fwd( //
+                weights.get_values(),
+                biases.get_values(),
+                output.get_values(),
+                inputs[i]->get_output(),
+                inputs[i]->get_size(),
+                i);
+        }
 
         activation.forward(output.get_values());
     }
@@ -64,12 +81,15 @@ class FeatureTransformer : public Layer {
 
         activation.backward(output);
 
-        kernel::feature_transformer_bwd( //
-            weights.get_gradients(),
-            biases.get_gradients(),
-            output.get_gradients(),
-            input->get_output(),
-            input->get_size());
+        for(int i = 0; i < inputs.size(); i++) {
+            kernel::feature_transformer_bwd( //
+                weights.get_gradients(),
+                biases.get_gradients(),
+                output.get_gradients(),
+                inputs[i]->get_output(),
+                inputs[i]->get_size(),
+                i);
+        }
     }
 
     std::vector<Ptr<Layer>> get_inputs() override {
@@ -77,7 +97,7 @@ class FeatureTransformer : public Layer {
     }
 
   private:
-    Ptr<Input> input;
+    std::vector<Ptr<Input>> inputs;
 };
 
 } // namespace nn
