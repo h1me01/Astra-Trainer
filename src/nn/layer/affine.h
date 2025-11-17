@@ -35,8 +35,8 @@ class Affine : public Layer {
 
         auto params = get_main()->get_params();
 
-        Tensor<float> &weights = *params[0];
-        Tensor<float> &biases = *params[1];
+        Tensor &weights = *params[0];
+        Tensor &biases = *params[1];
 
         kernel::affine_fwd( //
             weights.get_values(),
@@ -53,8 +53,8 @@ class Affine : public Layer {
 
         auto params = get_main()->get_params();
 
-        Tensor<float> &weights = *params[0];
-        Tensor<float> &biases = *params[1];
+        Tensor &weights = *params[0];
+        Tensor &biases = *params[1];
 
         activation.backward(output);
 

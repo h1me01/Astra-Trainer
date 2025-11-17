@@ -7,7 +7,7 @@
 #include "../../data/include.h"
 #include "../../kernel/include.h"
 #include "../../misc.h"
-#include "../batch_data/batch_data.h"
+#include "../../training_data_formats/include.h"
 #include "../utils/utils.h"
 #include "activation.h"
 
@@ -21,18 +21,18 @@ class Layer : public std::enable_shared_from_this<Layer> {
     Layer(int input_size, int output_size, WeightInitType init_type)
         : input_size(input_size), output_size(output_size) {
         is_main = true;
-        weights = Tensor<float>(output_size, input_size);
-        biases = Tensor<float>(output_size, 1);
+        weights = Tensor(output_size, input_size);
+        biases = Tensor(output_size, 1);
         weights.init(init_type, input_size);
     }
 
     virtual void init(int batch_size) {
         ASSERT(output_size > 0 && input_size > 0);
-        output = Tensor<float>(output_size, batch_size);
+        output = Tensor(output_size, batch_size);
         activation.init(output_size, batch_size);
     }
 
-    virtual void step() {}
+    virtual void step(const std::vector<DataEntry> &data_entries) {}
 
     virtual void forward() = 0;
     virtual void backward() = 0;
@@ -73,11 +73,11 @@ class Layer : public std::enable_shared_from_this<Layer> {
         return input_size;
     }
 
-    Tensor<float> &get_output() {
+    Tensor &get_output() {
         return activation.is_some() ? activation.get_output() : output;
     }
 
-    std::vector<Tensor<float> *> get_params() {
+    std::vector<Tensor *> get_params() {
         if(is_main)
             return {&weights, &biases};
         else
@@ -98,9 +98,9 @@ class Layer : public std::enable_shared_from_this<Layer> {
     int output_size = 0;
     Activation activation;
 
-    Tensor<float> weights{0, 0};
-    Tensor<float> biases{0, 0};
-    Tensor<float> output{0, 0};
+    Tensor weights;
+    Tensor biases;
+    Tensor output;
 
     // main layers are created by the user (not including helper layers)
     bool is_main = false;

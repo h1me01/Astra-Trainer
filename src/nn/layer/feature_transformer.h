@@ -40,14 +40,14 @@ class FeatureTransformer : public Layer {
 
         auto params = get_main()->get_params();
 
-        Tensor<float> &weights = *params[0];
-        Tensor<float> &biases = *params[1];
+        Tensor &weights = *params[0];
+        Tensor &biases = *params[1];
 
         kernel::feature_transformer_fwd( //
             weights.get_values(),
             biases.get_values(),
             output.get_values(),
-            input->get_output().get_values(),
+            input->get_output(),
             input->get_size());
 
         activation.forward(output.get_values());
@@ -59,8 +59,8 @@ class FeatureTransformer : public Layer {
 
         auto params = get_main()->get_params();
 
-        Tensor<float> &weights = *params[0];
-        Tensor<float> &biases = *params[1];
+        Tensor &weights = *params[0];
+        Tensor &biases = *params[1];
 
         activation.backward(output);
 
@@ -68,7 +68,7 @@ class FeatureTransformer : public Layer {
             weights.get_gradients(),
             biases.get_gradients(),
             output.get_gradients(),
-            input->get_output().get_values(),
+            input->get_output(),
             input->get_size());
     }
 

@@ -9,10 +9,10 @@ class Input {
     Input(int size) : size(size) {}
 
     void init(int batch_size) {
-        output = Tensor<int>(size, batch_size);
+        output = Array<int>(size * batch_size);
     }
 
-    Tensor<int> &get_output() {
+    Array<int> &get_output() {
         return output;
     }
 
@@ -22,7 +22,7 @@ class Input {
 
   private:
     int size;
-    Tensor<int> output{0, 0};
+    Array<int> output;
 };
 
 } // namespace nn

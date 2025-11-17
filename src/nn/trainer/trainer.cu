@@ -1,3 +1,4 @@
+#include "../../dataloader/dataloader.h"
 #include "../utils/utils.h"
 #include "trainer.h"
 
@@ -85,11 +86,8 @@ void Trainer::train(std::vector<std::string> data_path, std::string output_path,
         float lambda = params.lambda_start + (params.lambda_end - params.lambda_start) * (epoch / float(params.epochs));
 
         for(int batch = 1; batch <= params.batches_per_epoch; batch++) {
-            batch_data::data_entries = dataloader.next();
-            ASSERT(batch_data::data_entries.size() == (size_t) params.batch_size || //
-                   batch_data::data_entries.size() == 1);
-
-            network->fill_inputs(batch_data::data_entries, lambda, params.eval_div);
+            auto data_entries = dataloader.next();
+            network->fill_inputs(data_entries, lambda, params.eval_div);
 
             timer.stop();
             auto elapsed = timer.elapsed_time();
@@ -104,10 +102,10 @@ void Trainer::train(std::vector<std::string> data_path, std::string output_path,
                 std::cout << std::flush;
             }
 
-            network->forward();
+            network->forward(data_entries);
             loss->compute(network->get_targets(), network->get_output());
             network->backward();
-            optim->step(lr_sched->get_lr(), batch_data::data_entries.size());
+            optim->step(lr_sched->get_lr(), data_entries.size());
         }
 
         float epoch_loss = loss->get_loss() / positions_per_epoch;

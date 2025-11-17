@@ -46,13 +46,13 @@ inline __device__ float activate_der(float x, const ActivationType type) {
 }
 
 void activate_fwd( //
-    const DenseMatrix<float> &in_v,
-    DenseMatrix<float> &out_v,
+    const DenseMatrix &in_v,
+    DenseMatrix &out_v,
     const ActivationType type);
 
 void activate_bwd( //
-    Tensor<float> &in,
-    const DenseMatrix<float> &out_g,
+    Tensor &in,
+    const DenseMatrix &out_g,
     const ActivationType type);
 
 } // namespace kernel

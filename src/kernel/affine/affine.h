@@ -12,16 +12,16 @@ void destroy_cublas();
 
 // assumes column-major storage
 void affine_fwd( //
-    DenseMatrix<float> &weights_v,
-    DenseMatrix<float> &biases_v,
-    DenseMatrix<float> &inputs_v,
-    DenseMatrix<float> &out_v);
+    DenseMatrix &weights_v,
+    DenseMatrix &biases_v,
+    DenseMatrix &inputs_v,
+    DenseMatrix &out_v);
 
 // assumes column-major storage
 void affine_bwd( //
-    Tensor<float> &weights,
-    Tensor<float> &biases,
-    Tensor<float> &inputs,
-    Tensor<float> &out);
+    Tensor &weights,
+    Tensor &biases,
+    Tensor &inputs,
+    Tensor &out);
 
 } // namespace kernel

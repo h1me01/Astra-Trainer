@@ -50,7 +50,7 @@ class Optimizer {
     virtual void step(float lr, int batch_size) = 0;
 
   protected:
-    std::vector<Tensor<float> *> tunables{};
+    std::vector<Tensor *> tunables{};
 
     std::vector<Array<float>> momentum{};
     std::vector<Array<float>> velocity{};

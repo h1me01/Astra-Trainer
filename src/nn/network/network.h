@@ -41,12 +41,11 @@ class Network {
             l->init(batch_size);
 
         targets = Array<float>(batch_size);
-        batch_data::data_entries.reserve(batch_size);
     }
 
-    void forward() {
+    void forward(const std::vector<DataEntry> &data_entries) {
         for(auto &l : architecture)
-            l->step();
+            l->step(data_entries);
 
         for(size_t i = 0; i < architecture.size(); i++)
             architecture[i]->forward();
@@ -78,7 +77,7 @@ class Network {
         return targets;
     }
 
-    Tensor<float> &get_output() {
+    Tensor &get_output() {
         return architecture.back()->get_output();
     }
 

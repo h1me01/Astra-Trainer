@@ -37,7 +37,7 @@ inline __device__ float get_radam_update( //
 } // namespace optimizer_utils
 
 void adam_optim( //
-    Tensor<float> &param,
+    Tensor &param,
     Array<float> &moms,
     Array<float> &vels,
     const float lr,
@@ -48,7 +48,7 @@ void adam_optim( //
     const float grad_scale);
 
 void radam_optim( //
-    Tensor<float> &param,
+    Tensor &param,
     Array<float> &moms,
     Array<float> &vels,
     const float lr,
@@ -64,7 +64,7 @@ void radam_optim( //
     const int step);
 
 void ranger_optim( //
-    Tensor<float> &param,
+    Tensor &param,
     Array<float> &moms,
     Array<float> &vels,
     Array<float> &slow_buffer,

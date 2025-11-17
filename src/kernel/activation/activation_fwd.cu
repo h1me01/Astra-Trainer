@@ -15,10 +15,10 @@ __global__ void activate_fwd_kernel( //
         out_v[idx] = activate(in_v[idx], type);
 }
 
-void activate_fwd(                  //
-    const DenseMatrix<float> &in_v, //
-    DenseMatrix<float> &out_v,      //
-    const ActivationType type       //
+void activate_fwd(            //
+    const DenseMatrix &in_v,  //
+    DenseMatrix &out_v,       //
+    const ActivationType type //
 ) {
     ASSERT(in_v.size() == out_v.size());
 

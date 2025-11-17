@@ -10,15 +10,15 @@ class Activation {
 
     void init(int size, int batch_size) {
         if(is_some())
-            output = Tensor<float>(size, batch_size);
+            output = Tensor(size, batch_size);
     }
 
-    void forward(const DenseMatrix<float> &input) {
+    void forward(const DenseMatrix &input) {
         if(is_some())
             kernel::activate_fwd(input, output.get_values(), act_type);
     }
 
-    void backward(Tensor<float> &input) {
+    void backward(Tensor &input) {
         if(is_some())
             kernel::activate_bwd(input, output.get_gradients(), act_type);
     }
@@ -31,13 +31,13 @@ class Activation {
         act_type = type;
     }
 
-    Tensor<float> &get_output() {
+    Tensor &get_output() {
         return output;
     }
 
   private:
     ActivationType act_type;
-    Tensor<float> output{0, 0};
+    Tensor output;
 };
 
 } // namespace nn

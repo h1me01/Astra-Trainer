@@ -25,10 +25,10 @@ __global__ void select_bwd_kernel( //
     in_g[in_offset] += out_g[out_r * batch_idx + out_idx];
 }
 
-void select_bwd(                     //
-    DenseMatrix<float> &in_g,        //
-    const DenseMatrix<float> &out_g, //
-    const Array<int> &indices        //
+void select_bwd(              //
+    DenseMatrix &in_g,        //
+    const DenseMatrix &out_g, //
+    const Array<int> &indices //
 ) {
     ASSERT(in_g.cols() == out_g.cols() && out_g.cols() == indices.size());
 

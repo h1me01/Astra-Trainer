@@ -23,11 +23,11 @@ __global__ void biases_fwd_kernel( //
     out_v[idx] = weighted_sum;
 }
 
-void affine_fwd(                   //
-    DenseMatrix<float> &weights_v, //
-    DenseMatrix<float> &biases_v,  //
-    DenseMatrix<float> &inputs_v,  //
-    DenseMatrix<float> &out_v      //
+void affine_fwd(            //
+    DenseMatrix &weights_v, //
+    DenseMatrix &biases_v,  //
+    DenseMatrix &inputs_v,  //
+    DenseMatrix &out_v      //
 ) {
     ASSERT(biases_v.cols() == 1 &&             //
            out_v.rows() == biases_v.rows() &&  //

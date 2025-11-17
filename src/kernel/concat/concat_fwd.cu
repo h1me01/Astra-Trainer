@@ -31,10 +31,10 @@ __global__ void concat_fwd_kernel( //
     }
 }
 
-void concat_fwd(                     //
-    const DenseMatrix<float> &in1_v, //
-    const DenseMatrix<float> &in2_v, //
-    DenseMatrix<float> &out_v        //
+void concat_fwd(              //
+    const DenseMatrix &in1_v, //
+    const DenseMatrix &in2_v, //
+    DenseMatrix &out_v        //
 ) {
     ASSERT(in1_v.cols() == out_v.cols() && //
            in2_v.cols() == out_v.cols() && //

@@ -12,7 +12,7 @@ class Loss {
     Loss(ActivationType act_type) : act_type(act_type) {}
     virtual ~Loss() = default;
 
-    virtual void compute(const Array<float> &target, Tensor<float> &output) = 0;
+    virtual void compute(const Array<float> &target, Tensor &output) = 0;
 
     float get_loss() {
         loss.dev_to_host();

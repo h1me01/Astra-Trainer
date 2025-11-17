@@ -34,7 +34,7 @@ __global__ void mpe_kernel(        //
 void mpe_loss(                    //
     const Array<float> &targets,  //
     Array<float> &loss,           //
-    Tensor<float> &out,           //
+    Tensor &out,                  //
     const float power,            //
     const ActivationType act_type //
 ) {

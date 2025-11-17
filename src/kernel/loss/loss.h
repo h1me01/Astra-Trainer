@@ -9,14 +9,14 @@ namespace kernel {
 void mpe_loss( //
     const Array<float> &targets,
     Array<float> &loss,
-    Tensor<float> &out,
+    Tensor &out,
     const float power,
     const ActivationType act_type);
 
 void mse_loss( //
     const Array<float> &targets,
     Array<float> &loss,
-    Tensor<float> &out,
+    Tensor &out,
     const ActivationType act_type);
 
 } // namespace kernel

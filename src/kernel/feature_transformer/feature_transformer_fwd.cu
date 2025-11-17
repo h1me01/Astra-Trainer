@@ -33,16 +33,14 @@ __global__ void feature_transformer_fwd_kernel( //
     out_v[out_r * batch_idx + neuron_idx] = sum;
 }
 
-void feature_transformer_fwd(            //
-    const DenseMatrix<float> &weights_v, //
-    const DenseMatrix<float> &biases_v,  //
-    DenseMatrix<float> &out_v,           //
-    const DenseMatrix<int> &features,    //
-    const int max_entries                //
+void feature_transformer_fwd(     //
+    const DenseMatrix &weights_v, //
+    const DenseMatrix &biases_v,  //
+    DenseMatrix &out_v,           //
+    const Array<int> &features,   //
+    const int max_entries         //
 ) {
-    ASSERT(features.rows() == max_entries &&   //
-           features.cols() == out_v.cols() &&  //
-           weights_v.rows() == out_v.rows() && //
+    ASSERT(weights_v.rows() == out_v.rows() && //
            weights_v.rows() == biases_v.rows());
 
     ASSERT(weights_v.is_dev_allocated() && //

@@ -30,10 +30,10 @@ __global__ void concat_bwd_kernel( //
     }
 }
 
-void concat_bwd(                    //
-    DenseMatrix<float> &in1_g,      //
-    DenseMatrix<float> &in2_g,      //
-    const DenseMatrix<float> &out_g //
+void concat_bwd(             //
+    DenseMatrix &in1_g,      //
+    DenseMatrix &in2_g,      //
+    const DenseMatrix &out_g //
 ) {
     ASSERT(in1_g.cols() == out_g.cols() && //
            in2_g.cols() == out_g.cols() && //

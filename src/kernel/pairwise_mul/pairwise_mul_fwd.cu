@@ -23,7 +23,7 @@ __global__ void pairwise_mul_fwd_kernel( //
     out[out_offset] = in[in_offset] * in[in_offset + out_r];
 }
 
-void pairwise_mul_fwd(const DenseMatrix<float> &in_v, DenseMatrix<float> &out_v) {
+void pairwise_mul_fwd(const DenseMatrix &in_v, DenseMatrix &out_v) {
     ASSERT(in_v.cols() == out_v.cols() && in_v.rows() == 2 * out_v.rows());
 
     ASSERT(in_v.is_dev_allocated() && out_v.is_dev_allocated());

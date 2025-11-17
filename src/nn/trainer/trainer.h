@@ -7,7 +7,6 @@
 #include <sstream>
 
 #include "../../models/model.h"
-#include "../batch_data/batch_data.h"
 #include "../loss/include.h"
 #include "../lr_scheduler/include.h"
 #include "../network/network.h"
@@ -116,9 +115,8 @@ class Trainer {
 
         std::vector<DataEntry> ds{e};
 
-        batch_data::data_entries = ds;
         network->fill_inputs(ds, 1.0f, params.eval_div);
-        network->forward();
+        network->forward(ds);
 
         auto &output = network->get_output().get_values();
         output.dev_to_host();

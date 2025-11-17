@@ -57,11 +57,28 @@ void Network::save_quantized_weights(const std::string &path) {
         if(!f)
             error("Failed writing quantized weights!");
 
-        for(auto &l : get_layers())
+        for(auto &l : get_layers()) {
             for(auto &t : l->get_params()) {
                 t->get_values().dev_to_host();
-                t->save_quantized(f);
+
+                const auto &scheme = t->get_quant_scheme();
+                const auto &values = t->get_values();
+
+                switch(scheme.type) {
+                case QuantType::INT8:
+                    write_quantized<int8_t>(f, values, scheme);
+                    break;
+                case QuantType::INT16:
+                    write_quantized<int16_t>(f, values, scheme);
+                    break;
+                case QuantType::FLOAT:
+                    write_quantized<float>(f, values, scheme);
+                    break;
+                default:
+                    error("Unknown quantization type");
+                }
             }
+        }
 
         fclose(f);
     } catch(const std::exception &e) {
@@ -72,8 +89,8 @@ void Network::save_quantized_weights(const std::string &path) {
 void Network::fill_inputs(std::vector<DataEntry> &ds, float lambda, float eval_div) {
     auto &[stm_in, nstm_in] = inputs;
 
-    auto &stm_features = stm_in->get_output().get_values();
-    auto &nstm_features = nstm_in->get_output().get_values();
+    auto &stm_features = stm_in->get_output();
+    auto &nstm_features = nstm_in->get_output();
 
     const int max_entries = stm_in->get_size();
 
@@ -86,20 +103,22 @@ void Network::fill_inputs(std::vector<DataEntry> &ds, float lambda, float eval_d
         bool wtm = pos.sideToMove() == Color::White;
         Bitboard pieces = pos.piecesBB();
 
+        const int offset = i * max_entries;
+
         int count = 0;
         for(auto sq : pieces) {
             Piece p = pos.pieceAt(sq);
             int w_idx = feature_index_fn(p.type(), p.color(), sq, ksq_w, Color::White);
             int b_idx = feature_index_fn(p.type(), p.color(), sq, ksq_b, Color::Black);
 
-            stm_features(count, i) = wtm ? w_idx : b_idx;
-            nstm_features(count, i) = wtm ? b_idx : w_idx;
+            int idx = offset + count;
+            stm_features(idx) = wtm ? w_idx : b_idx;
+            nstm_features(idx) = wtm ? b_idx : w_idx;
 
             count++;
         }
 
         if(count < max_entries) {
-            int offset = i * max_entries;
             for(int i = count; i < max_entries; i++) {
                 int idx = offset + i;
                 stm_features(idx) = -1;

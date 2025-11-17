@@ -25,10 +25,10 @@ __global__ void select_fwd_kernel( //
     out_v[out_r * batch_idx + out_idx] = in_v[in_offset];
 }
 
-void select_fwd(                    //
-    const DenseMatrix<float> &in_v, //
-    DenseMatrix<float> &out_v,      //
-    const Array<int> &indices       //
+void select_fwd(              //
+    const DenseMatrix &in_v,  //
+    DenseMatrix &out_v,       //
+    const Array<int> &indices //
 ) {
     ASSERT(in_v.cols() == out_v.cols());
     ASSERT(out_v.cols() == indices.size());

@@ -46,7 +46,7 @@ __global__ void radam_kernel( //
 }
 
 void radam_optim(           //
-    Tensor<float> &param,   //
+    Tensor &param,          //
     Array<float> &moms,     //
     Array<float> &vels,     //
     const float lr,         //

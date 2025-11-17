@@ -16,10 +16,10 @@ __global__ void activate_bwd_kernel( //
         in_g[idx] = activate_der(in_v[idx], type) * out_g[idx];
 }
 
-void activate_bwd(                   //
-    Tensor<float> &in,               //
-    const DenseMatrix<float> &out_g, //
-    const ActivationType type        //
+void activate_bwd(            //
+    Tensor &in,               //
+    const DenseMatrix &out_g, //
+    const ActivationType type //
 ) {
     const auto &in_v = in.get_values();
     auto &in_g = in.get_gradients();

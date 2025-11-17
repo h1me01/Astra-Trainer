@@ -22,9 +22,9 @@ class Select : public Layer {
         Layer::init(batch_size);
     }
 
-    void step() override {
-        for(int i = 0; i < (int) batch_data::data_entries.size(); i++) {
-            int idx = select_fn(batch_data::data_entries[i].pos);
+    void step(const std::vector<DataEntry> &data_entries) override {
+        for(int i = 0; i < (int) data_entries.size(); i++) {
+            int idx = select_fn(data_entries[i].pos);
             if(idx < 0 || idx >= max_indices)
                 error("Index function of Select returned invalid index!");
             indices(i) = idx;

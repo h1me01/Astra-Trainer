@@ -30,7 +30,7 @@ __global__ void mse_kernel(        //
 void mse_loss(                    //
     const Array<float> &targets,  //
     Array<float> &loss,           //
-    Tensor<float> &out,           //
+    Tensor &out,                  //
     const ActivationType act_type //
 ) {
     const auto &out_v = out.get_values();

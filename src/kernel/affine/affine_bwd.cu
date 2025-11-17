@@ -24,11 +24,11 @@ __global__ void biases_bwd_kernel( //
         atomicAdd(&biases_g[neuron_idx], grad);
 }
 
-void affine_bwd(            //
-    Tensor<float> &weights, //
-    Tensor<float> &biases,  //
-    Tensor<float> &inputs,  //
-    Tensor<float> &out      //
+void affine_bwd(     //
+    Tensor &weights, //
+    Tensor &biases,  //
+    Tensor &inputs,  //
+    Tensor &out      //
 ) {
     const auto &weights_v = weights.get_values();
     auto &weights_g = weights.get_gradients();

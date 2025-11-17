@@ -39,16 +39,14 @@ __global__ void feature_transformer_bwd_kernel( //
     // no need to compute gradients for previous layer since previous are inputs
 }
 
-void feature_transformer_bwd(         //
-    DenseMatrix<float> &weights_g,    //
-    DenseMatrix<float> &biases_g,     //
-    const DenseMatrix<float> &out_g,  //
-    const DenseMatrix<int> &features, //
-    const int max_entries             //
+void feature_transformer_bwd(   //
+    DenseMatrix &weights_g,     //
+    DenseMatrix &biases_g,      //
+    const DenseMatrix &out_g,   //
+    const Array<int> &features, //
+    const int max_entries       //
 ) {
-    ASSERT(features.rows() == max_entries &&   //
-           features.cols() == out_g.cols() &&  //
-           weights_g.rows() == out_g.rows() && //
+    ASSERT(weights_g.rows() == out_g.rows() && //
            weights_g.rows() == biases_g.rows());
 
     ASSERT(weights_g.is_dev_allocated() && //

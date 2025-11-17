@@ -29,7 +29,7 @@ __global__ void pairwise_mul_bwd_kernel( //
     in_g[in_offset_plus] += grad * in_v[in_offset];
 }
 
-void pairwise_mul_bwd(Tensor<float> &in, const DenseMatrix<float> &out_g) {
+void pairwise_mul_bwd(Tensor &in, const DenseMatrix &out_g) {
     const auto &in_v = in.get_values();
     auto &in_g = in.get_gradients();
 

@@ -30,8 +30,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-using DataEntry = binpack::TrainingDataEntry;
-
 namespace dataloader {
 
 inline std::function<bool(const DataEntry &)> skip_predicate = [](const DataEntry &e) {

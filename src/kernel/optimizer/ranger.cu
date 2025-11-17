@@ -55,7 +55,7 @@ __global__ void ranger_kernel( //
 }
 
 void ranger_optim(             //
-    Tensor<float> &param,      //
+    Tensor &param,             //
     Array<float> &moms,        //
     Array<float> &vels,        //
     Array<float> &slow_buffer, //

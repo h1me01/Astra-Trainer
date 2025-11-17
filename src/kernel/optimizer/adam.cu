@@ -40,7 +40,7 @@ __global__ void adam_kernel( //
 }
 
 void adam_optim(           //
-    Tensor<float> &param,  //
+    Tensor &param,         //
     Array<float> &moms,    //
     Array<float> &vels,    //
     const float lr,        //
