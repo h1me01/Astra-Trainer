@@ -5,6 +5,9 @@
 
 namespace model {
 
+const int FT_SIZE = 256;
+const int OUTPUT_BUCKETS = 8;
+
 constexpr std::array<int, 64> input_bucket = {
     0,  1,  2,  3,  3,  2,  1,  0,  //
     4,  5,  6,  7,  7,  6,  5,  4,  //
@@ -59,22 +62,17 @@ struct Astra : Model {
     }
 
     Ptr<Layer> standard(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
-        const int FT_SIZE = 1536;
-        const int OUTPUT_BUCKETS = 8;
-
-        const int FT_QUANT = 255;
-        const int L1_QUANT = 64;
-
         // create layers
         auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
         auto l1 = make<Affine>(2 * FT_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
-        ft->get_params()[0]->quantize(QuantType::INT16, FT_QUANT); // weights
-        ft->get_params()[1]->quantize(QuantType::INT16, FT_QUANT); // biases
 
-        l1->get_params()[0]->quantize(QuantType::INT16, L1_QUANT, true);      // weights (transposed)
-        l1->get_params()[1]->quantize(QuantType::INT16, L1_QUANT * FT_QUANT); // biases
+        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
+        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
+
+        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
+        l1->get_params()[1]->quant_type(QuantType::INT16).quant_scale(64 * 255);       // biases
 
         // connect layers
         auto stm_l0 = ft->forward(stm_in)->screlu();
@@ -88,13 +86,8 @@ struct Astra : Model {
     }
 
     Ptr<Layer> multi_layer(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
-        const int FT_SIZE = 1536;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
-        const int OUTPUT_BUCKETS = 8;
-
-        const int FT_QUANT = 255;
-        const int L1_QUANT = 64;
 
         // create layers
         auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
@@ -103,12 +96,12 @@ struct Astra : Model {
         auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
-        ft->get_params()[0]->quantize(QuantType::INT16, FT_QUANT); // weights
-        ft->get_params()[1]->quantize(QuantType::INT16, FT_QUANT); // biases
+        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
+        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
 
-        l1->get_params()[0]->quantize(QuantType::INT16, L1_QUANT, true); // weights (transposed)
-        l2->get_params()[0]->quantize(QuantType::FLOAT, 1, true);        // weights (transposed)
-        l3->get_params()[0]->quantize(QuantType::FLOAT, 1, true);        // weights (transposed)
+        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
+        l2->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
+        l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
 
         // connect layers
         auto stm_l0 = ft->forward(stm_in)->crelu();
@@ -131,12 +124,8 @@ struct Astra : Model {
     }
 
     Ptr<Layer> multi_layer2(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
-        const int FT_SIZE = 1536;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
-
-        const int FT_QUANT = 255;
-        const int L1_QUANT = 64;
 
         // create layers
         auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
@@ -145,12 +134,12 @@ struct Astra : Model {
         auto l3 = make<Affine>(L2_SIZE, 1);
 
         // set quantization scheme
-        ft->get_params()[0]->quantize(QuantType::INT16, FT_QUANT); // weights
-        ft->get_params()[1]->quantize(QuantType::INT16, FT_QUANT); // biases
+        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
+        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
 
-        l1->get_params()[0]->quantize(QuantType::INT16, L1_QUANT, true); // weights (transposed)
-        l2->get_params()[0]->quantize(QuantType::FLOAT, 1, true);        // weights (transposed)
-        l3->get_params()[0]->quantize(QuantType::FLOAT, 1, true);        // weights (transposed)
+        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
+        l2->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
+        l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
 
         // connect layers
         auto stm_l0 = ft->forward(stm_in)->crelu();

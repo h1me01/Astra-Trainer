@@ -20,9 +20,9 @@ class Network {
     }
 
     void load_weights(const std::string &file);
-    void save_weights(const std::string &path);
+    void save_weights(const std::string &file);
 
-    void save_quantized_weights(const std::string &path);
+    void save_quantized_weights(const std::string &file);
 
     void fill_inputs(std::vector<DataEntry> &ds, float lambda, float eval_div);
 

@@ -3,86 +3,53 @@
 namespace nn {
 
 void Network::load_weights(const std::string &file) {
-    std::ifstream f(file, std::ios::binary);
-
+    FILE *f = fopen(file.c_str(), "rb");
     if(!f)
         error("File " + file + " does not exist!");
 
     try {
-        for(auto &l : get_layers()) {
-            for(auto &t : l->get_params()) {
-                auto &weights = t->get_values();
+        for(auto &l : get_layers())
+            for(auto &t : l->get_params())
+                t->load(f);
 
-                f.read(reinterpret_cast<char *>(weights.host_address()), weights.size() * sizeof(float));
-                if(f.gcount() != static_cast<std::streamsize>(weights.size() * sizeof(float))) {
-                    error("Insufficient data read from file. Expected " + //
-                          std::to_string(weights.size()) + " floats!");
-                }
-
-                weights.host_to_dev();
-            }
-        }
+        fclose(f);
     } catch(const std::exception &e) {
+        fclose(f);
         error("Failed loading weights from " + file + ": " + e.what());
     }
 }
 
-void Network::save_weights(const std::string &path) {
+void Network::save_weights(const std::string &file) {
+    FILE *f = fopen(file.c_str(), "wb");
+    if(!f)
+        error("Failed writing weights to " + file);
+
     try {
-        const std::string file = path + "/weights.bin";
-        FILE *f = fopen(file.c_str(), "wb");
-        if(!f)
-            error("Failed writing weights to " + file);
-
-        for(auto &l : get_layers()) {
-            for(auto &t : l->get_params()) {
-                auto &weights = t->get_values();
-                weights.dev_to_host();
-
-                int written = fwrite(weights.host_address(), sizeof(float), weights.size(), f);
-                if(written != weights.size())
-                    error("Failed writing weights to " + file);
-            }
-        }
+        for(auto &l : get_layers())
+            for(auto &t : l->get_params())
+                t->save(f);
 
         fclose(f);
     } catch(const std::exception &e) {
-        error(std::string("Failed saving weights to ") + e.what());
+        fclose(f);
+        error("Failed saving weights to " + file + ": " + e.what());
     }
 }
 
-void Network::save_quantized_weights(const std::string &path) {
+void Network::save_quantized_weights(const std::string &file) {
+    FILE *f = fopen(file.c_str(), "wb");
+    if(!f)
+        error("Failed writing quantized weights to " + file);
+
     try {
-        FILE *f = fopen((path + "/qweights.net").c_str(), "wb");
-        if(!f)
-            error("Failed writing quantized weights!");
-
-        for(auto &l : get_layers()) {
-            for(auto &t : l->get_params()) {
-                t->get_values().dev_to_host();
-
-                const auto &scheme = t->get_quant_scheme();
-                const auto &values = t->get_values();
-
-                switch(scheme.type) {
-                case QuantType::INT8:
-                    write_quantized<int8_t>(f, values, scheme);
-                    break;
-                case QuantType::INT16:
-                    write_quantized<int16_t>(f, values, scheme);
-                    break;
-                case QuantType::FLOAT:
-                    write_quantized<float>(f, values, scheme);
-                    break;
-                default:
-                    error("Unknown quantization type");
-                }
-            }
-        }
+        for(auto &l : get_layers())
+            for(auto &t : l->get_params())
+                t->save_quantized(f);
 
         fclose(f);
     } catch(const std::exception &e) {
-        error(std::string("Failed saving quantized weights: ") + e.what());
+        fclose(f);
+        error("Failed saving quantized weights to " + file + ": " + e.what());
     }
 }
 

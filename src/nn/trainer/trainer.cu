@@ -13,8 +13,8 @@ void Trainer::save_checkpoint(const std::string &path) {
         error("Failed creating directory " + path + ": " + e.what());
     }
 
-    network->save_weights(path);
-    network->save_quantized_weights(path);
+    network->save_weights(path + "/weights.bin");
+    network->save_quantized_weights(path + "/qweights.nnue");
 
     if(optim != nullptr)
         optim->save(path);
