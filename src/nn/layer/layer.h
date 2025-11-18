@@ -46,22 +46,22 @@ class Layer : public std::enable_shared_from_this<Layer> {
     }
 
     Ptr<Layer> relu() {
-        activation.set_activation_type(ActivationType::ReLU);
+        activation.set_type(ActivationType::ReLU);
         return shared_from_this();
     }
 
     Ptr<Layer> crelu() {
-        activation.set_activation_type(ActivationType::CReLU);
+        activation.set_type(ActivationType::CReLU);
         return shared_from_this();
     }
 
     Ptr<Layer> screlu() {
-        activation.set_activation_type(ActivationType::SCReLU);
+        activation.set_type(ActivationType::SCReLU);
         return shared_from_this();
     }
 
     Ptr<Layer> sigmoid() {
-        activation.set_activation_type(ActivationType::Sigmoid);
+        activation.set_type(ActivationType::Sigmoid);
         return shared_from_this();
     }
 

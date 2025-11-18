@@ -27,8 +27,12 @@ class Activation {
         return act_type != ActivationType::Linear;
     }
 
-    void set_activation_type(ActivationType type) {
+    void set_type(ActivationType type) {
         act_type = type;
+    }
+
+    ActivationType get_type() const {
+        return act_type;
     }
 
     Tensor &get_output() {
