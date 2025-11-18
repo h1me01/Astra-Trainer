@@ -56,8 +56,8 @@ struct Astra : Model {
     }
 
     Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
-        return standard(stm_in, nstm_in);
-        // return multi_layer2(stm_in, nstm_in);
+        // return standard(stm_in, nstm_in);
+         return multi_layer(stm_in, nstm_in);
         // return multi_layer2(stm_in, nstm_in);
     }
 
@@ -88,44 +88,6 @@ struct Astra : Model {
 
         // create layers
         auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
-        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
-
-        // set quantization scheme
-        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
-        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
-
-        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
-        l2->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
-        l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
-
-        // connect layers
-        auto stm_ft = ft->forward(stm_in)->crelu();
-        auto nstm_ft = ft->forward(nstm_in)->crelu();
-
-        auto stm_pwm = make<PairwiseMul>(stm_ft);
-        auto nstm_pwm = make<PairwiseMul>(nstm_ft);
-        auto merged_l0 = make<Concat>(stm_pwm, nstm_pwm);
-
-        auto l1_out = l1->forward(merged_l0);
-        auto l1_select = make<Select>(l1_out, bucket_index);
-
-        auto l2_out = l2->forward(l1_select->screlu());
-        auto l2_select = make<Select>(l2_out, bucket_index);
-
-        auto l3_out = l3->forward(l2_select->screlu());
-        auto l3_select = make<Select>(l3_out, bucket_index);
-
-        return l3_select;
-    }
-
-    Ptr<Layer> multi_layer2(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
-        const int L1_SIZE = 16;
-        const int L2_SIZE = 32;
-
-        // create layers
-        auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
         auto l1 = make<Affine>(FT_SIZE, L1_SIZE);
         auto l2 = make<Affine>(L1_SIZE, L2_SIZE);
         auto l3 = make<Affine>(L2_SIZE, 1);
@@ -142,16 +104,50 @@ struct Astra : Model {
         auto stm_ft = ft->forward(stm_in)->crelu();
         auto nstm_ft = ft->forward(nstm_in)->crelu();
 
-        auto stm_pwm = make<PairwiseMul>(stm_ft);
-        auto nstm_pwm = make<PairwiseMul>(nstm_ft);
-        auto merged_l0 = make<Concat>(stm_pwm, nstm_pwm);
+        auto pwm_out = make<PairwiseMul>(stm_ft, nstm_ft);
 
-        auto l1_out = l1->forward(merged_l0)->screlu();
+        auto l1_out = l1->forward(pwm_out)->screlu();
         auto l2_out = l2->forward(l1_out)->screlu();
 
         auto l3_out = l3->forward(l2_out);
 
         return l3_out;
+    }
+
+    Ptr<Layer> multi_layer2(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
+        const int L1_SIZE = 16;
+        const int L2_SIZE = 32;
+
+        // create layers
+        auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
+        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
+        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
+        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
+
+        // set quantization scheme
+        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
+        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
+
+        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
+        l2->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
+        l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
+
+        // connect layers
+        auto stm_ft = ft->forward(stm_in)->crelu();
+        auto nstm_ft = ft->forward(nstm_in)->crelu();
+
+        auto pwm_out = make<PairwiseMul>(stm_ft, nstm_ft);
+
+        auto l1_out = l1->forward(pwm_out);
+        auto l1_select = make<Select>(l1_out, bucket_index);
+
+        auto l2_out = l2->forward(l1_select->screlu());
+        auto l2_select = make<Select>(l2_out, bucket_index);
+
+        auto l3_out = l3->forward(l2_select->screlu());
+        auto l3_select = make<Select>(l3_out, bucket_index);
+
+        return l3_select;
     }
 
     Ptr<Loss> get_loss() override {
