@@ -6,7 +6,7 @@ namespace nn {
 
 class Select : public Layer {
   public:
-    Select(const Ptr<Layer> &input, const std::function<int(const Position &)> &select_fn) //
+    explicit Select(const Ptr<Layer> &input, const std::function<int(const Position &)> &select_fn) //
         : input(input), select_fn(select_fn) {}
 
     void init(int batch_size) override {

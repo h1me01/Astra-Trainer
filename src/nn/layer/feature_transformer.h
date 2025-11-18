@@ -11,14 +11,14 @@ namespace nn {
 
 class FeatureTransformer : public Layer {
   public:
-    FeatureTransformer(int input_size, int output_size, WeightInitType winit_type = WeightInitType::He)
+    explicit FeatureTransformer(int input_size, int output_size, WeightInitType winit_type = WeightInitType::He)
         : Layer(input_size, output_size, winit_type) {
 
         if(input_size % 768 != 0)
             error("Input size must be divisible by 768 to match standard chess inputs!");
     }
 
-    FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input) {
+    explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input) {
         this->main = other.get_main();
         this->inputs = {input};
         this->input_size = other.input_size;
@@ -26,7 +26,7 @@ class FeatureTransformer : public Layer {
         ASSERT(main != nullptr);
     }
 
-    FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input1, const Ptr<Input> &input2)
+    explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input1, const Ptr<Input> &input2)
         : FeatureTransformer(other, input1) {
         this->inputs.push_back(input2);
         this->output_size = 2 * other.output_size;
@@ -52,19 +52,14 @@ class FeatureTransformer : public Layer {
         if(is_main)
             return; // main layer does not perform forward
 
-        auto params = get_main()->get_params();
-
-        Tensor &weights = *params[0];
-        Tensor &biases = *params[1];
-
         for(int i = 0; i < inputs.size(); i++) {
             kernel::feature_transformer_fwd( //
-                weights.get_values(),
-                biases.get_values(),
+                get_weights().get_values(),
+                get_biases().get_values(),
                 output.get_values(),
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
-                i);
+                i * (output_size / 2));
         }
 
         activation.forward(output.get_values());
@@ -74,21 +69,16 @@ class FeatureTransformer : public Layer {
         if(is_main)
             return; // main layer does not perform backward
 
-        auto params = get_main()->get_params();
-
-        Tensor &weights = *params[0];
-        Tensor &biases = *params[1];
-
         activation.backward(output);
 
         for(int i = 0; i < inputs.size(); i++) {
             kernel::feature_transformer_bwd( //
-                weights.get_gradients(),
-                biases.get_gradients(),
+                get_weights().get_gradients(),
+                get_biases().get_gradients(),
                 output.get_gradients(),
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
-                i);
+                i * (output_size / 2));
         }
     }
 

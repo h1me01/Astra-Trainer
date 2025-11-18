@@ -6,7 +6,7 @@ namespace nn {
 
 class Activation {
   public:
-    Activation() : act_type(ActivationType::Linear) {}
+    explicit Activation() : act_type(ActivationType::Linear) {}
 
     void init(int size, int batch_size) {
         if(is_some())

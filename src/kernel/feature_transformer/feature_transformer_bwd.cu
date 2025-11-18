@@ -45,12 +45,12 @@ void feature_transformer_bwd(   //
     const DenseMatrix &out_g,   //
     const Array<int> &features, //
     const int max_entries,      //
-    const int offset            //
+    const int out_offset        //
 ) {
-    const bool is_half = out_g.rows() / 2 == weights_g.rows();
+    const bool is_double = out_g.rows() / 2 == weights_g.rows();
 
     ASSERT(weights_g.rows() == biases_g.rows() && //
-           weights_g.rows() == out_g.rows() / (is_half ? 2 : 1));
+           weights_g.rows() == out_g.rows() / (is_double ? 2 : 1));
 
     ASSERT(weights_g.is_dev_allocated() && //
            biases_g.is_dev_allocated() &&  //
@@ -67,7 +67,7 @@ void feature_transformer_bwd(   //
         out_g.rows(),
         out_g.cols(),
         max_entries,
-        offset * weights_g.rows());
+        out_offset);
 }
 
 } // namespace kernel

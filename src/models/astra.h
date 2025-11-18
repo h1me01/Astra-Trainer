@@ -56,8 +56,8 @@ struct Astra : Model {
     }
 
     Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
-        // return standard(stm_in, nstm_in);
-         return multi_layer(stm_in, nstm_in);
+        return standard(stm_in, nstm_in);
+        // return multi_layer(stm_in, nstm_in);
         // return multi_layer2(stm_in, nstm_in);
     }
 
@@ -67,11 +67,11 @@ struct Astra : Model {
         auto l1 = make<Affine>(2 * FT_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
-        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
-        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
+        ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
+        ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
 
-        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
-        l1->get_params()[1]->quant_type(QuantType::INT16).quant_scale(64 * 255);       // biases
+        l1->get_weights().quant_type(QuantType::INT16).quant_scale(64).transpose();
+        l1->get_biases().quant_type(QuantType::INT16).quant_scale(64 * 255);
 
         // connect layers
         auto ft_out = ft->forward(stm_in, nstm_in)->screlu();
@@ -93,12 +93,12 @@ struct Astra : Model {
         auto l3 = make<Affine>(L2_SIZE, 1);
 
         // set quantization scheme
-        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
-        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
+        ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
+        ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
 
-        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
-        l2->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
-        l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
+        l1->get_weights().quant_type(QuantType::INT16).quant_scale(64).transpose();
+        l2->get_weights().quant_type(QuantType::FLOAT).transpose();
+        l3->get_weights().quant_type(QuantType::FLOAT).transpose();
 
         // connect layers
         auto stm_ft = ft->forward(stm_in)->crelu();
@@ -120,25 +120,27 @@ struct Astra : Model {
 
         // create layers
         auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
-        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
+        auto l1 = make<Affine>(FT_SIZE, L1_SIZE);
+        auto l2 = make<Affine>(L1_SIZE, L2_SIZE);
+        auto l3 = make<Affine>(L2_SIZE, 1);
 
         // set quantization scheme
-        ft->get_params()[0]->quant_type(QuantType::INT16).quant_scale(255); // weights
-        ft->get_params()[1]->quant_type(QuantType::INT16).quant_scale(255); // biases
+        ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
+        ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
 
-        l1->get_params()[0]->quant_type(QuantType::INT16).quant_scale(64).transpose(); // weights
-        l2->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
-        l3->get_params()[0]->quant_type(QuantType::FLOAT).transpose();                 // weights
+        l1->get_weights().quant_type(QuantType::INT16).quant_scale(64).transpose();
+        l2->get_weights().quant_type(QuantType::FLOAT).transpose();
+        l3->get_weights().quant_type(QuantType::FLOAT).transpose();
 
         // connect layers
         auto stm_ft = ft->forward(stm_in)->crelu();
         auto nstm_ft = ft->forward(nstm_in)->crelu();
 
-        auto pwm_out = make<PairwiseMul>(stm_ft, nstm_ft);
+        auto stm_pwm = make<PairwiseMul>(stm_ft);
+        auto nstm_pwm = make<PairwiseMul>(nstm_ft);
+        auto merged_l0 = make<Concat>(stm_pwm, nstm_pwm);
 
-        auto l1_out = l1->forward(pwm_out);
+        auto l1_out = l1->forward(merged_l0);
         auto l1_select = make<Select>(l1_out, bucket_index);
 
         auto l2_out = l2->forward(l1_select->screlu());

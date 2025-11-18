@@ -73,6 +73,14 @@ class Layer : public std::enable_shared_from_this<Layer> {
         return input_size;
     }
 
+    Tensor &get_weights() {
+        return is_main ? weights : main->get_weights();
+    }
+
+    Tensor &get_biases() {
+        return is_main ? biases : main->get_biases();
+    }
+
     Tensor &get_output() {
         return activation.is_some() ? activation.get_output() : output;
     }
@@ -105,10 +113,6 @@ class Layer : public std::enable_shared_from_this<Layer> {
     // main layers are created by the user (not including helper layers)
     bool is_main = false;
     Ptr<Layer> main;
-
-    void set_main(const Ptr<Layer> &main_layer) {
-        this->main = main_layer;
-    }
 };
 
 } // namespace nn
