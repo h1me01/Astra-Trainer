@@ -21,6 +21,10 @@ class Trainer {
     explicit Trainer(Model *model) : model(model) {
         params = model->get_params();
         network = std::make_unique<Network>();
+        stm_input = std::make_shared<Input>(32);
+        nstm_input = std::make_shared<Input>(32);
+
+        targets = Array<float>(params.batch_size);
 
         this->loss = model->get_loss();
         this->optim = model->get_optim();
@@ -33,14 +37,7 @@ class Trainer {
         if(this->lr_sched == nullptr)
             error("LR Scheduler is not set for the trainer!");
 
-        network->set_feature_index_fn( //
-            [this](PieceType pt, Color pc, Square psq, Square ksq, Color view) {
-                return this->model->feature_index(pt, pc, psq, ksq, view);
-            });
-
-        network->set_output_layer(model->build( //
-            network->get_inputs().first,
-            network->get_inputs().second));
+        network->set_output_layer(model->build(stm_input, nstm_input));
 
         if(optim == nullptr)
             error("Optimizer is not set for the trainer!");
@@ -48,11 +45,14 @@ class Trainer {
             error("Loss function is not set for the trainer!");
 
         network->init(params.batch_size);
+        stm_input->init(params.batch_size);
+        nstm_input->init(params.batch_size);
         optim->init(network->get_layers());
     }
 
     virtual ~Trainer() = default;
 
+    void fill_inputs(std::vector<DataEntry> &ds, float lambda);
     void train(std::vector<std::string> data_path, std::string output_path, std::string checkpoint_name);
 
     void load_weights(const std::string &file) {
@@ -77,10 +77,14 @@ class Trainer {
     Model *model;
     HyperParams params;
 
+    Array<float> targets;
+
     Ptr<Loss> loss;
     Ptr<Optimizer> optim;
     Ptr<LRScheduler> lr_sched;
     std::unique_ptr<Network> network;
+
+    Ptr<Input> stm_input, nstm_input;
 
     std::string loaded_weights = "";
     std::string loaded_checkpoint = "";
@@ -115,7 +119,7 @@ class Trainer {
 
         std::vector<DataEntry> ds{e};
 
-        network->fill_inputs(ds, 1.0f, params.eval_div);
+        fill_inputs(ds, 1.0f);
         network->forward(ds);
 
         auto &output = network->get_output().get_values();

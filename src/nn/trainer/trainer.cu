@@ -22,6 +22,55 @@ void Trainer::save_checkpoint(const std::string &path) {
     std::cout << "Saved checkpoint" << std::endl;
 }
 
+void Trainer::fill_inputs(std::vector<DataEntry> &ds, float lambda) {
+    auto &stm_features = stm_input->get_output();
+    auto &nstm_features = nstm_input->get_output();
+
+    const int max_entries = stm_input->get_size();
+
+    for(size_t i = 0; i < ds.size(); i++) {
+        const Position &pos = ds[i].pos;
+
+        Square ksq_w = pos.kingSquare(Color::White);
+        Square ksq_b = pos.kingSquare(Color::Black);
+
+        bool wtm = pos.sideToMove() == Color::White;
+        Bitboard pieces = pos.piecesBB();
+
+        const int offset = i * max_entries;
+
+        int count = 0;
+        for(auto sq : pieces) {
+            Piece p = pos.pieceAt(sq);
+            int w_idx = model->feature_index(p.type(), p.color(), sq, ksq_w, Color::White);
+            int b_idx = model->feature_index(p.type(), p.color(), sq, ksq_b, Color::Black);
+
+            int idx = offset + count;
+            stm_features(idx) = wtm ? w_idx : b_idx;
+            nstm_features(idx) = wtm ? b_idx : w_idx;
+
+            count++;
+        }
+
+        if(count < max_entries) {
+            for(int i = count; i < max_entries; i++) {
+                int idx = offset + i;
+                stm_features(idx) = -1;
+                nstm_features(idx) = -1;
+            }
+        }
+
+        float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / params.eval_div));
+        float wdl_target = (ds[i].result + 1) / 2.0f;
+
+        targets(i) = lambda * score_target + (1.0f - lambda) * wdl_target;
+    }
+
+    stm_features.host_to_dev();
+    nstm_features.host_to_dev();
+    targets.host_to_dev();
+}
+
 void Trainer::train(std::vector<std::string> data_path, std::string output_path, std::string checkpoint_name) {
     const std::vector<std::string> files = utils::files_from_path(data_path);
 
@@ -87,7 +136,7 @@ void Trainer::train(std::vector<std::string> data_path, std::string output_path,
 
         for(int batch = 1; batch <= params.batches_per_epoch; batch++) {
             auto data_entries = dataloader.next();
-            network->fill_inputs(data_entries, lambda, params.eval_div);
+            fill_inputs(data_entries, lambda);
 
             timer.stop();
             auto elapsed = timer.elapsed_time();
@@ -103,7 +152,7 @@ void Trainer::train(std::vector<std::string> data_path, std::string output_path,
             }
 
             network->forward(data_entries);
-            loss->compute(network->get_targets(), network->get_output());
+            loss->compute(targets, network->get_output());
             network->backward();
             optim->step(lr_sched->get_lr(), data_entries.size());
         }

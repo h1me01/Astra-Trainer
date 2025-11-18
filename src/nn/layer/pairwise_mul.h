@@ -6,13 +6,10 @@ namespace nn {
 
 class PairwiseMul : public Layer {
   public:
-    explicit PairwiseMul(const Ptr<Layer> &input) {
+    explicit PairwiseMul(const Ptr<Layer> &input, const Ptr<Layer> &input2 = nullptr) {
         inputs.push_back(input);
-    }
-
-    explicit PairwiseMul(const Ptr<Layer> &input1, const Ptr<Layer> &input2) {
-        inputs.push_back(input1);
-        inputs.push_back(input2);
+        if(input2)
+            inputs.push_back(input2);
     }
 
     void init(int batch_size) override {
