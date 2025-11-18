@@ -5,7 +5,7 @@
 
 namespace model {
 
-const int FT_SIZE = 512;
+const int FT_SIZE = 1536;
 const int OUTPUT_BUCKETS = 8;
 
 constexpr std::array<int, 64> input_bucket = {
@@ -120,9 +120,9 @@ struct Astra : Model {
 
         // create layers
         auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
-        auto l1 = make<Affine>(FT_SIZE, L1_SIZE);
-        auto l2 = make<Affine>(L1_SIZE, L2_SIZE);
-        auto l3 = make<Affine>(L2_SIZE, 1);
+        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
+        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
+        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
         ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
@@ -136,11 +136,9 @@ struct Astra : Model {
         auto stm_ft = ft->forward(stm_in)->crelu();
         auto nstm_ft = ft->forward(nstm_in)->crelu();
 
-        auto stm_pwm = make<PairwiseMul>(stm_ft);
-        auto nstm_pwm = make<PairwiseMul>(nstm_ft);
-        auto merged_l0 = make<Concat>(stm_pwm, nstm_pwm);
+        auto pwm_out = make<PairwiseMul>(stm_ft, nstm_ft);
 
-        auto l1_out = l1->forward(merged_l0);
+        auto l1_out = l1->forward(pwm_out);
         auto l1_select = make<Select>(l1_out, bucket_index);
 
         auto l2_out = l2->forward(l1_select->screlu());
