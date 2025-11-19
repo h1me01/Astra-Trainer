@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../nn/include.h"
 #include "model.h"
 
 namespace model {
@@ -22,6 +21,26 @@ constexpr std::array<int, 64> input_bucket = {
 inline int bucket_index(const Position &pos) {
     return (pos.pieceCount() - 2) / 4;
 }
+
+inline bool skip_predicate(const TrainingDataEntry &e) {
+    if(e.score == 32002) // value none
+        return true;
+    if(e.ply < 20)
+        return true;
+    if(e.isCapturingMove() || e.isInCheck())
+        return true;
+
+    auto do_wld_skip = [&]() {
+        std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
+        auto &prng = rng::get_thread_local_rng();
+        return distrib(prng);
+    };
+
+    if(do_wld_skip())
+        return true;
+
+    return false;
+};
 
 struct Astra : Model {
     Astra(std::string name) : Model(name) {
@@ -162,6 +181,14 @@ struct Astra : Model {
 
     Ptr<LRScheduler> get_lr_scheduler() override {
         return make<CosineAnnealing>(params.epochs, params.lr, 0.000027);
+    }
+
+    Ptr<Dataloader> get_dataloader() override {
+        return make<Dataloader>( //
+            params.batch_size,
+            params.thread_count,
+            files_from_path({"D:/Astra-Data/training_data"}),
+            skip_predicate);
     }
 };
 

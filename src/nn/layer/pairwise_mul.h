@@ -15,18 +15,19 @@ class PairwiseMul : public Layer {
     void init(int batch_size) override {
         input_size = inputs[0]->get_output_size();
 
-        if(inputs.size() > 1 && inputs[1]->get_output_size() != input_size)
+        const int input_count = inputs.size();
+        if(input_count > 1 && inputs[1]->get_output_size() != input_size)
             error("PairwiseMul: Inputs must have the same size!");
         if(input_size % 2 != 0)
             error("PairwiseMul: Input size must be even!");
 
-        output_size = (input_size / 2) * inputs.size();
+        output_size = (input_size / 2) * input_count;
 
         Layer::init(batch_size);
     }
 
     void forward() override {
-        for(int i = 0; i < inputs.size(); i++) {
+        for(int i = 0; i < (int) inputs.size(); i++) {
             kernel::pairwise_mul_fwd( //
                 inputs[i]->get_output().get_values(),
                 output.get_values(),
@@ -39,7 +40,7 @@ class PairwiseMul : public Layer {
     void backward() override {
         activation.backward(output);
 
-        for(int i = 0; i < inputs.size(); i++) {
+        for(int i = 0; i < (int) inputs.size(); i++) {
             kernel::pairwise_mul_bwd( //
                 inputs[i]->get_output(),
                 output.get_gradients(),

@@ -8,7 +8,6 @@
 #include "../../kernel/include.h"
 #include "../../misc.h"
 #include "../../training_data_formats/include.h"
-#include "../utils/utils.h"
 #include "activation.h"
 
 namespace nn {
@@ -32,7 +31,7 @@ class Layer : public std::enable_shared_from_this<Layer> {
         activation.init(output_size, batch_size);
     }
 
-    virtual void step(const std::vector<DataEntry> &data_entries) {}
+    virtual void step(const std::vector<TrainingDataEntry> &data_entries) {}
 
     virtual void forward() = 0;
     virtual void backward() = 0;

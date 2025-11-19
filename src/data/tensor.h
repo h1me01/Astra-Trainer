@@ -48,14 +48,14 @@ class Tensor {
     }
 
     void load(FILE *f) {
-        if(fread(values.host_address(), sizeof(float), values.size(), f) != values.size())
+        if((int) fread(values.host_address(), sizeof(float), values.size(), f) != values.size())
             error("Failed reading tensor data from file!");
         values.host_to_dev();
     }
 
     void save(FILE *f) {
         values.dev_to_host();
-        if(fwrite(values.host_address(), sizeof(float), values.size(), f) != values.size())
+        if((int) fwrite(values.host_address(), sizeof(float), values.size(), f) != values.size())
             error("Failed writing tensor data to file!");
     }
 
@@ -144,7 +144,7 @@ class Tensor {
                 quantized(i) = quantize(values(i));
         }
 
-        if(fwrite(quantized.host_address(), sizeof(T), quantized.size(), f) != quantized.size())
+        if((int) fwrite(quantized.host_address(), sizeof(T), quantized.size(), f) != quantized.size())
             error("Failed writing quantized data to file!");
     }
 };

@@ -33,7 +33,7 @@ class Network {
             l->init(batch_size);
     }
 
-    void forward(const std::vector<DataEntry> &data_entries) {
+    void forward(const std::vector<TrainingDataEntry> &data_entries) {
         for(auto &l : architecture)
             l->step(data_entries);
 

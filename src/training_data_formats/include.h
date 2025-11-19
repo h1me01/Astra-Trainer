@@ -1,7 +1,6 @@
 #pragma once
 
-#include "sf_binpack/sf_binpack.h"
+#include "../../external/sf_binpack/training_data_format.h"
 
+using namespace binpack;
 using namespace chess;
-
-using DataEntry = binpack::TrainingDataEntry;

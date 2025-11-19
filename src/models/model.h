@@ -3,22 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "../misc.h"
-#include "../training_data_formats/include.h"
+#include "../dataloader/dataloader.h"
+#include "../nn/include.h"
 
-namespace nn {
-
-class Trainer;
-class Input;
-class Layer;
-class Loss;
-class Optimizer;
-class Trainer;
-class LRScheduler;
-
-} // namespace nn
-
-using namespace nn;
+using namespace dataloader;
 
 namespace model {
 
@@ -41,13 +29,29 @@ class Model {
 
     virtual Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) = 0;
 
-    void load_weights(const std::string &file);
-    void save_weights(const std::string &file);
-
-    void evaluate_positions(const std::vector<std::string> &positions);
-    void train(std::vector<std::string> data_path, std::string output_path, std::string checkpoint_name);
-
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
+
+    void train(std::string output_path, std::string checkpoint_name = "");
+
+    void load_weights(const std::string &file) {
+        network->load_weights(file);
+        loaded_weights = file;
+    }
+
+    void save_weights(const std::string &file) {
+        network->save_weights(file);
+    }
+
+    void evaluate_positions(const std::vector<std::string> &positions) {
+        init();
+
+        std::cout << "\n================================= Testing ================================\n\n";
+
+        for(const std::string &fen : positions) {
+            std::cout << "FEN: " << fen << std::endl;
+            std::cout << "Eval: " << predict(fen) << std::endl;
+        }
+    }
 
     virtual Ptr<Loss> get_loss() {
         return nullptr;
@@ -61,18 +65,12 @@ class Model {
         return nullptr;
     }
 
-    std::string get_name() const {
-        return name;
-    }
-
-    HyperParams get_params() const {
-        return params;
+    virtual Ptr<Dataloader> get_dataloader() {
+        return nullptr;
     }
 
   protected:
     HyperParams params;
-
-    std::string name = "";
 
     template <typename T, typename... Args> //
     auto make(Args &&...args) {
@@ -80,9 +78,137 @@ class Model {
     }
 
   private:
-    std::unique_ptr<Trainer> trainer;
+    std::string name = "";
+    bool is_initialized = false;
 
-    void init_trainer();
+    Array<float> targets;
+
+    Ptr<Loss> loss;
+    Ptr<Optimizer> optim;
+    Ptr<LRScheduler> lr_sched;
+    Ptr<Dataloader> dataloader;
+    Ptr<Input> stm_input, nstm_input;
+    std::unique_ptr<Network> network;
+
+    std::string loaded_weights = "";
+    std::string loaded_checkpoint = "";
+
+    void fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda);
+
+    void init() {
+        if(is_initialized)
+            return;
+
+        targets = Array<float>(params.batch_size);
+
+        network = std::make_unique<Network>();
+        stm_input = std::make_shared<Input>(32);
+        nstm_input = std::make_shared<Input>(32);
+
+        loss = get_loss();
+        optim = get_optim();
+        lr_sched = get_lr_scheduler();
+
+        if(loss == nullptr)
+            error("Loss function is not set for the trainer!");
+        if(optim == nullptr)
+            error("Optimizer is not set for the trainer!");
+        if(lr_sched == nullptr)
+            error("LR Scheduler is not set for the trainer!");
+        if(dataloader == nullptr)
+            error("Dataloader is not set for the trainer!");
+
+        network->set_output_layer(build(stm_input, nstm_input));
+
+        network->init(params.batch_size);
+        stm_input->init(params.batch_size);
+        nstm_input->init(params.batch_size);
+        optim->init(network->get_layers());
+
+        is_initialized = true;
+    }
+
+    void print_info() const {
+        std::cout << "\n============================== Training Data =============================\n\n";
+        const auto &training_files = dataloader->get_filenames();
+        if(training_files.empty())
+            error("No training data found in the specified paths!");
+
+        for(const auto &f : training_files)
+            std::cout << f << std::endl;
+
+        std::cout << "\n============================== Trainer Info ==============================\n\n";
+        std::cout << "Model name:    " << name << std::endl;
+        std::cout << "Epochs:        " << params.epochs << std::endl;
+        std::cout << "Batch Size:    " << params.batch_size << std::endl;
+        std::cout << "Batches/Epoch: " << params.batches_per_epoch << std::endl;
+        std::cout << "Save Rate:     " << params.save_rate << std::endl;
+        std::cout << "Thread Count:  " << params.thread_count << std::endl;
+        std::cout << "Learning Rate: " << params.lr << std::endl;
+        std::cout << "Eval Div:      " << params.eval_div << std::endl;
+        std::cout << "Lambda Start:  " << params.lambda_start << std::endl;
+        std::cout << "Lambda End:    " << params.lambda_end << std::endl;
+        if(!loaded_checkpoint.empty())
+            std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
+        else if(!loaded_weights.empty())
+            std::cout << "Loaded Weights:    " << loaded_weights << std::endl;
+    }
+
+    float predict(std::string fen) {
+        Position pos;
+        pos.set(fen);
+
+        TrainingDataEntry e;
+        e.pos = pos;
+
+        std::vector<TrainingDataEntry> ds{e};
+
+        fill_inputs(ds, 1.0f);
+        network->forward(ds);
+
+        auto &output = network->get_output().get_values();
+        output.dev_to_host();
+
+        return output(0) * params.eval_div;
+    }
+
+    void save_checkpoint(const std::string &path) {
+        try {
+            create_directories(path);
+        } catch(const filesystem_error &e) {
+            error("Failed creating directory " + path + ": " + e.what());
+        }
+
+        network->save_weights(path + "/weights.bin");
+        network->save_quantized_weights(path + "/qweights.nnue");
+
+        if(optim != nullptr)
+            optim->save(path);
+
+        std::cout << "Saved checkpoint" << std::endl;
+    }
+
+    int epoch_from_checkpoint(const std::string &checkpoint_name) {
+        size_t dash_pos = checkpoint_name.find_last_of('-');
+        if(dash_pos == std::string::npos) {
+            std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
+            return 0;
+        }
+
+        std::string epoch_str = checkpoint_name.substr(dash_pos + 1);
+        if(epoch_str == "final") {
+            std::cout << "Loading from final checkpoint, starting new training cycle\n";
+            return 0;
+        }
+
+        try {
+            int parsed_epoch = std::stoi(epoch_str);
+            return parsed_epoch;
+        } catch(...) {
+            std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
+            return 0;
+        }
+    }
 };
 
 } // namespace model

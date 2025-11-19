@@ -16,6 +16,8 @@
 #include <cusparse_v2.h>
 #include <stdlib.h>
 
+using namespace std::filesystem;
+
 #define ASSERT(expr)                                                                                                   \
     {                                                                                                                  \
         if(!static_cast<bool>(expr)) {                                                                                 \
@@ -41,6 +43,22 @@ using Ptr = std::shared_ptr<T>;
 inline void error(const std::string &message) {
     std::cerr << "Error: " << message << std::endl;
     std::abort();
+}
+
+inline std::vector<std::string> files_from_path(const std::vector<std::string> &paths) {
+    std::vector<std::string> files;
+    for(const auto &path : paths) {
+        try {
+            for(const auto &entry : recursive_directory_iterator(path)) {
+                if(entry.is_regular_file())
+                    files.push_back(entry.path().string());
+            }
+        } catch(const filesystem_error &e) {
+            std::cerr << "Filesystem error in path " << path << ": " << e.what() << std::endl;
+        }
+    }
+
+    return files;
 }
 
 class Logger {

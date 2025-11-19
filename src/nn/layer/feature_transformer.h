@@ -45,7 +45,8 @@ class FeatureTransformer : public Layer {
 
         DenseMatrix *act_ptr = activation.is_some() ? &activation.get_output().get_values() : nullptr;
 
-        for(int i = 0; i < inputs.size(); i++) {
+        const int input_count = inputs.size();
+        for(int i = 0; i < input_count; i++) {
             kernel::feature_transformer_fwd( //
                 get_weights().get_values(),
                 get_biases().get_values(),
@@ -53,7 +54,7 @@ class FeatureTransformer : public Layer {
                 act_ptr,
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
-                i * (output_size / inputs.size()),
+                i * (output_size / input_count),
                 activation.get_type());
         }
     }
@@ -66,7 +67,8 @@ class FeatureTransformer : public Layer {
         const DenseMatrix &incoming_grad = use_act ? activation.get_output().get_gradients() : output.get_gradients();
         const DenseMatrix *linear_out_ptr = use_act ? &output.get_values() : nullptr;
 
-        for(int i = 0; i < inputs.size(); i++) {
+        const int input_count = inputs.size();
+        for(int i = 0; i < input_count; i++) {
             kernel::feature_transformer_bwd( //
                 get_weights().get_gradients(),
                 get_biases().get_gradients(),
@@ -74,7 +76,7 @@ class FeatureTransformer : public Layer {
                 linear_out_ptr,
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
-                i * (output_size / inputs.size()),
+                i * (output_size / input_count),
                 activation.get_type());
         }
     }
