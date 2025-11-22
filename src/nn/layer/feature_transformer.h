@@ -17,31 +17,49 @@ class FeatureTransformer : public Layer {
             error("Input size must be divisible by 768!");
     }
 
-    explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input)
-        : FeatureTransformer(other, input, nullptr) {}
-
-    explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input1, const Ptr<Input> &input2) {
+    explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input) {
         this->main = other.get_main();
-        this->inputs = {input1};
-        if(input2)
-            this->inputs.push_back(input2);
-
+        this->inputs = {input};
         this->input_size = other.input_size;
-        this->output_size = other.output_size * (input2 ? 2 : 1);
+        this->output_size = other.output_size;
         ASSERT(main != nullptr);
     }
 
-    Ptr<FeatureTransformer> forward(const Ptr<Input> &input1, const Ptr<Input> &input2 = nullptr) {
+    explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input1, const Ptr<Input> &input2)
+        : FeatureTransformer(other, input1) {
+        this->inputs.push_back(input2);
+        this->output_size *= 2;
+    }
+
+    Ptr<FeatureTransformer> forward(const Ptr<Input> &input) {
+        if(!input)
+            error("Feature Transformer: Input is null!");
+        if(!is_main)
+            error("Forward can only be used by user defined layers!");
+        return std::make_shared<FeatureTransformer>(*this, input);
+    }
+
+    Ptr<FeatureTransformer> forward(const Ptr<Input> &input1, const Ptr<Input> &input2) {
         if(!input1)
             error("Feature Transformer: Input1 is null!");
+        if(!input2)
+            error("Feature Transformer: Input2 is null!");
         if(!is_main)
             error("Forward can only be used by user defined layers!");
         return std::make_shared<FeatureTransformer>(*this, input1, input2);
     }
 
+    virtual void step(const std::vector<TrainingDataEntry> &data_entries) override {
+        // when we fuse with activation, layer output gradients arent used
+        // so no need to update them
+        if(activation.is_some())
+            get_output().get_gradients().clear_dev(); // get_output returns activation output
+        else
+            Layer::step(data_entries);
+    }
+
     void forward() override {
-        if(is_main)
-            return;
+        ASSERT(!is_main);
 
         DenseMatrix *act_ptr = activation.is_some() ? &activation.get_output().get_values() : nullptr;
 
@@ -60,8 +78,7 @@ class FeatureTransformer : public Layer {
     }
 
     void backward() override {
-        if(is_main)
-            return;
+        ASSERT(!is_main);
 
         const bool use_act = activation.is_some();
         const DenseMatrix &incoming_grad = use_act ? activation.get_output().get_gradients() : output.get_gradients();

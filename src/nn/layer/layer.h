@@ -17,12 +17,12 @@ class Layer : public std::enable_shared_from_this<Layer> {
     Layer() = default;
     virtual ~Layer() = default;
 
-    Layer(int input_size, int output_size, WeightInitType init_type)
+    Layer(int input_size, int output_size, WeightInitType winit_type)
         : input_size(input_size), output_size(output_size) {
         is_main = true;
         weights = Tensor(output_size, input_size);
         biases = Tensor(output_size, 1);
-        weights.init(init_type, input_size);
+        weights.init(winit_type, input_size);
     }
 
     virtual void init(int batch_size) {
@@ -31,17 +31,13 @@ class Layer : public std::enable_shared_from_this<Layer> {
         activation.init(output_size, batch_size);
     }
 
-    virtual void step(const std::vector<TrainingDataEntry> &data_entries) {}
-
-    virtual void forward() = 0;
-    virtual void backward() = 0;
-
-    void zero_gradients() {
-        weights.get_gradients().clear_dev();
-        biases.get_gradients().clear_dev();
+    virtual void step(const std::vector<TrainingDataEntry> &data_entries) {
         output.get_gradients().clear_dev();
         activation.get_output().get_gradients().clear_dev();
     }
+
+    virtual void forward() = 0;
+    virtual void backward() = 0;
 
     void clamp_weights(float min, float max) {
         weights.clamp(min, max);

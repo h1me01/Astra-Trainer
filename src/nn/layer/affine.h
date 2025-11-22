@@ -30,8 +30,7 @@ class Affine : public Layer {
     }
 
     void forward() override {
-        if(is_main)
-            return; // main layer does not perform forward
+        ASSERT(!is_main);
 
         kernel::affine_fwd( //
             get_weights().get_values(),
@@ -43,8 +42,7 @@ class Affine : public Layer {
     }
 
     void backward() override {
-        if(is_main)
-            return; // main layer does not perform backward
+        ASSERT(!is_main);
 
         activation.backward(output);
 

@@ -13,7 +13,7 @@ __global__ void activate_bwd_kernel( //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx < size)
-        in_g[idx] = activate_der(in_v[idx], type) * out_g[idx];
+        in_g[idx] += activate_der(in_v[idx], type) * out_g[idx];
 }
 
 void activate_bwd(            //

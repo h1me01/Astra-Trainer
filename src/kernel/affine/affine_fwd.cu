@@ -18,9 +18,7 @@ __global__ void biases_fwd_kernel( //
         return;
 
     const int neuron_idx = idx % r;
-    const float weighted_sum = out_v[idx] + biases_v[neuron_idx];
-
-    out_v[idx] = weighted_sum;
+    out_v[idx] += biases_v[neuron_idx];
 }
 
 void affine_fwd(            //

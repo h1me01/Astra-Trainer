@@ -127,7 +127,6 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
                 std::cout << std::flush;
             }
 
-            network->zero_gradients();
             network->forward(data_entries);
             loss->compute(targets, network->get_output());
             network->backward();

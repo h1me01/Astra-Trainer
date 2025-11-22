@@ -23,6 +23,8 @@ class Select : public Layer {
     }
 
     void step(const std::vector<TrainingDataEntry> &data_entries) override {
+        Layer::step(data_entries);
+
         for(int i = 0; i < (int) data_entries.size(); i++) {
             int idx = select_fn(data_entries[i].pos);
             if(idx < 0 || idx >= max_indices)

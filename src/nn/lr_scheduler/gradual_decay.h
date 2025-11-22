@@ -10,7 +10,7 @@ class GradualDecay : public LRScheduler {
         : LRScheduler(lr), gamma(gamma) {}
 
     void step(int epoch) override {
-        lr = lr * gamma;
+        lr *= gamma;
     }
 
   private:
