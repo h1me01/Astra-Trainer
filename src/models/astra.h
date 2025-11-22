@@ -13,12 +13,12 @@ constexpr int OUTPUT_BUCKETS = 8;
 constexpr std::array<int, 64> input_bucket = {
     0,  1,  2,  3,  3,  2,  1,  0,  //
     4,  5,  6,  7,  7,  6,  5,  4,  //
-    8,  8,  9,  9,  9,  9,  8,  8,  //
-    10, 10, 10, 10, 10, 10, 10, 10, //
-    10, 10, 10, 10, 10, 10, 10, 10, //
-    11, 11, 11, 11, 11, 11, 11, 11, //
-    11, 11, 11, 11, 11, 11, 11, 11, //
-    11, 11, 11, 11, 11, 11, 11, 11, //
+    8,  9,  10, 11, 11, 10, 9,  8,  //
+    8,  9,  10, 11, 11, 10, 9,  8,  //
+    12, 12, 13, 13, 13, 13, 12, 12, //
+    12, 12, 13, 13, 13, 13, 12, 12, //
+    14, 14, 15, 15, 15, 15, 14, 14, //
+    14, 14, 15, 15, 15, 15, 14, 14  //
 };
 
 inline int bucket_index(const Position &pos) {
@@ -57,10 +57,10 @@ inline bool filter_entry(const TrainingDataEntry &e) {
 
 struct Astra : Model {
     Astra(std::string name) : Model(name) {
-        params.epochs = 300;
+        params.epochs = 800;
         params.batch_size = 16384;
         params.batches_per_epoch = 6104;
-        params.save_rate = 100;
+        params.save_rate = 50;
         params.thread_count = 4;
         params.lr = 0.001;
         params.eval_div = 400.0;
@@ -88,12 +88,8 @@ struct Astra : Model {
     }
 
     Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
-        return standard(stm_in, nstm_in);
-    }
-
-    Ptr<Layer> standard(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
         // create layers
-        auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
+        auto ft = make<FeatureTransformer>(num_buckets(input_bucket) * 768, FT_SIZE);
         auto l1 = make<Affine>(2 * FT_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
@@ -105,7 +101,6 @@ struct Astra : Model {
 
         // connect layers
         auto ft_out = ft->forward(stm_in, nstm_in)->screlu();
-
         auto l1_out = l1->forward(ft_out);
         auto l1_select = make<Select>(l1_out, bucket_index);
 
