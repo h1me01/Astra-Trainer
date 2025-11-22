@@ -4,8 +4,11 @@
 
 namespace model {
 
-const int FT_SIZE = 1536;
-const int OUTPUT_BUCKETS = 8;
+constexpr int early_fen_skipping = 20;
+constexpr int random_fen_skipping = 5;
+
+constexpr int FT_SIZE = 1536;
+constexpr int OUTPUT_BUCKETS = 8;
 
 constexpr std::array<int, 64> input_bucket = {
     0,  1,  2,  3,  3,  2,  1,  0,  //
@@ -22,13 +25,8 @@ inline int bucket_index(const Position &pos) {
     return (pos.pieceCount() - 2) / 4;
 }
 
-inline bool skip_predicate(const TrainingDataEntry &e) {
-    if(e.score == 32002) // value none
-        return true;
-    if(e.ply < 20)
-        return true;
-    if(e.isCapturingMove() || e.isInCheck())
-        return true;
+inline bool filter_entry(const TrainingDataEntry &e) {
+    static constexpr int VALUE_NONE = 32002;
 
     auto do_wld_skip = [&]() {
         std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
@@ -36,6 +34,21 @@ inline bool skip_predicate(const TrainingDataEntry &e) {
         return distrib(prng);
     };
 
+    auto do_skip = [&]() {
+        static constexpr double prob = double(random_fen_skipping) / (random_fen_skipping + 1);
+        std::bernoulli_distribution distrib(prob);
+        auto &prng = rng::get_thread_local_rng();
+        return distrib(prng);
+    };
+
+    if(e.score == VALUE_NONE)
+        return true;
+    if(e.ply <= early_fen_skipping)
+        return true;
+    if(e.isCapturingMove() || e.isInCheck())
+        return true;
+    if(do_skip())
+        return true;
     if(do_wld_skip())
         return true;
 
@@ -48,7 +61,7 @@ struct Astra : Model {
         params.batch_size = 16384;
         params.batches_per_epoch = 6104;
         params.save_rate = 100;
-        params.thread_count = 2;
+        params.thread_count = 4;
         params.lr = 0.001;
         params.eval_div = 400.0;
         // lambda determines how much the score influences the loss
@@ -76,8 +89,6 @@ struct Astra : Model {
 
     Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
         return standard(stm_in, nstm_in);
-        // return multi_layer(stm_in, nstm_in);
-        // return multi_layer2(stm_in, nstm_in);
     }
 
     Ptr<Layer> standard(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
@@ -101,74 +112,6 @@ struct Astra : Model {
         return l1_select;
     }
 
-    Ptr<Layer> multi_layer(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
-        const int L1_SIZE = 16;
-        const int L2_SIZE = 32;
-
-        // create layers
-        auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
-        auto l1 = make<Affine>(FT_SIZE, L1_SIZE);
-        auto l2 = make<Affine>(L1_SIZE, L2_SIZE);
-        auto l3 = make<Affine>(L2_SIZE, 1);
-
-        // set quantization scheme
-        ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
-        ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
-
-        l1->get_weights().quant_type(QuantType::INT16).quant_scale(64).transpose();
-        l2->get_weights().quant_type(QuantType::FLOAT).transpose();
-        l3->get_weights().quant_type(QuantType::FLOAT).transpose();
-
-        // connect layers
-        auto stm_ft = ft->forward(stm_in)->crelu();
-        auto nstm_ft = ft->forward(nstm_in)->crelu();
-
-        auto pwm_out = make<PairwiseMul>(stm_ft, nstm_ft);
-
-        auto l1_out = l1->forward(pwm_out)->screlu();
-        auto l2_out = l2->forward(l1_out)->screlu();
-
-        auto l3_out = l3->forward(l2_out);
-
-        return l3_out;
-    }
-
-    Ptr<Layer> multi_layer2(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) {
-        const int L1_SIZE = 16;
-        const int L2_SIZE = 32;
-
-        // create layers
-        auto ft = make<FeatureTransformer>(12 * 768, FT_SIZE);
-        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
-
-        // set quantization scheme
-        ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
-        ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
-
-        l1->get_weights().quant_type(QuantType::INT16).quant_scale(64).transpose();
-        l2->get_weights().quant_type(QuantType::FLOAT).transpose();
-        l3->get_weights().quant_type(QuantType::FLOAT).transpose();
-
-        // connect layers
-        auto stm_ft = ft->forward(stm_in)->crelu();
-        auto nstm_ft = ft->forward(nstm_in)->crelu();
-
-        auto pwm_out = make<PairwiseMul>(stm_ft, nstm_ft);
-
-        auto l1_out = l1->forward(pwm_out);
-        auto l1_select = make<Select>(l1_out, bucket_index);
-
-        auto l2_out = l2->forward(l1_select->screlu());
-        auto l2_select = make<Select>(l2_out, bucket_index);
-
-        auto l3_out = l3->forward(l2_select->screlu());
-        auto l3_select = make<Select>(l3_out, bucket_index);
-
-        return l3_select;
-    }
-
     Ptr<Loss> get_loss() override {
         return make<MPE>(ActivationType::Sigmoid, 2.5);
     }
@@ -188,7 +131,7 @@ struct Astra : Model {
             params.batch_size,
             params.thread_count,
             files_from_path({"D:/Astra-Data/training_data"}),
-            skip_predicate);
+            filter_entry);
     }
 };
 

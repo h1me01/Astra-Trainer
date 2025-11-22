@@ -65,7 +65,7 @@ void radam_optim(           //
     const float max_val = param.upper_bound();
 
     auto &vals = param.get_values();
-    auto &grads = param.get_gradients();
+    const auto &grads = param.get_gradients();
 
     ASSERT(moms.size() == vals.size() && vels.size() == vals.size());
 
@@ -94,8 +94,6 @@ void radam_optim(           //
         N_sma_max,
         step,
         vals.size());
-
-    grads.clear_dev();
 }
 
 } // namespace kernel

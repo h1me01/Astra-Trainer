@@ -52,8 +52,6 @@ void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
 }
 
 void Model::train(std::string output_path, std::string checkpoint_name) {
-    dataloader = get_dataloader();
-
     init();
     print_info();
 
@@ -101,7 +99,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
         loaded_checkpoint = checkpoint_name;
     }
 
-    std::cout << "\n================================ Training ================================\n\n";
+    std::cout << "\n================================= Training =================================\n\n";
 
     const int positions_per_epoch = params.batch_size * params.batches_per_epoch;
 
@@ -120,7 +118,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
             auto elapsed = timer.elapsed_time();
 
             if(batch == params.batches_per_epoch || timer.is_time_reached(1000)) {
-                printf("\repoch/batch = %3d/%4d, loss = %1.8f, pos/sec = %7d, time = %3ds",
+                printf("\repoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds",
                        epoch,
                        batch,
                        loss->get_loss() / (params.batch_size * batch),
@@ -129,6 +127,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
                 std::cout << std::flush;
             }
 
+            network->zero_gradients();
             network->forward(data_entries);
             loss->compute(targets, network->get_output());
             network->backward();
@@ -141,7 +140,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
         auto elapsed = timer.elapsed_time();
 
         printf("\r\033[K"); // clear the current line
-        printf("epoch/batch = %3d/%4d, loss = %1.8f, pos/sec = %7d, time = %3ds\n",
+        printf("epoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds\n",
                epoch,
                params.batches_per_epoch,
                epoch_loss,
@@ -152,7 +151,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
 
         if(epoch % params.save_rate == 0 || epoch == params.epochs) {
             std::string suffix = epoch == params.epochs ? "final" : std::to_string(epoch);
-            save_checkpoint(training_folder + "/checkpoint-" + suffix);
+            save_checkpoint(training_folder + "/checkpoint_" + suffix);
         }
 
         lr_sched->step(epoch);

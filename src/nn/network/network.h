@@ -46,6 +46,11 @@ class Network {
             architecture[i]->backward();
     }
 
+    void zero_gradients() {
+        for(auto &l : architecture)
+            l->zero_gradients();
+    }
+
     void set_output_layer(const Ptr<Layer> &output_layer) {
         if(output_layer == nullptr)
             error("Output layer is null!");

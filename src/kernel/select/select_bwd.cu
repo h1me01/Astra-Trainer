@@ -36,10 +36,6 @@ void select_bwd(              //
            out_g.is_dev_allocated() && //
            indices.is_dev_allocated());
 
-    // clear input gradient
-    // since previous gradients from other indices might be present
-    in_g.clear_dev();
-
     const int blocks = get_num_blocks(out_g.size(), block_size);
     select_bwd_kernel<<<blocks, block_size>>>( //
         in_g.dev_address(),

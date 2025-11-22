@@ -36,6 +36,13 @@ class Layer : public std::enable_shared_from_this<Layer> {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
+    void zero_gradients() {
+        weights.get_gradients().clear_dev();
+        biases.get_gradients().clear_dev();
+        output.get_gradients().clear_dev();
+        activation.get_output().get_gradients().clear_dev();
+    }
+
     void clamp_weights(float min, float max) {
         weights.clamp(min, max);
     }

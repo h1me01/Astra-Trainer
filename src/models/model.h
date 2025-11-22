@@ -27,18 +27,16 @@ class Model {
     Model(std::string name) : name(name) {}
     virtual ~Model() = default;
 
-    virtual Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) = 0;
-
-    virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
-
     void train(std::string output_path, std::string checkpoint_name = "");
 
     void load_weights(const std::string &file) {
+        init();
         network->load_weights(file);
         loaded_weights = file;
     }
 
     void save_weights(const std::string &file) {
+        init();
         network->save_weights(file);
     }
 
@@ -51,6 +49,26 @@ class Model {
             std::cout << "FEN: " << fen << std::endl;
             std::cout << "Eval: " << predict(fen) << std::endl;
         }
+    }
+
+  protected:
+    HyperParams params;
+
+    template <typename T, typename... Args> //
+    auto make(Args &&...args) {
+        return std::make_shared<T>(std::forward<Args>(args)...);
+    }
+
+    virtual Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) = 0;
+
+    virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
+
+    int num_buckets(std::array<int, 64> bucket_map) {
+        int max_bucket = 0;
+        for(int b : bucket_map)
+            if(b > max_bucket)
+                max_bucket = b;
+        return max_bucket + 1;
     }
 
     virtual Ptr<Loss> get_loss() {
@@ -67,14 +85,6 @@ class Model {
 
     virtual Ptr<Dataloader> get_dataloader() {
         return nullptr;
-    }
-
-  protected:
-    HyperParams params;
-
-    template <typename T, typename... Args> //
-    auto make(Args &&...args) {
-        return std::make_shared<T>(std::forward<Args>(args)...);
     }
 
   private:
@@ -108,6 +118,7 @@ class Model {
         loss = get_loss();
         optim = get_optim();
         lr_sched = get_lr_scheduler();
+        dataloader = get_dataloader();
 
         if(loss == nullptr)
             error("Loss function is not set for the trainer!");
@@ -129,7 +140,7 @@ class Model {
     }
 
     void print_info() const {
-        std::cout << "\n============================== Training Data =============================\n\n";
+        std::cout << "\n=============================== Training Data ==============================\n\n";
         const auto &training_files = dataloader->get_filenames();
         if(training_files.empty())
             error("No training data found in the specified paths!");
@@ -137,17 +148,18 @@ class Model {
         for(const auto &f : training_files)
             std::cout << f << std::endl;
 
-        std::cout << "\n============================== Trainer Info ==============================\n\n";
-        std::cout << "Model name:    " << name << std::endl;
-        std::cout << "Epochs:        " << params.epochs << std::endl;
-        std::cout << "Batch Size:    " << params.batch_size << std::endl;
-        std::cout << "Batches/Epoch: " << params.batches_per_epoch << std::endl;
-        std::cout << "Save Rate:     " << params.save_rate << std::endl;
-        std::cout << "Thread Count:  " << params.thread_count << std::endl;
-        std::cout << "Learning Rate: " << params.lr << std::endl;
-        std::cout << "Eval Div:      " << params.eval_div << std::endl;
-        std::cout << "Lambda Start:  " << params.lambda_start << std::endl;
-        std::cout << "Lambda End:    " << params.lambda_end << std::endl;
+        std::cout << "\n=============================== Trainer Info ===============================\n\n";
+        std::cout << "Model name:        " << name << std::endl;
+        std::cout << "Epochs:            " << params.epochs << std::endl;
+        std::cout << "Batch Size:        " << params.batch_size << std::endl;
+        std::cout << "Batches/Epoch:     " << params.batches_per_epoch << std::endl;
+        std::cout << "Save Rate:         " << params.save_rate << std::endl;
+        std::cout << "Thread Count:      " << params.thread_count << std::endl;
+        std::cout << "Learning Rate:     " << params.lr << std::endl;
+        std::cout << "Eval Div:          " << params.eval_div << std::endl;
+        std::cout << "Lambda Start:      " << params.lambda_start << std::endl;
+        std::cout << "Lambda End:        " << params.lambda_end << std::endl;
+
         if(!loaded_checkpoint.empty())
             std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
         else if(!loaded_weights.empty())
@@ -185,7 +197,7 @@ class Model {
         if(optim != nullptr)
             optim->save(path);
 
-        std::cout << "Saved checkpoint" << std::endl;
+        std::cout << "Saved checkpoint to " << path << std::endl;
     }
 
     int epoch_from_checkpoint(const std::string &checkpoint_name) {
