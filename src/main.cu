@@ -3,8 +3,9 @@
 using namespace model;
 
 int main() {
-    Astra model("training_1");
+    Astra model("training_1_step3");
 
+    model.load_weights("D:/Astra-Data/nn_output/training_1_step2/checkpoint_600/weights.bin");
     model.train("D:/Astra-Data/nn_output");
 
     model.evaluate_positions({

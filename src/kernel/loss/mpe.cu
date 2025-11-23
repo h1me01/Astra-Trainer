@@ -28,7 +28,7 @@ __global__ void mpe_kernel(        //
 
     float p = powf(abs_diff, power);
     if(p != 0.0f)
-        atomicAdd(loss, p);
+        atomicAdd(&loss[0], p);
 }
 
 void mpe_loss(                    //

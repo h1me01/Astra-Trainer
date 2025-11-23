@@ -139,7 +139,7 @@ class Model {
         is_initialized = true;
     }
 
-    void print_info() const {
+    void print_info(std::string output_path) const {
         std::cout << "\n=============================== Training Data ==============================\n\n";
         const auto &training_files = dataloader->get_filenames();
         if(training_files.empty())
@@ -159,6 +159,7 @@ class Model {
         std::cout << "Eval Div:          " << params.eval_div << std::endl;
         std::cout << "Lambda Start:      " << params.lambda_start << std::endl;
         std::cout << "Lambda End:        " << params.lambda_end << std::endl;
+        std::cout << "Output Path:       " << output_path << std::endl;
 
         if(!loaded_checkpoint.empty())
             std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
@@ -201,7 +202,7 @@ class Model {
     }
 
     int epoch_from_checkpoint(const std::string &checkpoint_name) {
-        size_t dash_pos = checkpoint_name.find_last_of('-');
+        size_t dash_pos = checkpoint_name.find_last_of('_');
         if(dash_pos == std::string::npos) {
             std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
             return 0;

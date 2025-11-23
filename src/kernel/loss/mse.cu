@@ -24,7 +24,7 @@ __global__ void mse_kernel(        //
 
     float sq = diff * diff;
     if(sq != 0.0f)
-        atomicAdd(loss, sq);
+        atomicAdd(&loss[0], sq);
 }
 
 void mse_loss(                    //

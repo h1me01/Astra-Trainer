@@ -53,37 +53,30 @@ void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
 
 void Model::train(std::string output_path, std::string checkpoint_name) {
     init();
-    print_info();
 
     std::string training_folder;
     Logger log;
     int epoch;
 
     if(checkpoint_name.empty()) {
-        std::cout << "\nNo checkpoint path provided, training from scratch\n";
-
         std::stringstream new_folder_path;
         new_folder_path << output_path << "/" << name;
         training_folder = new_folder_path.str();
 
         create_directory(training_folder);
-        std::cout << "Created output folder: " << training_folder << std::endl;
 
         log.open(training_folder + "/log.txt", false);
         log.write({"epoch", "loss"});
 
         epoch = 0;
     } else {
-        std::cout << "\nLoading checkpoint from " << checkpoint_name << " ..." << std::endl;
         const std::string checkpoint_path = output_path + "/" + checkpoint_name;
 
-        if(!exists(checkpoint_path)) {
+        if(!exists(checkpoint_path))
             error("Checkpoint path does not exist: " + checkpoint_path);
-        }
 
         load_weights(checkpoint_path + "/weights.bin");
         optim->load(checkpoint_path);
-        std::cout << std::endl;
 
         epoch = epoch_from_checkpoint(checkpoint_name);
         lr_sched->lr_from_epoch(epoch);
@@ -93,11 +86,12 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
 
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
 
-        std::cout << "Using existing folder: " << training_folder << std::endl;
         log.open(training_folder + "/log.txt", true);
 
         loaded_checkpoint = checkpoint_name;
     }
+
+    print_info(training_folder);
 
     std::cout << "\n================================= Training =================================\n\n";
 

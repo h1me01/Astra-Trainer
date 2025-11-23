@@ -86,8 +86,6 @@ inline void Optimizer::load(const std::string &path) {
     } catch(const std::exception &e) {
         error("Failed loading optimizer state from " + state_path + ": " + e.what());
     }
-
-    std::cout << "Loaded optimizer state from " << path << std::endl;
 }
 
 inline void Optimizer::save(const std::string &path) {
