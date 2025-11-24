@@ -90,7 +90,7 @@ struct Astra : Model {
         ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
         ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
 
-        l1->get_weights().quant_type(QuantType::INT8).quant_scale(264).transpose();
+        l1->get_weights().quant_type(QuantType::INT8).quant_scale(64).transpose();
         l2->get_weights().transpose();
         l3->get_weights().transpose();
 
