@@ -130,7 +130,7 @@ struct Astra : Model {
         return make<Dataloader>( //
             params.batch_size,
             params.thread_count,
-            files_from_path({"D:/Astra-Data/training_data"}),
+            files_from_paths({"D:/Astra-Data/training_data"}),
             filter_entry);
     }
 };

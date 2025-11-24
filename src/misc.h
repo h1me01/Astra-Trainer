@@ -45,7 +45,7 @@ inline void error(const std::string &message) {
     std::abort();
 }
 
-inline std::vector<std::string> files_from_path(const std::vector<std::string> &paths) {
+inline std::vector<std::string> files_from_paths(const std::vector<std::string> &paths) {
     std::vector<std::string> files;
     for(const auto &path : paths) {
         try {
