@@ -142,7 +142,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
-        if(epoch % std::min(params.save_rate, 1) == 0 || epoch == params.epochs) {
+        if(epoch % std::max(params.save_rate, 1) == 0 || epoch == params.epochs) {
             std::string suffix = epoch == params.epochs ? "final" : std::to_string(epoch);
             save_checkpoint(training_folder + "/checkpoint_" + suffix);
         }
