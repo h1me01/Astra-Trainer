@@ -11,9 +11,13 @@ enum class ActivationType {
     Sigmoid,
 };
 
+inline bool has_activation(const ActivationType type) {
+    return type != ActivationType::Linear;
+}
+
 namespace kernel {
 
-inline __device__ float activate(float x, const ActivationType type) {
+inline __device__ float activate_fwd(float x, const ActivationType type) {
     switch(type) {
     case ActivationType::ReLU:
         return fmaxf(0.0f, x);
@@ -29,7 +33,7 @@ inline __device__ float activate(float x, const ActivationType type) {
     }
 }
 
-inline __device__ float activate_der(float x, const ActivationType type) {
+inline __device__ float activate_bwd(float x, const ActivationType type) {
     switch(type) {
     case ActivationType::ReLU:
         return (x > 0.0f) ? 1.0f : 0.0f;
@@ -38,21 +42,11 @@ inline __device__ float activate_der(float x, const ActivationType type) {
     case ActivationType::SCReLU:
         return (x > 0.0f && x < 1.0f) ? 2.0f * x : 0.0f;
     case ActivationType::Sigmoid:
-        x = activate(x, ActivationType::Sigmoid);
+        x = activate_fwd(x, ActivationType::Sigmoid);
         return x * (1 - x);
     default:
         return 1.0f; // None
     }
 }
-
-void activate_fwd( //
-    const DenseMatrix &in_v,
-    DenseMatrix &out_v,
-    const ActivationType type);
-
-void activate_bwd( //
-    Tensor &in,
-    const DenseMatrix &out_g,
-    const ActivationType type);
 
 } // namespace kernel

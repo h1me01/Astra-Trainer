@@ -7,6 +7,19 @@ constexpr float beta = 1;
 
 constexpr int block_size = 128;
 
+__global__ void activate_bwd( //
+    const float *linear_out,  //
+    float *grads,             //
+    const int size,
+    const ActivationType act_type //
+) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if(idx >= size)
+        return;
+
+    grads[idx] *= activate_bwd(linear_out[idx], act_type);
+}
+
 __global__ void biases_bwd_kernel( //
     float *biases_g,               //
     const float *out_g,            //
@@ -18,48 +31,53 @@ __global__ void biases_bwd_kernel( //
         return;
 
     const int neuron_idx = idx % r;
-
-    const float grad = out_g[idx];
-    if(grad != 0)
-        atomicAdd(&biases_g[neuron_idx], grad);
+    atomicAdd(&biases_g[neuron_idx], out_g[idx]);
 }
 
-void affine_bwd(     //
-    Tensor &weights, //
-    Tensor &biases,  //
-    Tensor &inputs,  //
-    Tensor &out      //
+void affine_bwd(             //
+    Tensor &weights,         //
+    Tensor &biases,          //
+    DenseMatrix &in_v,       //
+    DenseMatrix &in_g,       //
+    DenseMatrix &linear_out, //
+    DenseMatrix &grads,      //
+    ActivationType act_type  //
 ) {
     const auto &weights_v = weights.get_values();
     auto &weights_g = weights.get_gradients();
 
     auto &biases_g = biases.get_gradients();
 
-    const auto &inputs_v = inputs.get_values();
-    auto &inputs_g = inputs.get_gradients();
-
-    const auto &out_g = out.get_gradients();
-
     ASSERT(biases_g.cols() == 1 &&             //
-           out_g.rows() == biases_g.rows() &&  //
-           inputs_g.cols() == out_g.cols() &&  //
-           weights_g.rows() == out_g.rows() && //
-           weights_g.cols() == inputs_g.rows());
+           grads.rows() == biases_g.rows() &&  //
+           in_g.cols() == grads.cols() &&      //
+           weights_g.rows() == grads.rows() && //
+           weights_g.cols() == in_g.rows());
 
     ASSERT(weights_v.is_dev_allocated() && //
            weights_g.is_dev_allocated() && //
            biases_g.is_dev_allocated() &&  //
-           inputs_v.is_dev_allocated() &&  //
-           inputs_g.is_dev_allocated() &&  //
-           out_g.is_dev_allocated());
+           in_v.is_dev_allocated() &&      //
+           in_g.is_dev_allocated() &&      //
+           grads.is_dev_allocated());
+
+    const int blocks = get_num_blocks(grads.size(), block_size);
+
+    // first update gradients if activation was used
+    if(has_activation(act_type)) {
+        activate_bwd<<<blocks, block_size>>>( //
+            linear_out.dev_address(),
+            grads.dev_address(),
+            grads.size(),
+            act_type);
+    }
 
     // update biases gradients
-    const int blocks = get_num_blocks(out_g.size(), block_size);
     biases_bwd_kernel<<<blocks, block_size>>>( //
         biases_g.dev_address(),
-        out_g.dev_address(),
-        out_g.rows(),
-        out_g.cols());
+        grads.dev_address(),
+        grads.rows(),
+        grads.cols());
 
     // update weights gradient
     cublasSgemm(                 //
@@ -68,12 +86,12 @@ void affine_bwd(     //
         CUBLAS_OP_T,             // transb
         weights_g.rows(),        // m
         weights_g.cols(),        // n
-        out_g.cols(),            // k
+        grads.cols(),            // k
         &alpha,                  // alpha
-        out_g.dev_address(),     // A
-        out_g.rows(),            // lda
-        inputs_v.dev_address(),  // B
-        inputs_v.rows(),         // ldb
+        grads.dev_address(),     // A
+        grads.rows(),            // lda
+        in_v.dev_address(),      // B
+        in_v.rows(),             // ldb
         &beta,                   // beta
         weights_g.dev_address(), // C
         weights_g.rows()         // ldc
@@ -84,17 +102,17 @@ void affine_bwd(     //
         CUBLAS_HANDLE,           // handle
         CUBLAS_OP_T,             // transa
         CUBLAS_OP_N,             // transb
-        inputs_g.rows(),         // m
-        inputs_g.cols(),         // n
+        in_g.rows(),             // m
+        in_g.cols(),             // n
         weights_v.rows(),        // k
         &alpha,                  // alpha
         weights_v.dev_address(), // A
         weights_v.rows(),        // lda
-        out_g.dev_address(),     // B
-        out_g.rows(),            // ldb
+        grads.dev_address(),     // B
+        grads.rows(),            // ldb
         &beta,                   // beta
-        inputs_g.dev_address(),  // C
-        inputs_g.rows()          // ldc
+        in_g.dev_address(),      // C
+        in_g.rows()              // ldc
     );
 }
 

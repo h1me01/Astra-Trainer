@@ -7,8 +7,7 @@
 #include "../../data/include.h"
 #include "../../kernel/include.h"
 #include "../../misc.h"
-#include "../../training_data_formats/include.h"
-#include "activation.h"
+#include "../../training_data_format/include.h"
 
 namespace nn {
 
@@ -27,13 +26,11 @@ class Layer : public std::enable_shared_from_this<Layer> {
 
     virtual void init(int batch_size) {
         ASSERT(output_size > 0 && input_size > 0);
-        output = Tensor(output_size, batch_size);
-        activation.init(output_size, batch_size);
+        output.init(output_size, batch_size, has_activation(act_type));
     }
 
     virtual void step(const std::vector<TrainingDataEntry> &data_entries) {
-        output.get_gradients().clear_dev();
-        activation.get_output().get_gradients().clear_dev();
+        output.clear_grads();
     }
 
     virtual void forward() = 0;
@@ -48,22 +45,22 @@ class Layer : public std::enable_shared_from_this<Layer> {
     }
 
     Ptr<Layer> relu() {
-        activation.set_type(ActivationType::ReLU);
+        act_type = ActivationType::ReLU;
         return shared_from_this();
     }
 
     Ptr<Layer> crelu() {
-        activation.set_type(ActivationType::CReLU);
+        act_type = ActivationType::CReLU;
         return shared_from_this();
     }
 
     Ptr<Layer> screlu() {
-        activation.set_type(ActivationType::SCReLU);
+        act_type = ActivationType::SCReLU;
         return shared_from_this();
     }
 
     Ptr<Layer> sigmoid() {
-        activation.set_type(ActivationType::Sigmoid);
+        act_type = ActivationType::Sigmoid;
         return shared_from_this();
     }
 
@@ -83,8 +80,16 @@ class Layer : public std::enable_shared_from_this<Layer> {
         return is_main ? biases : main->get_biases();
     }
 
-    Tensor &get_output() {
-        return activation.is_some() ? activation.get_output() : output;
+    DenseMatrix &get_output() {
+        return output.get_output();
+    }
+
+    DenseMatrix &get_gradients() {
+        return output.get_gradients();
+    }
+
+    LayerTensor &get_layer_tensor() {
+        return output;
     }
 
     std::vector<Tensor *> get_params() {
@@ -106,11 +111,11 @@ class Layer : public std::enable_shared_from_this<Layer> {
   protected:
     int input_size = 0;
     int output_size = 0;
-    Activation activation;
+    ActivationType act_type = ActivationType::Linear;
 
     Tensor weights;
     Tensor biases;
-    Tensor output;
+    LayerTensor output;
 
     // main layers are created by the user (not including helper layers)
     bool is_main = false;

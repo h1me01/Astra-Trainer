@@ -29,22 +29,23 @@ class PairwiseMul : public Layer {
     void forward() override {
         for(int i = 0; i < (int) inputs.size(); i++) {
             kernel::pairwise_mul_fwd( //
-                inputs[i]->get_output().get_values(),
-                output.get_values(),
-                i * (input_size / 2));
+                inputs[i]->get_output(),
+                output.get_linear_output(),
+                output.get_activated(),
+                i * (input_size / 2),
+                act_type);
         }
-
-        activation.forward(output.get_values());
     }
 
     void backward() override {
-        activation.backward(output);
-
         for(int i = 0; i < (int) inputs.size(); i++) {
             kernel::pairwise_mul_bwd( //
                 inputs[i]->get_output(),
+                inputs[i]->get_gradients(),
+                output.get_linear_output(),
                 output.get_gradients(),
-                i * (input_size / 2));
+                i * (input_size / 2),
+                act_type);
         }
     }
 

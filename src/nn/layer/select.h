@@ -37,20 +37,20 @@ class Select : public Layer {
 
     void forward() override {
         kernel::select_fwd( //
-            input->get_output().get_values(),
-            output.get_values(),
-            indices);
-
-        activation.forward(output.get_values());
+            input->get_output(),
+            output.get_linear_output(),
+            output.get_activated(),
+            indices,
+            act_type);
     }
 
     void backward() override {
-        activation.backward(output);
-
         kernel::select_bwd( //
-            input->get_output().get_gradients(),
+            input->get_gradients(),
+            output.get_linear_output(),
             output.get_gradients(),
-            indices);
+            indices,
+            act_type);
     }
 
     std::vector<Ptr<Layer>> get_inputs() override {

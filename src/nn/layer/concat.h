@@ -17,20 +17,20 @@ class Concat : public Layer {
 
     void forward() override {
         kernel::concat_fwd( //
-            input1->get_output().get_values(),
-            input2->get_output().get_values(),
-            output.get_values());
-
-        activation.forward(output.get_values());
+            input1->get_output(),
+            input2->get_output(),
+            output.get_linear_output(),
+            output.get_activated(),
+            act_type);
     }
 
     void backward() override {
-        activation.backward(output);
-
         kernel::concat_bwd( //
-            input1->get_output().get_gradients(),
-            input2->get_output().get_gradients(),
-            output.get_gradients());
+            input1->get_gradients(),
+            input2->get_gradients(),
+            output.get_linear_output(),
+            output.get_gradients(),
+            act_type);
     }
 
     std::vector<Ptr<Layer>> get_inputs() override {

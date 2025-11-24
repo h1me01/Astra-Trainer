@@ -5,20 +5,16 @@
 namespace model {
 
 constexpr int early_fen_skipping = 20;
-constexpr int random_fen_skipping = 5;
-
-constexpr int FT_SIZE = 1536;
-constexpr int OUTPUT_BUCKETS = 8;
 
 constexpr std::array<int, 64> input_bucket = {
     0,  1,  2,  3,  3,  2,  1,  0,  //
     4,  5,  6,  7,  7,  6,  5,  4,  //
-    8,  9,  10, 11, 11, 10, 9,  8,  //
-    8,  9,  10, 11, 11, 10, 9,  8,  //
-    12, 12, 13, 13, 13, 13, 12, 12, //
-    12, 12, 13, 13, 13, 13, 12, 12, //
-    14, 14, 15, 15, 15, 15, 14, 14, //
-    14, 14, 15, 15, 15, 15, 14, 14  //
+    8,  8,  9,  9,  9,  9,  8,  8,  //
+    10, 10, 10, 10, 10, 10, 10, 10, //
+    11, 11, 11, 11, 11, 11, 11, 11, //
+    11, 11, 11, 11, 11, 11, 11, 11, //
+    12, 12, 12, 12, 12, 12, 12, 12, //
+    12, 12, 12, 12, 12, 12, 12, 12, //
 };
 
 inline int bucket_index(const Position &pos) {
@@ -34,20 +30,11 @@ inline bool filter_entry(const TrainingDataEntry &e) {
         return distrib(prng);
     };
 
-    auto do_skip = [&]() {
-        static constexpr double prob = double(random_fen_skipping) / (random_fen_skipping + 1);
-        std::bernoulli_distribution distrib(prob);
-        auto &prng = rng::get_thread_local_rng();
-        return distrib(prng);
-    };
-
     if(e.score == VALUE_NONE)
         return true;
     if(e.ply <= early_fen_skipping)
         return true;
     if(e.isCapturingMove() || e.isInCheck())
-        return true;
-    if(do_skip())
         return true;
     if(do_wld_skip())
         return true;
@@ -60,14 +47,14 @@ struct Astra : Model {
         params.epochs = 800;
         params.batch_size = 16384;
         params.batches_per_epoch = 6104;
-        params.save_rate = 50;
-        params.thread_count = 4;
+        params.save_rate = 80;
+        params.thread_count = 2;
         params.lr = 0.001;
         params.eval_div = 400.0;
         // lambda determines how much the score influences the loss
         // e.g. 1 means full score influence, so wdl has 0 influence
         params.lambda_start = 1.0;
-        params.lambda_end = 0.7;
+        params.lambda_end = 0.75;
     }
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
@@ -88,23 +75,41 @@ struct Astra : Model {
     }
 
     Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
+        const int FT_SIZE = 1536;
+        const int L1_SIZE = 16;
+        const int L2_SIZE = 32;
+        const int OUTPUT_BUCKETS = 8;
+
         // create layers
         auto ft = make<FeatureTransformer>(num_buckets(input_bucket) * 768, FT_SIZE);
-        auto l1 = make<Affine>(2 * FT_SIZE, OUTPUT_BUCKETS);
+        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
+        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
+        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
 
         // set quantization scheme
         ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
         ft->get_biases().quant_type(QuantType::INT16).quant_scale(255);
 
-        l1->get_weights().quant_type(QuantType::INT16).quant_scale(64).transpose();
-        l1->get_biases().quant_type(QuantType::INT16).quant_scale(64 * 255);
+        l1->get_weights().quant_type(QuantType::INT8).quant_scale(264).transpose();
+        l2->get_weights().transpose();
+        l3->get_weights().transpose();
 
         // connect layers
-        auto ft_out = ft->forward(stm_in, nstm_in)->screlu();
-        auto l1_out = l1->forward(ft_out);
-        auto l1_select = make<Select>(l1_out, bucket_index);
+        auto ft_stm = ft->forward(stm_in)->crelu();
+        auto ft_nstm = ft->forward(nstm_in)->crelu();
 
-        return l1_select;
+        auto pwm_out = make<PairwiseMul>(ft_stm, ft_nstm);
+
+        auto l1_out = l1->forward(pwm_out);
+        auto l1_select = make<Select>(l1_out, bucket_index)->screlu();
+
+        auto l2_out = l2->forward(l1_select);
+        auto l2_select = make<Select>(l2_out, bucket_index)->screlu();
+
+        auto l3_out = l3->forward(l2_select);
+        auto l3_select = make<Select>(l3_out, bucket_index);
+
+        return l3_select;
     }
 
     Ptr<Loss> get_loss() override {
@@ -118,7 +123,7 @@ struct Astra : Model {
     }
 
     Ptr<LRScheduler> get_lr_scheduler() override {
-        return make<CosineAnnealing>(params.epochs, params.lr, 0.000027);
+        return make<StepDecay>(params.lr, 0.995, 1);
     }
 
     Ptr<Dataloader> get_dataloader() override {

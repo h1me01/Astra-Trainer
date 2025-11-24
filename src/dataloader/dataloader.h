@@ -2,7 +2,7 @@
 
 #include <deque>
 
-#include "../training_data_formats/include.h"
+#include "../training_data_format/include.h"
 
 namespace dataloader {
 

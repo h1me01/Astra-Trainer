@@ -55,8 +55,8 @@ class Network {
         init_layers(output_layer->get_inputs());
     }
 
-    Tensor &get_output() {
-        return architecture.back()->get_output();
+    LayerTensor &get_output() {
+        return architecture.back()->get_layer_tensor();
     }
 
     std::vector<Ptr<Layer>> get_layers() {

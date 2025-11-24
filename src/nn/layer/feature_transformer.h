@@ -18,6 +18,9 @@ class FeatureTransformer : public Layer {
     }
 
     explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input) {
+        if(!input)
+            error("Feature Transformer: Input is null!");
+
         this->main = other.get_main();
         this->inputs = {input};
         this->input_size = other.input_size;
@@ -27,74 +30,56 @@ class FeatureTransformer : public Layer {
 
     explicit FeatureTransformer(FeatureTransformer &other, const Ptr<Input> &input1, const Ptr<Input> &input2)
         : FeatureTransformer(other, input1) {
+        if(!input2)
+            error("Feature Transformer: Input2 is null!");
+
         this->inputs.push_back(input2);
         this->output_size *= 2;
     }
 
     Ptr<FeatureTransformer> forward(const Ptr<Input> &input) {
-        if(!input)
-            error("Feature Transformer: Input is null!");
         if(!is_main)
             error("Forward can only be used by user defined layers!");
         return std::make_shared<FeatureTransformer>(*this, input);
     }
 
     Ptr<FeatureTransformer> forward(const Ptr<Input> &input1, const Ptr<Input> &input2) {
-        if(!input1)
-            error("Feature Transformer: Input1 is null!");
-        if(!input2)
-            error("Feature Transformer: Input2 is null!");
         if(!is_main)
             error("Forward can only be used by user defined layers!");
         return std::make_shared<FeatureTransformer>(*this, input1, input2);
     }
 
-    virtual void step(const std::vector<TrainingDataEntry> &data_entries) override {
-        // when we fuse with activation, layer output gradients arent used
-        // so no need to update them
-        if(activation.is_some())
-            get_output().get_gradients().clear_dev(); // get_output returns activation output
-        else
-            Layer::step(data_entries);
-    }
-
     void forward() override {
         ASSERT(!is_main);
-
-        DenseMatrix *act_ptr = activation.is_some() ? &activation.get_output().get_values() : nullptr;
 
         const int input_count = inputs.size();
         for(int i = 0; i < input_count; i++) {
             kernel::feature_transformer_fwd( //
                 get_weights().get_values(),
                 get_biases().get_values(),
-                output.get_values(),
-                act_ptr,
+                output.get_linear_output(),
+                output.get_activated(),
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
                 i * (output_size / input_count),
-                activation.get_type());
+                act_type);
         }
     }
 
     void backward() override {
         ASSERT(!is_main);
 
-        const bool use_act = activation.is_some();
-        const DenseMatrix &incoming_grad = use_act ? activation.get_output().get_gradients() : output.get_gradients();
-        const DenseMatrix *linear_out_ptr = use_act ? &output.get_values() : nullptr;
-
         const int input_count = inputs.size();
         for(int i = 0; i < input_count; i++) {
             kernel::feature_transformer_bwd( //
                 get_weights().get_gradients(),
                 get_biases().get_gradients(),
-                incoming_grad,
-                linear_out_ptr,
+                output.get_gradients(),
+                output.get_linear_output(),
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
                 i * (output_size / input_count),
-                activation.get_type());
+                act_type);
         }
     }
 

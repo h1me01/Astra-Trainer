@@ -35,22 +35,23 @@ class Affine : public Layer {
         kernel::affine_fwd( //
             get_weights().get_values(),
             get_biases().get_values(),
-            input->get_output().get_values(),
-            output.get_values());
-
-        activation.forward(output.get_values());
+            input->get_output(),
+            output.get_linear_output(),
+            output.get_activated(),
+            act_type);
     }
 
     void backward() override {
         ASSERT(!is_main);
 
-        activation.backward(output);
-
         kernel::affine_bwd( //
             get_weights(),
             get_biases(),
             input->get_output(),
-            output);
+            input->get_gradients(),
+            output.get_linear_output(),
+            output.get_gradients(),
+            act_type);
     }
 
     std::vector<Ptr<Layer>> get_inputs() override {

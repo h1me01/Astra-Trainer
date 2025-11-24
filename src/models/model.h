@@ -179,7 +179,7 @@ class Model {
         fill_inputs(ds, 1.0f);
         network->forward(ds);
 
-        auto &output = network->get_output().get_values();
+        auto &output = network->get_output().get_output();
         output.dev_to_host();
 
         return output(0) * params.eval_div;
