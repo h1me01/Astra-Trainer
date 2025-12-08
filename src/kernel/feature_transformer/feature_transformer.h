@@ -15,7 +15,7 @@ void feature_transformer_fwd( //
     const Array<int> &features,
     const int max_entries,
     const int out_offset,
-    const ActivationType act_type);
+    const Activation act_type);
 
 // assumes column-major storage
 void feature_transformer_bwd( //
@@ -26,6 +26,6 @@ void feature_transformer_bwd( //
     const Array<int> &features,
     const int max_entries,
     const int out_offset,
-    const ActivationType act_type);
+    const Activation act_type);
 
 } // namespace kernel

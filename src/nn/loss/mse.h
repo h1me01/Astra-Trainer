@@ -5,7 +5,7 @@
 namespace nn {
 
 struct MSE : public Loss {
-    MSE(ActivationType act_type) : Loss(act_type) {}
+    MSE(Activation act_type) : Loss(act_type) {}
 
     void compute(const Array<float> &targets, LayerTensor &output) {
         kernel::mse_loss( //

@@ -14,7 +14,7 @@ __global__ void pairwise_mul_bwd_kernel( //
     const int out_r,                     //
     const int batch_size,                //
     const int out_offset,                //
-    const ActivationType act_type        //
+    const Activation act_type        //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= feature_size * batch_size)
@@ -42,7 +42,7 @@ void pairwise_mul_bwd(             //
     const DenseMatrix &linear_out, //
     const DenseMatrix &grads,      //
     const int out_offset,          //
-    const ActivationType act_type  //
+    const Activation act_type  //
 ) {
     const int feature_size = in_v.rows() / 2;
 

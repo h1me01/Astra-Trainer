@@ -12,13 +12,13 @@ void mpe_loss( //
     const DenseMatrix &out,
     DenseMatrix &grads,
     const float power,
-    const ActivationType act_type);
+    const Activation act_type);
 
 void mse_loss( //
     const Array<float> &targets,
     Array<float> &loss,
     const DenseMatrix &out,
     DenseMatrix &grads,
-    const ActivationType act_type);
+    const Activation act_type);
 
 } // namespace kernel

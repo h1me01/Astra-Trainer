@@ -11,7 +11,7 @@ void pairwise_mul_fwd( //
     DenseMatrix &linear_out,
     DenseMatrix &activated,
     const int out_offset,
-    const ActivationType act_type);
+    const Activation act_type);
 
 void pairwise_mul_bwd( //
     const DenseMatrix &in_v,
@@ -19,6 +19,6 @@ void pairwise_mul_bwd( //
     const DenseMatrix &linear_out,
     const DenseMatrix &grads,
     const int out_offset,
-    const ActivationType act_type);
+    const Activation act_type);
 
 } // namespace kernel

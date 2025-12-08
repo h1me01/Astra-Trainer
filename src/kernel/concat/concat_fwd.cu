@@ -14,7 +14,7 @@ __global__ void concat_fwd_kernel( //
     const int out_r,               //
     const int in1_r,               //
     const int batch_size,          //
-    const ActivationType act_type  //
+    const Activation act_type  //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= out_r * batch_size)
@@ -44,7 +44,7 @@ void concat_fwd(                  //
     const DenseMatrix &in2_v,     //
     DenseMatrix &linear_out,      //
     DenseMatrix &activated,       //
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     ASSERT(in1_v.cols() == linear_out.cols() && //
            in2_v.cols() == linear_out.cols() && //

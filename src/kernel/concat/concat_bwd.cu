@@ -13,7 +13,7 @@ __global__ void concat_bwd_kernel( //
     const int in1_r,               //
     const int out_r,               //
     const int batch_size,          //
-    const ActivationType act_type  //
+    const Activation act_type  //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= out_r * batch_size)
@@ -42,7 +42,7 @@ void concat_bwd(                   //
     DenseMatrix &in2_g,            //
     const DenseMatrix &linear_out, //
     const DenseMatrix &grads,      //
-    const ActivationType act_type  //
+    const Activation act_type  //
 ) {
     ASSERT(in1_g.cols() == grads.cols() && //
            in2_g.cols() == grads.cols() && //

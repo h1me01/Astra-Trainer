@@ -9,7 +9,7 @@ namespace nn {
 
 class Loss {
   public:
-    Loss(ActivationType act_type) : act_type(act_type) {}
+    Loss(Activation act_type) : act_type(act_type) {}
     virtual ~Loss() = default;
 
     virtual void compute(const Array<float> &target, LayerTensor &output) = 0;
@@ -25,7 +25,7 @@ class Loss {
 
   protected:
     Array<float> loss{1};
-    ActivationType act_type;
+    Activation act_type;
 };
 
 } // namespace nn

@@ -113,7 +113,7 @@ struct Astra : Model {
     }
 
     Ptr<Loss> get_loss() override {
-        return make<MPE>(ActivationType::Sigmoid, 2.5);
+        return make<MPE>(Activation::Sigmoid, 2.5);
     }
 
     Ptr<Optimizer> get_optim() override {

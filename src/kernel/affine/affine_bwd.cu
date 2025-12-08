@@ -11,7 +11,7 @@ __global__ void activate_bwd( //
     const float *linear_out,  //
     float *grads,             //
     const int size,
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
@@ -41,7 +41,7 @@ void affine_bwd(             //
     DenseMatrix &in_g,       //
     DenseMatrix &linear_out, //
     DenseMatrix &grads,      //
-    ActivationType act_type  //
+    Activation act_type  //
 ) {
     const auto &weights_v = weights.get_values();
     auto &weights_g = weights.get_gradients();

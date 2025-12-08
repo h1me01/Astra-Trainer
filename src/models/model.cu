@@ -81,9 +81,6 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
         epoch = epoch_from_checkpoint(checkpoint_name);
         lr_sched->lr_from_epoch(epoch);
 
-        if(epoch > 0)
-            std::cout << "Resuming from epoch " << epoch << " with learning rate " << lr_sched->get_lr() << std::endl;
-
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
 
         log.open(training_folder + "/log.txt", true);
@@ -91,7 +88,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
         loaded_checkpoint = checkpoint_name;
     }
 
-    print_info(training_folder);
+    print_info(epoch, training_folder);
 
     std::cout << "\n================================= Training =================================\n\n";
 

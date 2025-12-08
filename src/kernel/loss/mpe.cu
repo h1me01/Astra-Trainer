@@ -11,7 +11,7 @@ __global__ void mpe_kernel(       //
     float *loss,                  //
     const float power,            //
     const int size,               //
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
@@ -37,7 +37,7 @@ void mpe_loss(                    //
     const DenseMatrix &out,       //
     DenseMatrix &grads,           //
     const float power,            //
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     ASSERT(out.is_dev_allocated() &&     //
            grads.is_dev_allocated() &&   //

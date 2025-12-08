@@ -139,7 +139,7 @@ class Model {
         is_initialized = true;
     }
 
-    void print_info(std::string output_path) const {
+    void print_info(int epoch, std::string output_path) const {
         std::cout << "\n=============================== Training Data ==============================\n\n";
         const auto &training_files = dataloader->get_filenames();
         if(training_files.empty())
@@ -165,6 +165,9 @@ class Model {
             std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
         else if(!loaded_weights.empty())
             std::cout << "Loaded Weights:    " << loaded_weights << std::endl;
+
+        if(epoch > 0)
+            std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get_lr() << std::endl;
     }
 
     float predict(std::string fen) {

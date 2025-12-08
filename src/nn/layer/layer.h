@@ -45,22 +45,22 @@ class Layer : public std::enable_shared_from_this<Layer> {
     }
 
     Ptr<Layer> relu() {
-        act_type = ActivationType::ReLU;
+        act_type = Activation::ReLU;
         return shared_from_this();
     }
 
     Ptr<Layer> crelu() {
-        act_type = ActivationType::CReLU;
+        act_type = Activation::CReLU;
         return shared_from_this();
     }
 
     Ptr<Layer> screlu() {
-        act_type = ActivationType::SCReLU;
+        act_type = Activation::SCReLU;
         return shared_from_this();
     }
 
     Ptr<Layer> sigmoid() {
-        act_type = ActivationType::Sigmoid;
+        act_type = Activation::Sigmoid;
         return shared_from_this();
     }
 
@@ -111,7 +111,7 @@ class Layer : public std::enable_shared_from_this<Layer> {
   protected:
     int input_size = 0;
     int output_size = 0;
-    ActivationType act_type = ActivationType::Linear;
+    Activation act_type = Activation::Linear;
 
     Tensor weights;
     Tensor biases;

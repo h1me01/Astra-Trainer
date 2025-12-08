@@ -14,7 +14,7 @@ __global__ void biases_fwd_kernel( //
     float *activated,              //
     const int r,                   //
     const int c,                   //
-    const ActivationType act_type  //
+    const Activation act_type  //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= r * c)
@@ -34,7 +34,7 @@ void affine_fwd(             //
     DenseMatrix &inputs_v,   //
     DenseMatrix &linear_out, //
     DenseMatrix &activated,  //
-    ActivationType act_type  //
+    Activation act_type  //
 ) {
     ASSERT(biases_v.cols() == 1 &&                  //
            linear_out.rows() == biases_v.rows() &&  //

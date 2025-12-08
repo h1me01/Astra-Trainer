@@ -10,7 +10,7 @@ __global__ void mse_kernel(       //
     float *grads,                 //
     float *loss,                  //
     const int size,               //
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= size)
@@ -32,7 +32,7 @@ void mse_loss(                    //
     Array<float> &loss,           //
     const DenseMatrix &out,       //
     DenseMatrix &grads,           //
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     ASSERT(out.is_dev_allocated() &&     //
            grads.is_dev_allocated() &&   //

@@ -13,7 +13,7 @@ __global__ void select_bwd_kernel( //
     const int in_r,                //
     const int out_r,               //
     const int batch_size,          //
-    const ActivationType act_type) {
+    const Activation act_type) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= batch_size * out_r)
         return;
@@ -38,7 +38,7 @@ void select_bwd(                   //
     const DenseMatrix &linear_out, //
     const DenseMatrix &grads,      //
     const Array<int> &indices,     //
-    const ActivationType act_type  //
+    const Activation act_type  //
 ) {
     ASSERT(in_g.cols() == grads.cols() && grads.cols() == indices.size());
 

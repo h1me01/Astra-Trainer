@@ -16,7 +16,7 @@ __global__ void feature_transformer_fwd_kernel( //
     const int batch_size,                       //
     const int max_entries,                      //
     const int out_offset,                       //
-    const ActivationType act_type               //
+    const Activation act_type               //
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if(idx >= weights_r * batch_size)
@@ -50,7 +50,7 @@ void feature_transformer_fwd(     //
     const Array<int> &features,   //
     const int max_entries,        //
     const int out_offset,         //
-    const ActivationType act_type //
+    const Activation act_type //
 ) {
     const bool is_double = linear_out.rows() / 2 == weights_v.rows();
 
@@ -91,7 +91,7 @@ void feature_transformer_fwd(     //
             linear_out.cols(),
             max_entries,
             out_offset,
-            ActivationType::Linear);
+            Activation::Linear);
     }
 }
 

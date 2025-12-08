@@ -17,7 +17,7 @@ void affine_fwd( //
     DenseMatrix &inputs_v,
     DenseMatrix &linear_out,
     DenseMatrix &activated,
-    ActivationType act_type);
+    Activation act_type);
 
 void affine_bwd( //
     Tensor &weights,
@@ -26,6 +26,6 @@ void affine_bwd( //
     DenseMatrix &in_g,
     DenseMatrix &linear_out,
     DenseMatrix &grads,
-    ActivationType act_type);
+    Activation act_type);
 
 } // namespace kernel
