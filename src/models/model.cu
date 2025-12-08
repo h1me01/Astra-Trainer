@@ -11,23 +11,21 @@ void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
     for(size_t i = 0; i < ds.size(); i++) {
         const Position &pos = ds[i].pos;
 
-        Square ksq_w = pos.kingSquare(Color::White);
-        Square ksq_b = pos.kingSquare(Color::Black);
-
-        bool wtm = pos.sideToMove() == Color::White;
-        Bitboard pieces = pos.piecesBB();
+        const Color stm = pos.sideToMove();
+        const Square ksq_stm = pos.kingSquare(stm);
+        const Square ksq_nstm = pos.kingSquare(!stm);
 
         const int offset = i * max_entries;
+
+        Bitboard pieces = pos.piecesBB();
 
         int count = 0;
         for(auto sq : pieces) {
             Piece p = pos.pieceAt(sq);
-            int w_idx = feature_index(p.type(), p.color(), sq, ksq_w, Color::White);
-            int b_idx = feature_index(p.type(), p.color(), sq, ksq_b, Color::Black);
-
+ 
             int idx = offset + count;
-            stm_features(idx) = wtm ? w_idx : b_idx;
-            nstm_features(idx) = wtm ? b_idx : w_idx;
+            stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
+            nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
 
             count++;
         }
