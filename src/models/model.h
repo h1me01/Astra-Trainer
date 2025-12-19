@@ -40,6 +40,11 @@ class Model {
         network->save_weights(file);
     }
 
+    void save_quantized_weights(const std::string &file) {
+        init();
+        network->save_quantized_weights(file);
+    }
+
     void evaluate_positions(const std::vector<std::string> &positions) {
         init();
 

@@ -101,10 +101,10 @@ struct Astra : Model {
         auto pwm_out = make<PairwiseMul>(ft_stm, ft_nstm);
 
         auto l1_out = l1->forward(pwm_out);
-        auto l1_select = make<Select>(l1_out, bucket_index)->screlu();
+        auto l1_select = make<Select>(l1_out, bucket_index)->crelu();
 
         auto l2_out = l2->forward(l1_select);
-        auto l2_select = make<Select>(l2_out, bucket_index)->screlu();
+        auto l2_select = make<Select>(l2_out, bucket_index)->crelu();
 
         auto l3_out = l3->forward(l2_select);
         auto l3_select = make<Select>(l3_out, bucket_index);
@@ -123,7 +123,7 @@ struct Astra : Model {
     }
 
     Ptr<LRScheduler> get_lr_scheduler() override {
-        return make<StepDecay>(params.lr, 0.995, 1);
+        return make<CosineAnnealing>(params.epochs, params.lr, params.lr * 0.3 * 0.3 * 0.3);
     }
 
     Ptr<Dataloader> get_dataloader() override {
