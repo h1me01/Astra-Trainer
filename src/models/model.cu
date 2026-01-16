@@ -22,7 +22,7 @@ void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
         int count = 0;
         for(auto sq : pieces) {
             Piece p = pos.pieceAt(sq);
- 
+
             int idx = offset + count;
             stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
             nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
@@ -137,9 +137,9 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
-        if(epoch % std::max(params.save_rate, 1) == 0 || epoch == params.epochs) 
+        if(epoch % std::max(params.save_rate, 1) == 0 || epoch == params.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(epoch));
-        
+
         lr_sched->step(epoch);
     }
 }

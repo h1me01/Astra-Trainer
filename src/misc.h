@@ -18,6 +18,9 @@
 
 using namespace std::filesystem;
 
+#ifdef NDEBUG
+#define ASSERT(expr) ((void) 0)
+#else
 #define ASSERT(expr)                                                                                                   \
     {                                                                                                                  \
         if(!static_cast<bool>(expr)) {                                                                                 \
@@ -28,6 +31,7 @@ using namespace std::filesystem;
             std::exit(1);                                                                                              \
         }                                                                                                              \
     }
+#endif
 
 #define CUDA_ASSERT(ans)                                                                                               \
     {                                                                                                                  \
@@ -36,6 +40,12 @@ using namespace std::filesystem;
             exit(ans);                                                                                                 \
         }                                                                                                              \
     }
+
+#ifdef NDEBUG
+#define CUDA_ASSERT_DEBUG(ans) ((void) 0)
+#else
+#define CUDA_ASSERT_DEBUG(ans) CUDA_ASSERT(ans)
+#endif
 
 template <typename T> //
 using Ptr = std::shared_ptr<T>;

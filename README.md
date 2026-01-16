@@ -23,6 +23,7 @@ cd Astra-Trainer
 ### Build Release
 ```bash
 cmake -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release --target Astra-Trainer --config Release
-./build-release/release/astra-trainer
+cmake --build build-release --parallel
+./build-release/astra-trainer
 ```
+
