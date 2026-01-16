@@ -4,17 +4,17 @@
 
 namespace model {
 
-constexpr int early_fen_skipping = 20;
+constexpr int early_fen_skipping = 8;
 
 constexpr std::array<int, 64> input_bucket = {
-    0,  1,  2,  3,  3,  2,  1,  0,  //
-    4,  5,  6,  7,  7,  6,  5,  4,  //
-    8,  8,  9,  9,  9,  9,  8,  8,  //
-    10, 10, 10, 10, 10, 10, 10, 10, //
-    11, 11, 11, 11, 11, 11, 11, 11, //
-    11, 11, 11, 11, 11, 11, 11, 11, //
-    12, 12, 12, 12, 12, 12, 12, 12, //
-    12, 12, 12, 12, 12, 12, 12, 12, //
+    0, 1, 2, 3, 3, 2, 1, 0, //
+    4, 4, 5, 5, 5, 5, 4, 4, //
+    6, 6, 6, 6, 6, 6, 6, 6, //
+    7, 7, 7, 7, 7, 7, 7, 7, //
+    8, 8, 8, 8, 8, 8, 8, 8, //
+    8, 8, 8, 8, 8, 8, 8, 8, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
 };
 
 inline int bucket_index(const Position &pos) {
@@ -44,17 +44,15 @@ inline bool filter_entry(const TrainingDataEntry &e) {
 
 struct Astra : Model {
     Astra(std::string name) : Model(name) {
-        params.epochs = 800;
+        params.epochs = 100;
         params.batch_size = 16384;
         params.batches_per_epoch = 6104;
-        params.save_rate = 80;
-        params.thread_count = 2;
+        params.save_rate = 10;
+        params.thread_count = 4;
         params.lr = 0.001;
         params.eval_div = 400.0;
-        // lambda determines how much the score influences the loss
-        // e.g. 1 means full score influence, so wdl has 0 influence
-        params.lambda_start = 1.0;
-        params.lambda_end = 0.75;
+        params.lambda_start = 0.7;
+        params.lambda_end = 0.7;
     }
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
@@ -75,16 +73,15 @@ struct Astra : Model {
     }
 
     Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
-        const int FT_SIZE = 1536;
+        const int FT_SIZE = 1024;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
-        const int OUTPUT_BUCKETS = 8;
 
         // create layers
         auto ft = make<FeatureTransformer>(num_buckets(input_bucket) * 768, FT_SIZE);
-        auto l1 = make<Affine>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2 = make<Affine>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3 = make<Affine>(L2_SIZE, OUTPUT_BUCKETS);
+        auto l1 = make<Affine>(FT_SIZE, L1_SIZE);
+        auto l2 = make<Affine>(L1_SIZE, L2_SIZE);
+        auto l3 = make<Affine>(L2_SIZE, 1);
 
         // set quantization scheme
         ft->get_weights().quant_type(QuantType::INT16).quant_scale(255);
@@ -100,16 +97,11 @@ struct Astra : Model {
 
         auto pwm_out = make<PairwiseMul>(ft_stm, ft_nstm);
 
-        auto l1_out = l1->forward(pwm_out);
-        auto l1_select = make<Select>(l1_out, bucket_index)->crelu();
+        auto l1_out = l1->forward(pwm_out)->crelu();
+        auto l2_out = l2->forward(l1_out)->crelu();
+        auto l3_out = l3->forward(l2_out);
 
-        auto l2_out = l2->forward(l1_select);
-        auto l2_select = make<Select>(l2_out, bucket_index)->crelu();
-
-        auto l3_out = l3->forward(l2_select);
-        auto l3_select = make<Select>(l3_out, bucket_index);
-
-        return l3_select;
+        return l3_out;
     }
 
     Ptr<Loss> get_loss() override {
@@ -130,7 +122,7 @@ struct Astra : Model {
         return make<Dataloader>( //
             params.batch_size,
             params.thread_count,
-            files_from_paths({"D:/Astra-Data/training_data"}),
+            files_from_paths({"/home/h1me/Documents/Coding/Astra-Data/training_data"}),
             filter_entry);
     }
 };
