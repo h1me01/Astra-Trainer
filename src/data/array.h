@@ -4,31 +4,32 @@
 
 namespace data {
 
-template <typename T> //
+template <typename T>
 class CudaDevicePtr {
   public:
     CudaDevicePtr() = default;
 
     explicit CudaDevicePtr(size_t count) {
-        if(count > 0)
+        if (count > 0)
             CUDA_ASSERT(cudaMalloc(&ptr, count * sizeof(T)));
     }
 
     ~CudaDevicePtr() {
-        if(ptr)
+        if (ptr)
             cudaFree(ptr);
     }
 
-    CudaDevicePtr(const CudaDevicePtr &) = delete;
-    CudaDevicePtr &operator=(const CudaDevicePtr &) = delete;
+    CudaDevicePtr(const CudaDevicePtr&) = delete;
+    CudaDevicePtr& operator=(const CudaDevicePtr&) = delete;
 
-    CudaDevicePtr(CudaDevicePtr &&other) noexcept : ptr(other.ptr) {
+    CudaDevicePtr(CudaDevicePtr&& other) noexcept
+        : ptr(other.ptr) {
         other.ptr = nullptr;
     }
 
-    CudaDevicePtr &operator=(CudaDevicePtr &&other) noexcept {
-        if(this != &other) {
-            if(ptr)
+    CudaDevicePtr& operator=(CudaDevicePtr&& other) noexcept {
+        if (this != &other) {
+            if (ptr)
                 cudaFree(ptr);
 
             ptr = other.ptr;
@@ -37,7 +38,7 @@ class CudaDevicePtr {
         return *this;
     }
 
-    T *get() const {
+    T* get() const {
         return ptr;
     }
 
@@ -46,44 +47,46 @@ class CudaDevicePtr {
     }
 
   private:
-    T *ptr = nullptr;
+    T* ptr = nullptr;
 };
 
-template <typename T> //
+template <typename T>
 class Array {
   public:
     Array() = default;
 
-    explicit Array(int size) : m_size(size) {
-        if(size > 0) {
+    explicit Array(int size)
+        : m_size(size) {
+        if (size > 0) {
             host_data = std::make_unique<T[]>(size);
             dev_data = CudaDevicePtr<T>(size);
         }
     }
 
-    Array(const Array<T> &other) : m_size(other.m_size) {
-        if(other.host_data) {
+    Array(const Array<T>& other)
+        : m_size(other.m_size) {
+        if (other.host_data) {
             host_data = std::make_unique<T[]>(m_size);
             std::memcpy(host_data.get(), other.host_data.get(), m_size * sizeof(T));
         }
 
-        if(other.dev_data) {
+        if (other.dev_data) {
             dev_data = CudaDevicePtr<T>(m_size);
             CUDA_ASSERT(cudaMemcpy(dev_data.get(), other.dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToDevice));
         }
     }
 
-    Array(Array<T> &&other) noexcept = default;
+    Array(Array<T>&& other) noexcept = default;
 
-    Array<T> &operator=(const Array<T> &other) {
-        if(this != &other) {
+    Array<T>& operator=(const Array<T>& other) {
+        if (this != &other) {
             Array<T> temp(other);
             *this = std::move(temp);
         }
         return *this;
     }
 
-    Array<T> &operator=(Array<T> &&other) noexcept = default;
+    Array<T>& operator=(Array<T>&& other) noexcept = default;
 
     virtual ~Array() = default;
 
@@ -95,11 +98,11 @@ class Array {
         return static_cast<bool>(dev_data);
     }
 
-    T *host_address() const {
+    T* host_address() const {
         return host_data.get();
     }
 
-    T *dev_address() const {
+    T* dev_address() const {
         return dev_data.get();
     }
 
@@ -109,23 +112,23 @@ class Array {
     }
 
     void clear_host() {
-        if(host_data)
+        if (host_data)
             std::memset(host_data.get(), 0, sizeof(T) * m_size);
     }
 
     void clear_dev() {
-        if(dev_data)
+        if (dev_data)
             CUDA_ASSERT(cudaMemset(dev_data.get(), 0, sizeof(T) * m_size));
     }
 
     void host_to_dev() {
-        if(!is_host_allocated() || !is_dev_allocated())
+        if (!is_host_allocated() || !is_dev_allocated())
             return;
         CUDA_ASSERT(cudaMemcpy(dev_data.get(), host_data.get(), m_size * sizeof(T), cudaMemcpyHostToDevice));
     }
 
     void dev_to_host() {
-        if(!is_host_allocated() || !is_dev_allocated())
+        if (!is_host_allocated() || !is_dev_allocated())
             return;
         CUDA_ASSERT(cudaMemcpy(host_data.get(), dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToHost));
     }
@@ -136,7 +139,7 @@ class Array {
         return host_data[idx];
     }
 
-    T &get(int idx) {
+    T& get(int idx) {
         ASSERT(is_host_allocated());
         ASSERT(idx >= 0 && idx < m_size);
         return host_data[idx];
@@ -146,7 +149,7 @@ class Array {
         return get(idx);
     }
 
-    T &operator()(int idx) {
+    T& operator()(int idx) {
         return get(idx);
     }
 

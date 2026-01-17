@@ -17,33 +17,34 @@ constexpr std::array<int, 64> input_bucket = {
     9, 9, 9, 9, 9, 9, 9, 9, //
 };
 
-inline int bucket_index(const Position &pos) {
+inline int bucket_index(const Position& pos) {
     return (pos.pieceCount() - 2) / 4;
 }
 
-inline bool filter_entry(const TrainingDataEntry &e) {
+inline bool filter_entry(const TrainingDataEntry& e) {
     static constexpr int VALUE_NONE = 32002;
 
     auto do_wld_skip = [&]() {
         std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
-        auto &prng = rng::get_thread_local_rng();
+        auto& prng = rng::get_thread_local_rng();
         return distrib(prng);
     };
 
-    if(e.score == VALUE_NONE)
+    if (e.score == VALUE_NONE)
         return true;
-    if(e.ply <= early_fen_skipping)
+    if (e.ply <= early_fen_skipping)
         return true;
-    if(e.isCapturingMove() || e.isInCheck())
+    if (e.isCapturingMove() || e.isInCheck())
         return true;
-    if(do_wld_skip())
+    if (do_wld_skip())
         return true;
 
     return false;
 };
 
 struct Astra : Model {
-    Astra(std::string name) : Model(name) {
+    Astra(std::string name)
+        : Model(name) {
         params.epochs = 100;
         params.batch_size = 16384;
         params.batches_per_epoch = 6104;
@@ -57,22 +58,19 @@ struct Astra : Model {
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
         // if king is on opposite side, flip psq horizontally
-        if(ksq.file() > fileD)
+        if (ksq.file() > fileD)
             psq.flipHorizontally();
 
         // relative squares
-        if(view == Color::Black) {
+        if (view == Color::Black) {
             psq.flipVertically();
             ksq.flipVertically();
         }
 
-        return int(psq) +                        //
-               int(pt) * 64 +                    //
-               (int(pc) != int(view)) * 64 * 6 + //
-               input_bucket[int(ksq)] * 768;
+        return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6 + input_bucket[int(ksq)] * 768;
     }
 
-    Ptr<Layer> build(const Ptr<Input> &stm_in, const Ptr<Input> &nstm_in) override {
+    Ptr<Layer> build(const Ptr<Input>& stm_in, const Ptr<Input>& nstm_in) override {
         const int FT_SIZE = 1024;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
@@ -123,7 +121,8 @@ struct Astra : Model {
             params.batch_size,
             params.thread_count,
             files_from_paths({"/home/h1me/Documents/Coding/Astra-Data/training_data"}),
-            filter_entry);
+            filter_entry
+        );
     }
 };
 

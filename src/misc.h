@@ -19,11 +19,11 @@
 using namespace std::filesystem;
 
 #ifdef NDEBUG
-#define ASSERT(expr) ((void) 0)
+#define ASSERT(expr) ((void)0)
 #else
 #define ASSERT(expr)                                                                                                   \
     {                                                                                                                  \
-        if(!static_cast<bool>(expr)) {                                                                                 \
+        if (!static_cast<bool>(expr)) {                                                                                \
             printf("ASSERT: %s\n", #expr);                                                                             \
             printf("    file: %s\n", __FILE__);                                                                        \
             printf("    line: %d\n", __LINE__);                                                                        \
@@ -35,35 +35,35 @@ using namespace std::filesystem;
 
 #define CUDA_ASSERT(ans)                                                                                               \
     {                                                                                                                  \
-        if(ans != cudaSuccess) {                                                                                       \
+        if (ans != cudaSuccess) {                                                                                      \
             fprintf(stderr, "CUDA_ASSERT: %s %s %d\n", cudaGetErrorString(ans), __FILE__, __LINE__);                   \
             exit(ans);                                                                                                 \
         }                                                                                                              \
     }
 
 #ifdef NDEBUG
-#define CUDA_ASSERT_DEBUG(ans) ((void) 0)
+#define CUDA_ASSERT_DEBUG(ans) ((void)0)
 #else
 #define CUDA_ASSERT_DEBUG(ans) CUDA_ASSERT(ans)
 #endif
 
-template <typename T> //
+template <typename T>
 using Ptr = std::shared_ptr<T>;
 
-inline void error(const std::string &message) {
+inline void error(const std::string& message) {
     std::cerr << "Error: " << message << std::endl;
     std::abort();
 }
 
-inline std::vector<std::string> files_from_paths(const std::vector<std::string> &paths) {
+inline std::vector<std::string> files_from_paths(const std::vector<std::string>& paths) {
     std::vector<std::string> files;
-    for(const auto &path : paths) {
+    for (const auto& path : paths) {
         try {
-            for(const auto &entry : recursive_directory_iterator(path)) {
-                if(entry.is_regular_file())
+            for (const auto& entry : recursive_directory_iterator(path)) {
+                if (entry.is_regular_file())
                     files.push_back(entry.path().string());
             }
-        } catch(const filesystem_error &e) {
+        } catch (const filesystem_error& e) {
             std::cerr << "Filesystem error in path " << path << ": " << e.what() << std::endl;
         }
     }
@@ -80,23 +80,23 @@ class Logger {
     }
 
     void open(std::string path, bool append = false) {
-        if(file.is_open())
+        if (file.is_open())
             file.close();
 
-        if(append)
+        if (append)
             file = std::ofstream(path, std::ios::app);
         else
             file = std::ofstream(path);
     }
 
     ~Logger() {
-        if(file.is_open())
+        if (file.is_open())
             file.close();
     }
 
     void write(std::initializer_list<std::string> args) {
-        for(auto i = args.begin(); i != args.end(); ++i) {
-            if(i != args.begin())
+        for (auto i = args.begin(); i != args.end(); ++i) {
+            if (i != args.begin())
                 file << ",";
             file << *i;
         }
@@ -128,7 +128,7 @@ class Timer {
     // returns true if the provided has elapsed since the last call
     bool is_time_reached(long long time) {
         long long elapsed = elapsed_time();
-        if(elapsed - prev_duration > time) {
+        if (elapsed - prev_duration > time) {
             prev_duration = elapsed;
             return true;
         }

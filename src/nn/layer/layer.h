@@ -17,7 +17,8 @@ class Layer : public std::enable_shared_from_this<Layer> {
     virtual ~Layer() = default;
 
     Layer(int input_size, int output_size, WeightInitType winit_type)
-        : input_size(input_size), output_size(output_size) {
+        : input_size(input_size),
+          output_size(output_size) {
         is_main = true;
         weights = Tensor(output_size, input_size);
         biases = Tensor(output_size, 1);
@@ -29,7 +30,7 @@ class Layer : public std::enable_shared_from_this<Layer> {
         output.init(output_size, batch_size, has_activation(act_type));
     }
 
-    virtual void step(const std::vector<TrainingDataEntry> &data_entries) {
+    virtual void step(const std::vector<TrainingDataEntry>& data_entries) {
         output.clear_grads();
     }
 
@@ -72,35 +73,35 @@ class Layer : public std::enable_shared_from_this<Layer> {
         return input_size;
     }
 
-    Tensor &get_weights() {
+    Tensor& get_weights() {
         return is_main ? weights : main->get_weights();
     }
 
-    Tensor &get_biases() {
+    Tensor& get_biases() {
         return is_main ? biases : main->get_biases();
     }
 
-    DenseMatrix &get_output() {
+    DenseMatrix& get_output() {
         return output.get_output();
     }
 
-    DenseMatrix &get_gradients() {
+    DenseMatrix& get_gradients() {
         return output.get_gradients();
     }
 
-    LayerTensor &get_layer_tensor() {
+    LayerTensor& get_layer_tensor() {
         return output;
     }
 
-    std::vector<Tensor *> get_params() {
-        if(is_main)
+    std::vector<Tensor*> get_params() {
+        if (is_main)
             return {&weights, &biases};
         else
             return {};
     }
 
     Ptr<Layer> get_main() {
-        if(is_main)
+        if (is_main)
             return shared_from_this();
         else
             return main;

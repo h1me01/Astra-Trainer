@@ -5,18 +5,18 @@ namespace kernel {
 constexpr int block_size = 1024;
 
 template <bool UseActivation>
-__global__ void pairwise_mul_fwd_kernel( //
-    const float *in_v,                   //
-    float *linear_out,                   //
-    float *activated,                    //
-    const int feature_size,              //
-    const int out_r,                     //
-    const int batch_size,                //
-    const int out_offset,                //
-    const Activation act_type        //
+__global__ void pairwise_mul_fwd_kernel(
+    const float* in_v,
+    float* linear_out,
+    float* activated,
+    const int feature_size,
+    const int out_r,
+    const int batch_size,
+    const int out_offset,
+    const Activation act_type
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= feature_size * batch_size)
+    if (idx >= feature_size * batch_size)
         return;
 
     const int batch_idx = idx / feature_size;
@@ -30,31 +30,33 @@ __global__ void pairwise_mul_fwd_kernel( //
     const float val = in_v[in_offset_a] * in_v[in_offset_b];
 
     linear_out[out_idx] = val;
-    if(UseActivation)
+    if (UseActivation)
         activated[out_idx] = activate_fwd(val, act_type);
 }
 
-void pairwise_mul_fwd(            //
-    const DenseMatrix &in_v,      //
-    DenseMatrix &linear_out,      //
-    DenseMatrix &activated,       //
-    const int out_offset,         //
-    const Activation act_type //
+void pairwise_mul_fwd(
+    const DenseMatrix& in_v,
+    DenseMatrix& linear_out,
+    DenseMatrix& activated,
+    const int out_offset,
+    const Activation act_type
 ) {
     const int feature_size = in_v.rows() / 2;
 
-    ASSERT(in_v.rows() % 2 == 0 &&             //
-           in_v.cols() == linear_out.cols() && //
-           linear_out.rows() >= out_offset + feature_size);
+    ASSERT(
+        in_v.rows() % 2 == 0 &&             //
+        in_v.cols() == linear_out.cols() && //
+        linear_out.rows() >= out_offset + feature_size
+    );
 
     ASSERT(in_v.is_dev_allocated() && linear_out.is_dev_allocated());
 
     const int blocks = get_num_blocks(feature_size * in_v.cols(), block_size);
 
-    if(has_activation(act_type)) {
+    if (has_activation(act_type)) {
         ASSERT(activated.is_dev_allocated());
 
-        pairwise_mul_fwd_kernel<true><<<blocks, block_size>>>( //
+        pairwise_mul_fwd_kernel<true><<<blocks, block_size>>>(
             in_v.dev_address(),
             linear_out.dev_address(),
             activated.dev_address(),
@@ -62,9 +64,10 @@ void pairwise_mul_fwd(            //
             linear_out.rows(),
             in_v.cols(),
             out_offset,
-            act_type);
+            act_type
+        );
     } else {
-        pairwise_mul_fwd_kernel<false><<<blocks, block_size>>>( //
+        pairwise_mul_fwd_kernel<false><<<blocks, block_size>>>(
             in_v.dev_address(),
             linear_out.dev_address(),
             activated.dev_address(),
@@ -72,7 +75,8 @@ void pairwise_mul_fwd(            //
             linear_out.rows(),
             in_v.cols(),
             out_offset,
-            act_type);
+            act_type
+        );
     }
 }
 

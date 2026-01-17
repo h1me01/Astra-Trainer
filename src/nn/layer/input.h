@@ -6,13 +6,14 @@ namespace nn {
 
 class Input {
   public:
-    explicit Input(int size) : size(size) {}
+    explicit Input(int size)
+        : size(size) {}
 
     void init(int batch_size) {
         output = Array<int>(size * batch_size);
     }
 
-    Array<int> &get_output() {
+    Array<int>& get_output() {
         return output;
     }
 

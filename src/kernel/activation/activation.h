@@ -18,7 +18,7 @@ inline bool has_activation(const Activation type) {
 namespace kernel {
 
 inline __device__ float activate_fwd(float x, const Activation type) {
-    switch(type) {
+    switch (type) {
     case Activation::ReLU:
         return fmaxf(0.0f, x);
     case Activation::CReLU:
@@ -29,12 +29,12 @@ inline __device__ float activate_fwd(float x, const Activation type) {
     case Activation::Sigmoid:
         return 1.0f / (1.0f + expf(-x));
     default:
-        return x; // None
+        return x; // Linear
     }
 }
 
 inline __device__ float activate_bwd(float x, const Activation type) {
-    switch(type) {
+    switch (type) {
     case Activation::ReLU:
         return (x > 0.0f) ? 1.0f : 0.0f;
     case Activation::CReLU:
@@ -45,7 +45,7 @@ inline __device__ float activate_bwd(float x, const Activation type) {
         x = activate_fwd(x, Activation::Sigmoid);
         return x * (1 - x);
     default:
-        return 1.0f; // None
+        return 1.0f; // Linear
     }
 }
 

@@ -6,8 +6,9 @@ namespace nn {
 
 class Concat : public Layer {
   public:
-    explicit Concat(const Ptr<Layer> &input1, const Ptr<Layer> &input2) //
-        : input1(input1), input2(input2) {}
+    explicit Concat(const Ptr<Layer>& input1, const Ptr<Layer>& input2)
+        : input1(input1),
+          input2(input2) {}
 
     void init(int batch_size) override {
         input_size = input1->get_output_size() + input2->get_output_size();
@@ -16,21 +17,19 @@ class Concat : public Layer {
     }
 
     void forward() override {
-        kernel::concat_fwd( //
-            input1->get_output(),
-            input2->get_output(),
-            output.get_linear_output(),
-            output.get_activated(),
-            act_type);
+        kernel::concat_fwd(
+            input1->get_output(), input2->get_output(), output.get_linear_output(), output.get_activated(), act_type
+        );
     }
 
     void backward() override {
-        kernel::concat_bwd( //
+        kernel::concat_bwd(
             input1->get_gradients(),
             input2->get_gradients(),
             output.get_linear_output(),
             output.get_gradients(),
-            act_type);
+            act_type
+        );
     }
 
     std::vector<Ptr<Layer>> get_inputs() override {

@@ -2,14 +2,14 @@
 
 namespace model {
 
-void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
-    auto &stm_features = stm_input->get_output();
-    auto &nstm_features = nstm_input->get_output();
+void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
+    auto& stm_features = stm_input->get_output();
+    auto& nstm_features = nstm_input->get_output();
 
     const int max_entries = stm_input->get_size();
 
-    for(size_t i = 0; i < ds.size(); i++) {
-        const Position &pos = ds[i].pos;
+    for (size_t i = 0; i < ds.size(); i++) {
+        const Position& pos = ds[i].pos;
 
         const Color stm = pos.sideToMove();
         const Square ksq_stm = pos.kingSquare(stm);
@@ -20,7 +20,7 @@ void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
         Bitboard pieces = pos.piecesBB();
 
         int count = 0;
-        for(auto sq : pieces) {
+        for (auto sq : pieces) {
             Piece p = pos.pieceAt(sq);
 
             int idx = offset + count;
@@ -30,8 +30,8 @@ void Model::fill_inputs(std::vector<TrainingDataEntry> &ds, float lambda) {
             count++;
         }
 
-        if(count < max_entries) {
-            for(int i = count; i < max_entries; i++) {
+        if (count < max_entries) {
+            for (int i = count; i < max_entries; i++) {
                 int idx = offset + i;
                 stm_features(idx) = -1;
                 nstm_features(idx) = -1;
@@ -56,7 +56,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
     Logger log;
     int epoch;
 
-    if(checkpoint_name.empty()) {
+    if (checkpoint_name.empty()) {
         std::stringstream new_folder_path;
         new_folder_path << output_path << "/" << name;
         training_folder = new_folder_path.str();
@@ -70,7 +70,7 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
     } else {
         const std::string checkpoint_path = output_path + "/" + checkpoint_name;
 
-        if(!exists(checkpoint_path))
+        if (!exists(checkpoint_path))
             error("Checkpoint path does not exist: " + checkpoint_path);
 
         load_weights(checkpoint_path + "/weights.bin");
@@ -93,26 +93,28 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
     const int positions_per_epoch = params.batch_size * params.batches_per_epoch;
 
     Timer timer;
-    for(epoch = epoch + 1; epoch <= params.epochs; epoch++) {
+    for (epoch = epoch + 1; epoch <= params.epochs; epoch++) {
         timer.start();
         loss->reset();
 
         float lambda = params.lambda_start + (params.lambda_end - params.lambda_start) * (epoch / float(params.epochs));
 
-        for(int batch = 1; batch <= params.batches_per_epoch; batch++) {
+        for (int batch = 1; batch <= params.batches_per_epoch; batch++) {
             auto data_entries = dataloader->next();
             fill_inputs(data_entries, lambda);
 
             timer.stop();
             auto elapsed = timer.elapsed_time();
 
-            if(batch == params.batches_per_epoch || timer.is_time_reached(1000)) {
-                printf("\repoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds",
-                       epoch,
-                       batch,
-                       loss->get_loss() / (params.batch_size * batch),
-                       (int) round(1000.0f * params.batch_size * batch / elapsed),
-                       (int) elapsed / 1000);
+            if (batch == params.batches_per_epoch || timer.is_time_reached(1000)) {
+                printf(
+                    "\repoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds",
+                    epoch,
+                    batch,
+                    loss->get_loss() / (params.batch_size * batch),
+                    (int)round(1000.0f * params.batch_size * batch / elapsed),
+                    (int)elapsed / 1000
+                );
                 std::cout << std::flush;
             }
 
@@ -128,16 +130,18 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
         auto elapsed = timer.elapsed_time();
 
         printf("\r\033[K"); // clear the current line
-        printf("epoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds\n",
-               epoch,
-               params.batches_per_epoch,
-               epoch_loss,
-               (int) round(1000.0f * positions_per_epoch / elapsed),
-               (int) elapsed / 1000);
+        printf(
+            "epoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds\n",
+            epoch,
+            params.batches_per_epoch,
+            epoch_loss,
+            (int)round(1000.0f * positions_per_epoch / elapsed),
+            (int)elapsed / 1000
+        );
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
-        if(epoch % std::max(params.save_rate, 1) == 0 || epoch == params.epochs)
+        if (epoch % std::max(params.save_rate, 1) == 0 || epoch == params.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(epoch));
 
         lr_sched->step(epoch);

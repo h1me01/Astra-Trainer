@@ -7,10 +7,13 @@ namespace nn {
 class CosineAnnealing : public LRScheduler {
   public:
     CosineAnnealing(int max_epochs, float lr, float final_lr)
-        : LRScheduler(lr), max_epochs(max_epochs), start_lr(lr), final_lr(final_lr) {}
+        : LRScheduler(lr),
+          max_epochs(max_epochs),
+          start_lr(lr),
+          final_lr(final_lr) {}
 
     void step(int epoch) override {
-        if(epoch >= max_epochs)
+        if (epoch >= max_epochs)
             return;
 
         float lambda = 1.0f - 0.5f * (1.0f + std::cos(pi * epoch / max_epochs));

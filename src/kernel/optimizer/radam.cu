@@ -5,28 +5,28 @@ namespace kernel {
 constexpr int block_size = 1024;
 
 // https://github.com/LiyuanLucasLiu/RAdam.git
-__global__ void radam_kernel( //
-    float *vals,              //
-    const float *grads,       //
-    float *moms,              //
-    float *vels,              //
-    const float lr,           //
-    const float beta1,        //
-    const float beta2,        //
-    const float beta1_t,      //
-    const float beta2_t,      //
-    const float eps,          //
-    const float decay,        //
-    const float min_val,      //
-    const float max_val,      //
-    const float grad_scale,   //
-    const int N_sma,          //
-    const int N_sma_max,      //
-    const int step,           //
-    const int size            //
+__global__ void radam_kernel(
+    float* vals,
+    const float* grads,
+    float* moms,
+    float* vels,
+    const float lr,
+    const float beta1,
+    const float beta2,
+    const float beta1_t,
+    const float beta2_t,
+    const float eps,
+    const float decay,
+    const float min_val,
+    const float max_val,
+    const float grad_scale,
+    const int N_sma,
+    const int N_sma_max,
+    const int step,
+    const int size
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= size)
+    if (idx >= size)
         return;
 
     const float grad = grads[idx] * grad_scale;
@@ -45,37 +45,39 @@ __global__ void radam_kernel( //
     vals[idx] = clamp(val, min_val, max_val);
 }
 
-void radam_optim(           //
-    Tensor &param,          //
-    Array<float> &moms,     //
-    Array<float> &vels,     //
-    const float lr,         //
-    const float beta1,      //
-    const float beta2,      //
-    const float beta1_t,    //
-    const float beta2_t,    //
-    const float eps,        //
-    const float decay,      //
-    const float grad_scale, //
-    const int N_sma,        //
-    const int N_sma_max,    //
-    const int step          //
+void radam_optim(
+    Tensor& param,
+    Array<float>& moms,
+    Array<float>& vels,
+    const float lr,
+    const float beta1,
+    const float beta2,
+    const float beta1_t,
+    const float beta2_t,
+    const float eps,
+    const float decay,
+    const float grad_scale,
+    const int N_sma,
+    const int N_sma_max,
+    const int step
 ) {
     const float min_val = param.lower_bound();
     const float max_val = param.upper_bound();
 
-    auto &vals = param.get_values();
-    auto &grads = param.get_gradients();
+    auto& vals = param.get_values();
+    auto& grads = param.get_gradients();
 
     ASSERT(moms.size() == vals.size() && vels.size() == vals.size());
 
-    ASSERT(vals.is_dev_allocated() &&  //
-           grads.is_dev_allocated() && //
-           moms.is_dev_allocated() &&  //
-           vels.is_dev_allocated());
+    ASSERT(
+        vals.is_dev_allocated() &&  //
+        grads.is_dev_allocated() && //
+        moms.is_dev_allocated() &&  //
+        vels.is_dev_allocated()
+    );
 
     const int blocks = get_num_blocks(vals.size(), block_size);
-    radam_kernel<<<blocks, block_size>>>( //
+    radam_kernel<<<blocks, block_size>>>(
         vals.dev_address(),
         grads.dev_address(),
         moms.dev_address(),
@@ -93,7 +95,8 @@ void radam_optim(           //
         N_sma,
         N_sma_max,
         step,
-        vals.size());
+        vals.size()
+    );
 
     grads.clear_dev();
 }

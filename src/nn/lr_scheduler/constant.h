@@ -6,7 +6,8 @@ namespace nn {
 
 class Constant : public LRScheduler {
   public:
-    Constant(float lr) : LRScheduler(lr) {}
+    Constant(float lr)
+        : LRScheduler(lr) {}
 
     void step(int epoch) override {}
 };

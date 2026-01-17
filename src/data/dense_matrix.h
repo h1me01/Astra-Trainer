@@ -7,15 +7,20 @@ namespace data {
 // column-major dense matrix
 class DenseMatrix {
   public:
-    DenseMatrix() : m_rows(0), m_cols(0), data() {}
+    DenseMatrix()
+        : m_rows(0),
+          m_cols(0),
+          data() {}
 
     DenseMatrix(int rows, int cols) //
-        : m_rows(rows), m_cols(cols), data(rows * cols) {}
+        : m_rows(rows),
+          m_cols(cols),
+          data(rows * cols) {}
 
-    DenseMatrix(const DenseMatrix &) = default;
-    DenseMatrix(DenseMatrix &&) noexcept = default;
-    DenseMatrix &operator=(const DenseMatrix &) = default;
-    DenseMatrix &operator=(DenseMatrix &&) noexcept = default;
+    DenseMatrix(const DenseMatrix&) = default;
+    DenseMatrix(DenseMatrix&&) noexcept = default;
+    DenseMatrix& operator=(const DenseMatrix&) = default;
+    DenseMatrix& operator=(DenseMatrix&&) noexcept = default;
 
     // clang-format off
     int rows() const { return m_rows; }
@@ -43,7 +48,7 @@ class DenseMatrix {
         return data.get(m_rows * c + r);
     }
 
-    float &operator()(int r, int c) {
+    float& operator()(int r, int c) {
         ASSERT(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
         return data.get(m_rows * c + r);
     }

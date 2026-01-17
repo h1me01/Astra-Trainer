@@ -9,10 +9,11 @@ namespace nn {
 
 class Loss {
   public:
-    Loss(Activation act_type) : act_type(act_type) {}
+    Loss(Activation act_type)
+        : act_type(act_type) {}
     virtual ~Loss() = default;
 
-    virtual void compute(const Array<float> &target, LayerTensor &output) = 0;
+    virtual void compute(const Array<float>& target, LayerTensor& output) = 0;
 
     float get_loss() {
         loss.dev_to_host();

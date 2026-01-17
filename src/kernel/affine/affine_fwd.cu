@@ -8,44 +8,43 @@ constexpr float beta = 0;
 constexpr int block_size = 128;
 
 template <bool UseActivation>
-__global__ void biases_fwd_kernel( //
-    const float *biases_v,         //
-    float *linear_out,             //
-    float *activated,              //
-    const int r,                   //
-    const int c,                   //
-    const Activation act_type  //
+__global__ void biases_fwd_kernel(
+    const float* biases_v, float* linear_out, float* activated, const int r, const int c, const Activation act_type
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= r * c)
+    if (idx >= r * c)
         return;
 
     const int neuron_idx = idx % r;
     const float weighted_sum = linear_out[idx] + biases_v[neuron_idx];
 
     linear_out[idx] = weighted_sum;
-    if(UseActivation)
+    if (UseActivation)
         activated[idx] = activate_fwd(weighted_sum, act_type);
 }
 
-void affine_fwd(             //
-    DenseMatrix &weights_v,  //
-    DenseMatrix &biases_v,   //
-    DenseMatrix &inputs_v,   //
-    DenseMatrix &linear_out, //
-    DenseMatrix &activated,  //
-    Activation act_type  //
+void affine_fwd(
+    DenseMatrix& weights_v,
+    DenseMatrix& biases_v,
+    DenseMatrix& inputs_v,
+    DenseMatrix& linear_out,
+    DenseMatrix& activated,
+    Activation act_type
 ) {
-    ASSERT(biases_v.cols() == 1 &&                  //
-           linear_out.rows() == biases_v.rows() &&  //
-           inputs_v.cols() == linear_out.cols() &&  //
-           weights_v.rows() == linear_out.rows() && //
-           weights_v.cols() == inputs_v.rows());
+    ASSERT(
+        biases_v.cols() == 1 &&                  //
+        linear_out.rows() == biases_v.rows() &&  //
+        inputs_v.cols() == linear_out.cols() &&  //
+        weights_v.rows() == linear_out.rows() && //
+        weights_v.cols() == inputs_v.rows()
+    );
 
-    ASSERT(weights_v.is_dev_allocated() && //
-           biases_v.is_dev_allocated() &&  //
-           inputs_v.is_dev_allocated() &&  //
-           linear_out.is_dev_allocated());
+    ASSERT(
+        weights_v.is_dev_allocated() && //
+        biases_v.is_dev_allocated() &&  //
+        inputs_v.is_dev_allocated() &&  //
+        linear_out.is_dev_allocated()
+    );
 
     // compute dot product
     cublasSgemm(                  //
@@ -67,24 +66,26 @@ void affine_fwd(             //
 
     // add biases to dot product
     const int blocks = get_num_blocks(linear_out.size(), block_size);
-    if(has_activation(act_type)) {
+    if (has_activation(act_type)) {
         ASSERT(activated.is_dev_allocated());
 
-        biases_fwd_kernel<true><<<blocks, block_size>>>( //
+        biases_fwd_kernel<true><<<blocks, block_size>>>(
             biases_v.dev_address(),
             linear_out.dev_address(),
             activated.dev_address(),
             linear_out.rows(),
             linear_out.cols(),
-            act_type);
+            act_type
+        );
     } else {
-        biases_fwd_kernel<false><<<blocks, block_size>>>( //
+        biases_fwd_kernel<false><<<blocks, block_size>>>(
             biases_v.dev_address(),
             linear_out.dev_address(),
             activated.dev_address(),
             linear_out.rows(),
             linear_out.cols(),
-            act_type);
+            act_type
+        );
     }
 }
 
