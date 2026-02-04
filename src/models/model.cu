@@ -2,6 +2,71 @@
 
 namespace model {
 
+void Model::init() {
+    if (is_initialized)
+        return;
+
+    targets = Array<float>(params.batch_size);
+
+    network = std::make_unique<Network>();
+    stm_input = std::make_shared<Input>(32);
+    nstm_input = std::make_shared<Input>(32);
+
+    dataloader = std::make_unique<Dataloader>(
+        params.batch_size,
+        params.thread_count,
+        get_training_files(),
+        [this](const TrainingDataEntry& e) { return filter_entry(e); }
+    );
+
+    loss = get_loss();
+    optim = get_optim();
+    lr_sched = get_lr_scheduler();
+
+    if (!loss || !optim || !lr_sched)
+        error("All components (loss, optimizer, scheduler) must be initialized!");
+
+    build(stm_input, nstm_input);
+
+    network->init(params.batch_size);
+    stm_input->init(params.batch_size);
+    nstm_input->init(params.batch_size);
+    optim->init(network->get_params());
+
+    is_initialized = true;
+}
+
+void Model::print_info(int epoch, const std::string& output_path) const {
+    std::cout << "\n=============================== Training Data ==============================\n\n";
+    const auto& training_files = dataloader->get_filenames();
+    if (training_files.empty())
+        error("No training data found in the specified paths!");
+
+    for (const auto& f : training_files)
+        std::cout << f << std::endl;
+
+    std::cout << "\n=============================== Trainer Info ===============================\n\n";
+    std::cout << "Model name:        " << name << std::endl;
+    std::cout << "Epochs:            " << params.epochs << std::endl;
+    std::cout << "Batch Size:        " << params.batch_size << std::endl;
+    std::cout << "Batches/Epoch:     " << params.batches_per_epoch << std::endl;
+    std::cout << "Save Rate:         " << params.save_rate << std::endl;
+    std::cout << "Thread Count:      " << params.thread_count << std::endl;
+    std::cout << "Learning Rate:     " << params.lr << std::endl;
+    std::cout << "Eval Div:          " << params.eval_div << std::endl;
+    std::cout << "Lambda Start:      " << params.lambda_start << std::endl;
+    std::cout << "Lambda End:        " << params.lambda_end << std::endl;
+    std::cout << "Output Path:       " << output_path << std::endl;
+
+    if (!loaded_checkpoint.empty())
+        std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
+    else if (!loaded_model.empty())
+        std::cout << "Loaded Model:      " << loaded_model << std::endl;
+
+    if (epoch > 0)
+        std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get_lr() << std::endl;
+}
+
 void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
     auto& stm_features = stm_input->get_output();
     auto& nstm_features = nstm_input->get_output();
@@ -10,37 +75,31 @@ void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
 
     for (size_t i = 0; i < ds.size(); i++) {
         const Position& pos = ds[i].pos;
-
         const Color stm = pos.sideToMove();
         const Square ksq_stm = pos.kingSquare(stm);
         const Square ksq_nstm = pos.kingSquare(!stm);
-
         const int offset = i * max_entries;
 
         Bitboard pieces = pos.piecesBB();
-
         int count = 0;
+
         for (auto sq : pieces) {
             Piece p = pos.pieceAt(sq);
-
             int idx = offset + count;
             stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
             nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
-
             count++;
         }
 
-        if (count < max_entries) {
-            for (int i = count; i < max_entries; i++) {
-                int idx = offset + i;
-                stm_features(idx) = -1;
-                nstm_features(idx) = -1;
-            }
+        // fill remaining slots with -1
+        for (int j = count; j < max_entries; j++) {
+            int idx = offset + j;
+            stm_features(idx) = -1;
+            nstm_features(idx) = -1;
         }
 
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / params.eval_div));
         float wdl_target = (ds[i].result + 1) / 2.0f;
-
         targets(i) = lambda * score_target + (1.0f - lambda) * wdl_target;
     }
 
@@ -49,38 +108,47 @@ void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
     targets.host_to_dev();
 }
 
-void Model::train(std::string output_path, std::string checkpoint_name) {
+float Model::predict(const std::string& fen) {
+    Position pos;
+    pos.set(fen);
+
+    std::vector<TrainingDataEntry> ds{{pos}};
+
+    fill_inputs(ds, 1.0f);
+    network->forward(ds);
+
+    auto& output = network->get_output().get_output();
+    output.dev_to_host();
+
+    return output(0) * params.eval_div;
+}
+
+void Model::train(const std::string& output_path, const std::string& checkpoint_name) {
     init();
 
     std::string training_folder;
     Logger log;
-    int epoch;
+    int epoch = 0;
 
     if (checkpoint_name.empty()) {
-        std::stringstream new_folder_path;
-        new_folder_path << output_path << "/" << name;
-        training_folder = new_folder_path.str();
-
+        training_folder = output_path + "/" + name;
         create_directory(training_folder);
 
         log.open(training_folder + "/log.txt", false);
         log.write({"epoch", "loss"});
-
-        epoch = 0;
     } else {
         const std::string checkpoint_path = output_path + "/" + checkpoint_name;
 
         if (!exists(checkpoint_path))
             error("Checkpoint path does not exist: " + checkpoint_path);
 
-        load_weights(checkpoint_path + "/weights.bin");
+        load_params(checkpoint_path + "/model.bin");
         optim->load(checkpoint_path);
 
         epoch = epoch_from_checkpoint(checkpoint_name);
         lr_sched->lr_from_epoch(epoch);
 
         training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
-
         log.open(training_folder + "/log.txt", true);
 
         loaded_checkpoint = checkpoint_name;
@@ -125,7 +193,6 @@ void Model::train(std::string output_path, std::string checkpoint_name) {
         }
 
         float epoch_loss = loss->get_loss() / positions_per_epoch;
-
         timer.stop();
         auto elapsed = timer.elapsed_time();
 

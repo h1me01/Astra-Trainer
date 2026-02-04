@@ -24,26 +24,37 @@ struct HyperParams {
 
 class Model {
   public:
-    Model(std::string name)
-        : name(name) {}
     virtual ~Model() = default;
 
-    void train(std::string output_path, std::string checkpoint_name = "");
+    void train(const std::string& output_path, const std::string& checkpoint_name = "");
 
-    void load_weights(const std::string& file) {
+    void load_params(const std::string& file) {
         init();
-        network->load_weights(file);
-        loaded_weights = file;
+
+        FILE* f = fopen(file.c_str(), "rb");
+        if (!f)
+            error("File " + file + " does not exist!");
+
+        try {
+            for (auto& p : network->get_params())
+                p->load(f);
+            fclose(f);
+        } catch (const std::exception& e) {
+            fclose(f);
+            throw;
+        }
+
+        loaded_model = file;
     }
 
-    void save_weights(const std::string& file) {
+    void save_params(const std::string& file) {
         init();
-        network->save_weights(file);
+        save_params_helper(file, false);
     }
 
-    void save_quantized_weights(const std::string& file) {
+    void save_quantized_params(const std::string& file) {
         init();
-        network->save_quantized_weights(file);
+        save_params_helper(file, true);
     }
 
     void evaluate_positions(const std::vector<std::string>& positions) {
@@ -58,43 +69,39 @@ class Model {
     }
 
   protected:
+    std::string name;
     HyperParams params;
 
     template <typename T, typename... Args>
     auto make(Args&&... args) {
-        return std::make_shared<T>(std::forward<Args>(args)...);
+        auto op = std::make_shared<T>(std::forward<Args>(args)...);
+
+        if constexpr (std::is_base_of_v<Operation, T>)
+            network->add_operation(op);
+
+        return op;
     }
 
-    virtual Ptr<Layer> build(const Ptr<Input>& stm_in, const Ptr<Input>& nstm_in) = 0;
-
+    virtual void build(const Ptr<Input>& stm_in, const Ptr<Input>& nstm_in) = 0;
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
 
-    int num_buckets(std::array<int, 64> bucket_map) {
+    virtual bool filter_entry(const TrainingDataEntry& e) {
+        return false;
+    }
+
+    int num_buckets(const std::array<int, 64>& bucket_map) const {
         int max_bucket = 0;
         for (int b : bucket_map)
-            if (b > max_bucket)
-                max_bucket = b;
+            max_bucket = std::max(max_bucket, b);
         return max_bucket + 1;
     }
 
-    virtual Ptr<Loss> get_loss() {
-        return nullptr;
-    }
-
-    virtual Ptr<Optimizer> get_optim() {
-        return nullptr;
-    }
-
-    virtual Ptr<LRScheduler> get_lr_scheduler() {
-        return nullptr;
-    }
-
-    virtual Ptr<Dataloader> get_dataloader() {
-        return nullptr;
-    }
+    virtual Ptr<Loss> get_loss() = 0;
+    virtual Ptr<Optimizer> get_optim() = 0;
+    virtual Ptr<LRScheduler> get_lr_scheduler() = 0;
+    virtual std::vector<std::string> get_training_files() = 0;
 
   private:
-    std::string name = "";
     bool is_initialized = false;
 
     Array<float> targets;
@@ -102,97 +109,19 @@ class Model {
     Ptr<Loss> loss;
     Ptr<Optimizer> optim;
     Ptr<LRScheduler> lr_sched;
-    Ptr<Dataloader> dataloader;
     Ptr<Input> stm_input, nstm_input;
+
     std::unique_ptr<Network> network;
+    std::unique_ptr<Dataloader> dataloader;
 
-    std::string loaded_weights = "";
-    std::string loaded_checkpoint = "";
+    std::string loaded_model;
+    std::string loaded_checkpoint;
 
+    void init();
+    void print_info(int epoch, const std::string& output_path) const;
     void fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda);
 
-    void init() {
-        if (is_initialized)
-            return;
-
-        targets = Array<float>(params.batch_size);
-
-        network = std::make_unique<Network>();
-        stm_input = std::make_shared<Input>(32);
-        nstm_input = std::make_shared<Input>(32);
-
-        loss = get_loss();
-        optim = get_optim();
-        lr_sched = get_lr_scheduler();
-        dataloader = get_dataloader();
-
-        if (loss == nullptr)
-            error("Loss function is not set for the trainer!");
-        if (optim == nullptr)
-            error("Optimizer is not set for the trainer!");
-        if (lr_sched == nullptr)
-            error("LR Scheduler is not set for the trainer!");
-        if (dataloader == nullptr)
-            error("Dataloader is not set for the trainer!");
-
-        network->set_output_layer(build(stm_input, nstm_input));
-
-        network->init(params.batch_size);
-        stm_input->init(params.batch_size);
-        nstm_input->init(params.batch_size);
-        optim->init(network->get_layers());
-
-        is_initialized = true;
-    }
-
-    void print_info(int epoch, std::string output_path) const {
-        std::cout << "\n=============================== Training Data ==============================\n\n";
-        const auto& training_files = dataloader->get_filenames();
-        if (training_files.empty())
-            error("No training data found in the specified paths!");
-
-        for (const auto& f : training_files)
-            std::cout << f << std::endl;
-
-        std::cout << "\n=============================== Trainer Info ===============================\n\n";
-        std::cout << "Model name:        " << name << std::endl;
-        std::cout << "Epochs:            " << params.epochs << std::endl;
-        std::cout << "Batch Size:        " << params.batch_size << std::endl;
-        std::cout << "Batches/Epoch:     " << params.batches_per_epoch << std::endl;
-        std::cout << "Save Rate:         " << params.save_rate << std::endl;
-        std::cout << "Thread Count:      " << params.thread_count << std::endl;
-        std::cout << "Learning Rate:     " << params.lr << std::endl;
-        std::cout << "Eval Div:          " << params.eval_div << std::endl;
-        std::cout << "Lambda Start:      " << params.lambda_start << std::endl;
-        std::cout << "Lambda End:        " << params.lambda_end << std::endl;
-        std::cout << "Output Path:       " << output_path << std::endl;
-
-        if (!loaded_checkpoint.empty())
-            std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
-        else if (!loaded_weights.empty())
-            std::cout << "Loaded Weights:    " << loaded_weights << std::endl;
-
-        if (epoch > 0)
-            std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get_lr() << std::endl;
-    }
-
-    float predict(std::string fen) {
-        Position pos;
-        pos.set(fen);
-
-        TrainingDataEntry e;
-        e.pos = pos;
-
-        std::vector<TrainingDataEntry> ds{e};
-
-        fill_inputs(ds, 1.0f);
-        network->forward(ds);
-
-        auto& output = network->get_output().get_output();
-        output.dev_to_host();
-
-        return output(0) * params.eval_div;
-    }
+    float predict(const std::string& fen);
 
     void save_checkpoint(const std::string& path) {
         try {
@@ -201,16 +130,16 @@ class Model {
             error("Failed creating directory " + path + ": " + e.what());
         }
 
-        network->save_weights(path + "/weights.bin");
-        network->save_quantized_weights(path + "/qweights.nnue");
+        save_params(path + "/model.bin");
+        save_quantized_params(path + "/quantized_model.nnue");
 
-        if (optim != nullptr)
+        if (optim)
             optim->save(path);
 
         std::cout << "Saved checkpoint to " << path << std::endl;
     }
 
-    int epoch_from_checkpoint(const std::string& checkpoint_name) {
+    int epoch_from_checkpoint(const std::string& checkpoint_name) const {
         size_t dash_pos = checkpoint_name.find_last_of('_');
         if (dash_pos == std::string::npos) {
             std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
@@ -224,11 +153,29 @@ class Model {
         }
 
         try {
-            int parsed_epoch = std::stoi(epoch_str);
-            return parsed_epoch;
+            return std::stoi(epoch_str);
         } catch (...) {
             std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
             return 0;
+        }
+    }
+
+    void save_params_helper(const std::string& file, bool quantized) {
+        FILE* f = fopen(file.c_str(), "wb");
+        if (!f)
+            error("Failed writing weights to " + file);
+
+        try {
+            for (auto& p : network->get_params()) {
+                if (quantized)
+                    p->save_quantized(f);
+                else
+                    p->save(f);
+            }
+            fclose(f);
+        } catch (const std::exception& e) {
+            fclose(f);
+            throw;
         }
     }
 };

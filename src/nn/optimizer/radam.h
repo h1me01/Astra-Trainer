@@ -23,9 +23,9 @@ class RAdam : public Optimizer {
         const int N_sma_max = 2 / (1 - beta2) - 1;
         const int N_sma = N_sma_max - 2 * curr_step * beta2_t / (1 - beta2_t);
 
-        for (size_t i = 0; i < tunables.size(); i++) {
+        for (size_t i = 0; i < params.size(); i++) {
             kernel::radam_optim(
-                *tunables[i],
+                *params[i],
                 momentum[i],
                 velocity[i],
                 lr,

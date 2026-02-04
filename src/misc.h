@@ -41,12 +41,6 @@ using namespace std::filesystem;
         }                                                                                                              \
     }
 
-#ifdef NDEBUG
-#define CUDA_ASSERT_DEBUG(ans) ((void)0)
-#else
-#define CUDA_ASSERT_DEBUG(ans) CUDA_ASSERT(ans)
-#endif
-
 template <typename T>
 using Ptr = std::shared_ptr<T>;
 

@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "../layer/include.h"
+#include "../ops/include.h"
 
 namespace nn {
 
@@ -16,74 +16,53 @@ class Network {
         kernel::destroy_cublas();
     }
 
-    void load_weights(const std::string& file);
-    void save_weights(const std::string& file);
-
-    void save_quantized_weights(const std::string& file);
+    void add_operation(Ptr<Operation> op) {
+        operations.push_back(op);
+    }
 
     void init(int batch_size) {
-        if (architecture.empty())
-            error("No layers set for the network!");
-
-        // set output layer will initialize layers vector
-        // in reverse order, so we need to reverse it to get correct order
-        std::reverse(architecture.begin(), architecture.end());
-
-        for (auto& l : architecture)
-            l->init(batch_size);
+        if (operations.size() == 0)
+            error("Network has no operations!");
+        for (auto& op : operations)
+            op->init(batch_size);
     }
 
     void forward(const std::vector<TrainingDataEntry>& data_entries) {
-        for (auto& l : architecture)
+        for (auto& l : operations)
             l->step(data_entries);
 
-        for (size_t i = 0; i < architecture.size(); i++)
-            architecture[i]->forward();
+        for (size_t i = 0; i < operations.size(); i++)
+            operations[i]->forward();
     }
 
     void backward() {
-        for (int i = architecture.size() - 1; i >= 0; i--)
-            architecture[i]->backward();
+        for (int i = operations.size() - 1; i >= 0; i--)
+            operations[i]->backward();
     }
 
-    void set_output_layer(const Ptr<Layer>& output_layer) {
-        if (output_layer == nullptr)
-            error("Output layer is null!");
-
-        architecture.clear();
-        architecture.push_back(output_layer);
-        init_layers(output_layer->get_inputs());
+    OpTensor& get_output() {
+        return operations.back()->get_tensor_output();
     }
 
-    LayerTensor& get_output() {
-        return architecture.back()->get_layer_tensor();
+    const OpTensor& get_output() const {
+        return operations.back()->get_tensor_output();
     }
 
-    std::vector<Ptr<Layer>> get_layers() {
-        std::vector<Ptr<Layer>> main_layers;
-        std::unordered_set<Layer*> seen;
+    std::vector<Ptr<Params>> get_params() {
+        std::vector<Ptr<Params>> main_params;
+        std::unordered_set<Params*> seen;
 
-        for (auto& l : architecture) {
-            auto m = l->get_main();
+        for (auto& l : operations) {
+            auto m = l->get_params();
             if (m && seen.insert(m.get()).second)
-                main_layers.push_back(m);
+                main_params.push_back(m);
         }
 
-        return main_layers;
+        return main_params;
     }
 
   private:
-    std::vector<Ptr<Layer>> architecture;
-
-    void init_layers(const std::vector<Ptr<Layer>>& layers) {
-        if (layers.empty())
-            return;
-
-        for (const auto& l : layers) {
-            architecture.push_back(l);
-            init_layers(l->get_inputs());
-        }
-    }
+    std::vector<Ptr<Operation>> operations;
 };
 
 } // namespace nn

@@ -14,7 +14,7 @@ void destroy_cublas();
 void affine_fwd(
     DenseMatrix& weights_v,
     DenseMatrix& biases_v,
-    DenseMatrix& inputs_v,
+    const DenseMatrix& inputs_v,
     DenseMatrix& linear_out,
     DenseMatrix& activated,
     Activation act_type

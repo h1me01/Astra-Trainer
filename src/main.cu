@@ -3,7 +3,7 @@
 using namespace model;
 
 int main() {
-    Astra model("training_1");
+    Astra model;
 
     model.train("/home/h1me/Documents/Coding/Astra-Data/nn_output");
 
