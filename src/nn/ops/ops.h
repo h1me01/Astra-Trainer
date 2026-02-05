@@ -99,8 +99,6 @@ class Operation : public std::enable_shared_from_this<Operation> {
         return nullptr;
     }
 
-    virtual std::vector<Ptr<Operation>> get_inputs() = 0;
-
   protected:
     int input_dim = 0;
     int output_dim = 0;

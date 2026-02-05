@@ -85,10 +85,6 @@ class FeatureTransformer : public Operation {
         return params;
     }
 
-    std::vector<Ptr<Operation>> get_inputs() override {
-        return {};
-    }
-
   private:
     Ptr<Params> params;
     std::vector<Ptr<Input>> inputs;

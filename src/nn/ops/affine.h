@@ -41,10 +41,6 @@ class Affine : public Operation {
         return params;
     }
 
-    std::vector<Ptr<Operation>> get_inputs() override {
-        return {input};
-    }
-
   private:
     Ptr<Params> params;
     Ptr<Operation> input;

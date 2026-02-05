@@ -49,10 +49,6 @@ class Select : public Operation {
         );
     }
 
-    std::vector<Ptr<Operation>> get_inputs() override {
-        return {input};
-    }
-
   private:
     int max_indices;
 

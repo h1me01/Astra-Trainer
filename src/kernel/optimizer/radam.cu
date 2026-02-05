@@ -2,6 +2,8 @@
 
 namespace kernel {
 
+using namespace optim_utils;
+
 constexpr int block_size = 1024;
 
 // https://github.com/LiyuanLucasLiu/RAdam.git
@@ -13,15 +15,12 @@ __global__ void radam_kernel(
     const float lr,
     const float beta1,
     const float beta2,
-    const float beta1_t,
-    const float beta2_t,
     const float eps,
     const float decay,
     const float min_val,
     const float max_val,
     const float grad_scale,
-    const int N_sma,
-    const int N_sma_max,
+    const RAdamParams radam_params,
     const int step,
     const int size
 ) {
@@ -38,7 +37,7 @@ __global__ void radam_kernel(
     mom = beta1 * mom + (1.0f - beta1) * grad;
     vel = beta2 * vel + (1.0f - beta2) * grad * grad;
 
-    val -= optimizer_utils::get_radam_update(mom, vel, lr, eps, beta1_t, beta2_t, N_sma, N_sma_max);
+    val -= get_radam_update(mom, vel, lr, eps, radam_params);
 
     moms[idx] = mom;
     vels[idx] = vel;
@@ -52,18 +51,12 @@ void radam_optim(
     const float lr,
     const float beta1,
     const float beta2,
-    const float beta1_t,
-    const float beta2_t,
     const float eps,
     const float decay,
     const float grad_scale,
-    const int N_sma,
-    const int N_sma_max,
+    const RAdamParams radam_params,
     const int step
 ) {
-    const float min_val = param.lower_bound();
-    const float max_val = param.upper_bound();
-
     auto& vals = param.get_values();
     auto& grads = param.get_gradients();
 
@@ -85,15 +78,12 @@ void radam_optim(
         lr,
         beta1,
         beta2,
-        beta1_t,
-        beta2_t,
         eps,
-        optimizer_utils::get_decay(lr, decay),
-        min_val,
-        max_val,
+        get_decay(lr, decay),
+        param.lower_bound(),
+        param.upper_bound(),
         grad_scale,
-        N_sma,
-        N_sma_max,
+        radam_params,
         step,
         vals.size()
     );

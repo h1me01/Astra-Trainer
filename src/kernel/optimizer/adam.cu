@@ -75,7 +75,7 @@ void adam_optim(
         beta1,
         beta2,
         eps,
-        optimizer_utils::get_decay(lr, decay),
+        optim_utils::get_decay(lr, decay),
         min_val,
         max_val,
         grad_scale,

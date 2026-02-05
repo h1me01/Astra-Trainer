@@ -17,11 +17,7 @@ class RAdam : public Optimizer {
         curr_step++;
 
         const float grad_scale = 1.0f / batch_size;
-
-        const float beta1_t = std::pow(beta1, curr_step);
-        const float beta2_t = std::pow(beta2, curr_step);
-        const int N_sma_max = 2 / (1 - beta2) - 1;
-        const int N_sma = N_sma_max - 2 * curr_step * beta2_t / (1 - beta2_t);
+        const auto radam_params = kernel::optim_utils::get_radam_params(beta1, beta2, curr_step);
 
         for (size_t i = 0; i < params.size(); i++) {
             kernel::radam_optim(
@@ -31,13 +27,10 @@ class RAdam : public Optimizer {
                 lr,
                 beta1,
                 beta2,
-                beta1_t,
-                beta2_t,
                 epsilon,
                 decay,
                 grad_scale,
-                N_sma,
-                N_sma_max,
+                radam_params,
                 curr_step
             );
         }

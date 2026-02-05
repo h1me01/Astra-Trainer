@@ -34,10 +34,6 @@ class Concat : public Operation {
         );
     }
 
-    std::vector<Ptr<Operation>> get_inputs() override {
-        return {input1, input2};
-    }
-
   private:
     Ptr<Operation> input1;
     Ptr<Operation> input2;
