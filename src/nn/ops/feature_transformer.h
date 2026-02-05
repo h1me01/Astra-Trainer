@@ -9,21 +9,13 @@ class Input {
     Input(int size)
         : size(size) {}
 
-    void init(int batch_size) {
-        output = Array<int>(size * batch_size);
-    }
+    void init(int batch_size) { output = Array<int>(size * batch_size); }
 
-    Array<int>& get_output() {
-        return output;
-    }
+    Array<int>& get_output() { return output; }
 
-    const Array<int>& get_output() const {
-        return output;
-    }
+    const Array<int>& get_output() const { return output; }
 
-    int get_size() const {
-        return size;
-    }
+    int get_size() const { return size; }
 
   private:
     int size;
@@ -81,9 +73,7 @@ class FeatureTransformer : public Operation {
         }
     }
 
-    Ptr<Params> get_params() override {
-        return params;
-    }
+    Ptr<Params> get_params() override { return params; }
 
   private:
     Ptr<Params> params;

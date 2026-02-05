@@ -26,7 +26,6 @@ class OpTensor {
             gradients.clear_dev();
     }
 
-    // clang-format off
     DenseMatrix& get_output() { return has_act ? activated : linear_out; }
     const DenseMatrix& get_output() const { return has_act ? activated : linear_out; }
 
@@ -38,7 +37,6 @@ class OpTensor {
 
     DenseMatrix& get_activated() { return activated; }
     const DenseMatrix& get_activated() const { return activated; }
-    // clang-format on
 
   private:
     DenseMatrix linear_out;
@@ -51,13 +49,9 @@ class Operation : public std::enable_shared_from_this<Operation> {
   public:
     virtual ~Operation() = default;
 
-    virtual void init(int batch_size) {
-        tensor_output = OpTensor(batch_size, output_dim, act_type);
-    }
+    virtual void init(int batch_size) { tensor_output = OpTensor(batch_size, output_dim, act_type); }
 
-    virtual void step(const std::vector<TrainingDataEntry>& data_entries) {
-        tensor_output.clear_grads();
-    }
+    virtual void step(const std::vector<TrainingDataEntry>& data_entries) { tensor_output.clear_grads(); }
 
     virtual void forward() = 0;
     virtual void backward() = 0;
@@ -82,7 +76,6 @@ class Operation : public std::enable_shared_from_this<Operation> {
         return shared_from_this();
     }
 
-    // clang-format off
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }
 
@@ -93,11 +86,8 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     OpTensor& get_tensor_output() { return tensor_output; }
     const OpTensor& get_tensor_output() const { return tensor_output; }
-    // clang-format on
 
-    virtual Ptr<Params> get_params() {
-        return nullptr;
-    }
+    virtual Ptr<Params> get_params() { return nullptr; }
 
   protected:
     int input_dim = 0;

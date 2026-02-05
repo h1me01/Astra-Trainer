@@ -18,9 +18,7 @@ class Loss {
         return loss(0);
     }
 
-    void reset() {
-        loss.clear();
-    }
+    void reset() { loss.clear(); }
 
   protected:
     Activation act_type;

@@ -37,9 +37,7 @@ class Affine : public Operation {
         );
     }
 
-    Ptr<Params> get_params() override {
-        return params;
-    }
+    Ptr<Params> get_params() override { return params; }
 
   private:
     Ptr<Params> params;

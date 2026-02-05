@@ -8,6 +8,7 @@ class LRScheduler {
   public:
     LRScheduler(float lr)
         : lr(lr) {}
+
     virtual ~LRScheduler() = default;
 
     virtual void step(int epoch) = 0;
@@ -17,9 +18,7 @@ class LRScheduler {
             step(i);
     }
 
-    float get_lr() const {
-        return lr;
-    }
+    float get_lr() const { return lr; }
 
   protected:
     float lr;

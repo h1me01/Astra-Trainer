@@ -8,17 +8,10 @@ namespace nn {
 
 class Network {
   public:
-    Network() {
-        kernel::create_cublas();
-    }
+    Network() { kernel::create_cublas(); }
+    ~Network() { kernel::destroy_cublas(); }
 
-    ~Network() {
-        kernel::destroy_cublas();
-    }
-
-    void add_operation(Ptr<Operation> op) {
-        operations.push_back(op);
-    }
+    void add_operation(Ptr<Operation> op) { operations.push_back(op); }
 
     void init(int batch_size) {
         if (operations.size() == 0)
@@ -30,7 +23,6 @@ class Network {
     void forward(const std::vector<TrainingDataEntry>& data_entries) {
         for (auto& l : operations)
             l->step(data_entries);
-
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->forward();
     }
@@ -40,13 +32,8 @@ class Network {
             operations[i]->backward();
     }
 
-    OpTensor& get_output() {
-        return operations.back()->get_tensor_output();
-    }
-
-    const OpTensor& get_output() const {
-        return operations.back()->get_tensor_output();
-    }
+    OpTensor& get_output() { return operations.back()->get_tensor_output(); }
+    const OpTensor& get_output() const { return operations.back()->get_tensor_output(); }
 
     std::vector<Ptr<Params>> get_params() {
         std::vector<Ptr<Params>> main_params;

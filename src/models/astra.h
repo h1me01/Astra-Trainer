@@ -104,9 +104,7 @@ struct Astra : Model {
         auto select_l3 = make<Select>(l3_out, bucket_index);
     }
 
-    Ptr<Loss> get_loss() override {
-        return make<MSE>(Activation::Sigmoid);
-    }
+    Ptr<Loss> get_loss() override { return make<MSE>(Activation::Sigmoid); }
 
     Ptr<Optimizer> get_optim() override {
         auto optim = make<Adam>(0.9, 0.999, 1e-8, 0.01);

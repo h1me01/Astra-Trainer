@@ -13,10 +13,9 @@ void Model::init() {
     nstm_input = std::make_shared<Input>(32);
 
     dataloader = std::make_unique<Dataloader>(
-        params.batch_size,
-        params.thread_count,
-        get_training_files(),
-        [this](const TrainingDataEntry& e) { return filter_entry(e); }
+        params.batch_size, params.thread_count, get_training_files(), [this](const TrainingDataEntry& e) {
+            return filter_entry(e);
+        }
     );
 
     loss = get_loss();

@@ -38,13 +38,9 @@ class CudaDevicePtr {
         return *this;
     }
 
-    T* get() const {
-        return ptr;
-    }
+    T* get() const { return ptr; }
 
-    explicit operator bool() const {
-        return ptr != nullptr;
-    }
+    explicit operator bool() const { return ptr != nullptr; }
 
   private:
     T* ptr = nullptr;
@@ -90,21 +86,11 @@ class Array {
 
     virtual ~Array() = default;
 
-    bool is_host_allocated() const {
-        return host_data != nullptr;
-    }
+    bool is_host_allocated() const { return host_data != nullptr; }
+    bool is_dev_allocated() const { return static_cast<bool>(dev_data); }
 
-    bool is_dev_allocated() const {
-        return static_cast<bool>(dev_data);
-    }
-
-    T* host_address() const {
-        return host_data.get();
-    }
-
-    T* dev_address() const {
-        return dev_data.get();
-    }
+    T* host_address() const { return host_data.get(); }
+    T* dev_address() const { return dev_data.get(); }
 
     void clear() {
         clear_host();
@@ -145,17 +131,11 @@ class Array {
         return host_data[idx];
     }
 
-    T operator()(int idx) const {
-        return get(idx);
-    }
+    T operator()(int idx) const { return get(idx); }
 
-    T& operator()(int idx) {
-        return get(idx);
-    }
+    T& operator()(int idx) { return get(idx); }
 
-    int size() const {
-        return m_size;
-    }
+    int size() const { return m_size; }
 
   protected:
     int m_size = 0;

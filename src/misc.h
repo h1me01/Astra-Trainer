@@ -69,9 +69,7 @@ class Logger {
   public:
     Logger() {}
 
-    Logger(std::string path) {
-        file = std::ofstream(path, std::ios::app);
-    }
+    Logger(std::string path) { file = std::ofstream(path, std::ios::app); }
 
     void open(std::string path, bool append = false) {
         if (file.is_open())
@@ -111,13 +109,9 @@ class Timer {
         prev_duration = 0;
     }
 
-    void stop() {
-        end_point = steady_clock::now();
-    }
+    void stop() { end_point = steady_clock::now(); }
 
-    long long elapsed_time() const {
-        return std::chrono::duration_cast<ms>(end_point - start_point).count();
-    }
+    long long elapsed_time() const { return std::chrono::duration_cast<ms>(end_point - start_point).count(); }
 
     // returns true if the provided has elapsed since the last call
     bool is_time_reached(long long time) {

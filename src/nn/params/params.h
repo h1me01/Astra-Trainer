@@ -23,11 +23,9 @@ class SaveFormat {
         return *this;
     }
 
-    // clang-format off
     Type get_type() const { return m_type; }
     int get_scale() const { return m_scale; }
     bool is_transposed() const { return m_transpose; }
-    // clang-format on
 
   private:
     int m_scale = 1;
@@ -59,20 +57,22 @@ class Params {
         save_tensor_quantized(f, biases, biases_save_format);
     }
 
-    // clang-format off
     int get_input_dim() const { return weights.get_values().cols(); }
     int get_output_dim() const { return weights.get_values().rows(); }
 
     SaveFormat& weights_format() { return weights_save_format; }
     SaveFormat& biases_format() { return biases_save_format; }
+
     const SaveFormat& weights_format() const { return weights_save_format; }
     const SaveFormat& biases_format() const { return biases_save_format; }
+
     Tensor& get_weights() { return weights; }
     Tensor& get_biases() { return biases; }
+
     const Tensor& get_weights() const { return weights; }
     const Tensor& get_biases() const { return biases; }
+
     std::vector<Tensor*> get() { return {&weights, &biases}; }
-    // clang-format on
 
   private:
     Tensor weights;

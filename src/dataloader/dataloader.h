@@ -73,9 +73,7 @@ class Dataloader {
         return {};
     }
 
-    std::vector<std::string> get_filenames() const {
-        return m_filenames;
-    }
+    std::vector<std::string> get_filenames() const { return m_filenames; }
 
   private:
     void worker_loop() {

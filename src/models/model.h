@@ -85,9 +85,7 @@ class Model {
     virtual void build(const Ptr<Input>& stm_in, const Ptr<Input>& nstm_in) = 0;
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
 
-    virtual bool filter_entry(const TrainingDataEntry& e) {
-        return false;
-    }
+    virtual bool filter_entry(const TrainingDataEntry& e) { return false; }
 
     int num_buckets(const std::array<int, 64>& bucket_map) const {
         int max_bucket = 0;

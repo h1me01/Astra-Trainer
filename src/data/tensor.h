@@ -53,16 +53,14 @@ class Tensor {
         m_upper_bound = max_val;
     }
 
-    // clang-format off
     float lower_bound() const { return m_lower_bound; }
     float upper_bound() const { return m_upper_bound; }
 
     DenseMatrix& get_values() { return values; }
     const DenseMatrix& get_values() const { return values; }
-    
+
     DenseMatrix& get_gradients() { return gradients; }
     const DenseMatrix& get_gradients() const { return gradients; }
-    // clang-format on
 
   private:
     DenseMatrix values;
