@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-template <bool UseActivation>
 __global__ void concat_bwd_kernel(
     const float* linear_out,
     const float* grads,
@@ -25,7 +24,7 @@ __global__ void concat_bwd_kernel(
     const int out_offset = out_idx + batch_idx * out_r;
 
     float grad = grads[out_offset];
-    if (UseActivation)
+    if (has_activation(act_type))
         grad *= activate_bwd(linear_out[out_offset], act_type);
 
     if (out_idx < in1_r) {
@@ -58,30 +57,16 @@ void concat_bwd(
     );
 
     const int blocks = get_num_blocks(grads.size(), block_size);
-
-    if (has_activation(act_type)) {
-        concat_bwd_kernel<true><<<blocks, block_size>>>(
-            linear_out.dev_address(),
-            grads.dev_address(),
-            in1_g.dev_address(),
-            in2_g.dev_address(),
-            in1_g.rows(),
-            grads.rows(),
-            grads.cols(),
-            act_type
-        );
-    } else {
-        concat_bwd_kernel<false><<<blocks, block_size>>>(
-            linear_out.dev_address(),
-            grads.dev_address(),
-            in1_g.dev_address(),
-            in2_g.dev_address(),
-            in1_g.rows(),
-            grads.rows(),
-            grads.cols(),
-            act_type
-        );
-    }
+    concat_bwd_kernel<<<blocks, block_size>>>(
+        linear_out.dev_address(),
+        grads.dev_address(),
+        in1_g.dev_address(),
+        in2_g.dev_address(),
+        in1_g.rows(),
+        grads.rows(),
+        grads.cols(),
+        act_type
+    );
 }
 
 } // namespace kernel

@@ -7,7 +7,6 @@ constexpr float beta = 0;
 
 constexpr int block_size = 128;
 
-template <bool UseActivation>
 __global__ void biases_fwd_kernel(
     const float* biases_v, float* linear_out, float* activated, const int r, const int c, const Activation act_type
 ) {
@@ -19,7 +18,7 @@ __global__ void biases_fwd_kernel(
     const float weighted_sum = linear_out[idx] + biases_v[neuron_idx];
 
     linear_out[idx] = weighted_sum;
-    if (UseActivation)
+    if (has_activation(act_type))
         activated[idx] = activate_fwd(weighted_sum, act_type);
 }
 
@@ -46,6 +45,8 @@ void affine_fwd(
         linear_out.is_dev_allocated()
     );
 
+    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
+
     // compute dot product
     cublasSgemm(                  //
         CUBLAS_HANDLE,            // handle
@@ -66,27 +67,14 @@ void affine_fwd(
 
     // add biases to dot product
     const int blocks = get_num_blocks(linear_out.size(), block_size);
-    if (has_activation(act_type)) {
-        ASSERT(activated.is_dev_allocated());
-
-        biases_fwd_kernel<true><<<blocks, block_size>>>(
-            biases_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            linear_out.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    } else {
-        biases_fwd_kernel<false><<<blocks, block_size>>>(
-            biases_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            linear_out.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    }
+    biases_fwd_kernel<<<blocks, block_size>>>(
+        biases_v.dev_address(),
+        linear_out.dev_address(),
+        activated.dev_address(),
+        linear_out.rows(),
+        linear_out.cols(),
+        act_type
+    );
 }
 
 } // namespace kernel

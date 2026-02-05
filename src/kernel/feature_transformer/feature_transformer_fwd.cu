@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 128;
 
-template <bool UseActivation>
 __global__ void feature_transformer_fwd_kernel(
     const float* weights_v,
     const float* biases_v,
@@ -38,7 +37,7 @@ __global__ void feature_transformer_fwd_kernel(
     const int out_idx = out_r * batch_idx + neuron_idx + out_offset;
     linear_out[out_idx] = sum;
 
-    if (UseActivation)
+    if (has_activation(act_type))
         activated[out_idx] = activate_fwd(sum, act_type);
 }
 
@@ -64,39 +63,22 @@ void feature_transformer_fwd(
         features.is_dev_allocated()
     );
 
+    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
+
     const int blocks = get_num_blocks(weights_v.rows() * linear_out.cols(), block_size);
-
-    if (has_activation(act_type)) {
-        ASSERT(activated.is_dev_allocated());
-
-        feature_transformer_fwd_kernel<true><<<blocks, block_size>>>(
-            weights_v.dev_address(),
-            biases_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            features.dev_address(),
-            weights_v.rows(),
-            linear_out.rows(),
-            linear_out.cols(),
-            max_entries,
-            out_offset,
-            act_type
-        );
-    } else {
-        feature_transformer_fwd_kernel<false><<<blocks, block_size>>>(
-            weights_v.dev_address(),
-            biases_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            features.dev_address(),
-            weights_v.rows(),
-            linear_out.rows(),
-            linear_out.cols(),
-            max_entries,
-            out_offset,
-            Activation::Linear
-        );
-    }
+    feature_transformer_fwd_kernel<<<blocks, block_size>>>(
+        weights_v.dev_address(),
+        biases_v.dev_address(),
+        linear_out.dev_address(),
+        activated.dev_address(),
+        features.dev_address(),
+        weights_v.rows(),
+        linear_out.rows(),
+        linear_out.cols(),
+        max_entries,
+        out_offset,
+        act_type
+    );
 }
 
 } // namespace kernel

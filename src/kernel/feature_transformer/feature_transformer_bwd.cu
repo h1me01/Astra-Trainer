@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 128;
 
-template <bool UseActivation>
 __global__ void feature_transformer_bwd_kernel(
     float* weights_g,
     float* biases_g,
@@ -28,7 +27,7 @@ __global__ void feature_transformer_bwd_kernel(
 
     float grad = grads[out_idx];
 
-    if (UseActivation)
+    if (has_activation(act_type))
         grad *= activate_bwd(linear_out[out_idx], act_type);
 
     if (grad == 0.0f)
@@ -69,36 +68,19 @@ void feature_transformer_bwd(
     );
 
     const int blocks = get_num_blocks(weights_g.rows() * grads.cols(), block_size);
-
-    if (has_activation(act_type)) {
-        feature_transformer_bwd_kernel<true><<<blocks, block_size>>>(
-            weights_g.dev_address(),
-            biases_g.dev_address(),
-            linear_out.dev_address(),
-            grads.dev_address(),
-            features.dev_address(),
-            weights_g.rows(),
-            grads.rows(),
-            grads.cols(),
-            max_entries,
-            out_offset,
-            act_type
-        );
-    } else {
-        feature_transformer_bwd_kernel<false><<<blocks, block_size>>>(
-            weights_g.dev_address(),
-            biases_g.dev_address(),
-            linear_out.dev_address(),
-            grads.dev_address(),
-            features.dev_address(),
-            weights_g.rows(),
-            grads.rows(),
-            grads.cols(),
-            max_entries,
-            out_offset,
-            act_type
-        );
-    }
+    feature_transformer_bwd_kernel<<<blocks, block_size>>>(
+        weights_g.dev_address(),
+        biases_g.dev_address(),
+        linear_out.dev_address(),
+        grads.dev_address(),
+        features.dev_address(),
+        weights_g.rows(),
+        grads.rows(),
+        grads.cols(),
+        max_entries,
+        out_offset,
+        act_type
+    );
 }
 
 } // namespace kernel

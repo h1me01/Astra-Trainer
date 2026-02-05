@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-template <bool UseActivation>
 __global__ void pairwise_mul_fwd_kernel(
     const float* in_v,
     float* linear_out,
@@ -30,7 +29,7 @@ __global__ void pairwise_mul_fwd_kernel(
     const float val = in_v[in_offset_a] * in_v[in_offset_b];
 
     linear_out[out_idx] = val;
-    if (UseActivation)
+    if (has_activation(act_type))
         activated[out_idx] = activate_fwd(val, act_type);
 }
 
@@ -50,34 +49,19 @@ void pairwise_mul_fwd(
     );
 
     ASSERT(in_v.is_dev_allocated() && linear_out.is_dev_allocated());
+    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
 
     const int blocks = get_num_blocks(feature_size * in_v.cols(), block_size);
-
-    if (has_activation(act_type)) {
-        ASSERT(activated.is_dev_allocated());
-
-        pairwise_mul_fwd_kernel<true><<<blocks, block_size>>>(
-            in_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            feature_size,
-            linear_out.rows(),
-            in_v.cols(),
-            out_offset,
-            act_type
-        );
-    } else {
-        pairwise_mul_fwd_kernel<false><<<blocks, block_size>>>(
-            in_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            feature_size,
-            linear_out.rows(),
-            in_v.cols(),
-            out_offset,
-            act_type
-        );
-    }
+    pairwise_mul_fwd_kernel<<<blocks, block_size>>>(
+        in_v.dev_address(),
+        linear_out.dev_address(),
+        activated.dev_address(),
+        feature_size,
+        linear_out.rows(),
+        in_v.cols(),
+        out_offset,
+        act_type
+    );
 }
 
 } // namespace kernel

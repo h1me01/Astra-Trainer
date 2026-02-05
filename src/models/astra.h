@@ -109,7 +109,7 @@ struct Astra : Model {
     }
 
     Ptr<Optimizer> get_optim() override {
-        auto optim = make<Ranger>(0.9, 0.999, 1e-8, 0.01);
+        auto optim = make<Adam>(0.9, 0.999, 1e-8, 0.01);
         optim->clamp(-0.99, 0.99);
         return optim;
     }

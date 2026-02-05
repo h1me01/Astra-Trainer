@@ -5,7 +5,6 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-template <bool UseActivation>
 __global__ void concat_fwd_kernel(
     const float* in1_v,
     const float* in2_v,
@@ -35,7 +34,7 @@ __global__ void concat_fwd_kernel(
     }
 
     linear_out[out_offset] = val;
-    if (UseActivation)
+    if (has_activation(act_type))
         activated[out_offset] = activate_fwd(val, act_type);
 }
 
@@ -58,33 +57,19 @@ void concat_fwd(
         linear_out.is_dev_allocated()
     );
 
+    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
+
     const int blocks = get_num_blocks(linear_out.size(), block_size);
-
-    if (has_activation(act_type)) {
-        ASSERT(activated.is_dev_allocated());
-
-        concat_fwd_kernel<true><<<blocks, block_size>>>(
-            in1_v.dev_address(),
-            in2_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            linear_out.rows(),
-            in1_v.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    } else {
-        concat_fwd_kernel<false><<<blocks, block_size>>>(
-            in1_v.dev_address(),
-            in2_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            linear_out.rows(),
-            in1_v.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    }
+    concat_fwd_kernel<<<blocks, block_size>>>(
+        in1_v.dev_address(),
+        in2_v.dev_address(),
+        linear_out.dev_address(),
+        activated.dev_address(),
+        linear_out.rows(),
+        in1_v.rows(),
+        linear_out.cols(),
+        act_type
+    );
 }
 
 } // namespace kernel

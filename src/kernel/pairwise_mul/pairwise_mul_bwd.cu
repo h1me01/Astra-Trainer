@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-template <bool UseActivation>
 __global__ void pairwise_mul_bwd_kernel(
     const float* in_v,
     float* in_g,
@@ -29,7 +28,7 @@ __global__ void pairwise_mul_bwd_kernel(
     const int out_idx = batch_idx * out_r + feature_idx + out_offset;
 
     float grad = grads[out_idx];
-    if (UseActivation)
+    if (has_activation(act_type))
         grad *= activate_bwd(linear_out[out_idx], act_type);
 
     in_g[in_offset_a] += grad * in_v[in_offset_b];
@@ -60,31 +59,17 @@ void pairwise_mul_bwd(
     );
 
     const int blocks = get_num_blocks(feature_size * in_v.cols(), block_size);
-    if (has_activation(act_type)) {
-        pairwise_mul_bwd_kernel<true><<<blocks, block_size>>>(
-            in_v.dev_address(),
-            in_g.dev_address(),
-            linear_out.dev_address(),
-            grads.dev_address(),
-            feature_size,
-            grads.rows(),
-            in_v.cols(),
-            out_offset,
-            act_type
-        );
-    } else {
-        pairwise_mul_bwd_kernel<false><<<blocks, block_size>>>(
-            in_v.dev_address(),
-            in_g.dev_address(),
-            linear_out.dev_address(),
-            grads.dev_address(),
-            feature_size,
-            grads.rows(),
-            in_v.cols(),
-            out_offset,
-            act_type
-        );
-    }
+    pairwise_mul_bwd_kernel<<<blocks, block_size>>>(
+        in_v.dev_address(),
+        in_g.dev_address(),
+        linear_out.dev_address(),
+        grads.dev_address(),
+        feature_size,
+        grads.rows(),
+        in_v.cols(),
+        out_offset,
+        act_type
+    );
 }
 
 } // namespace kernel

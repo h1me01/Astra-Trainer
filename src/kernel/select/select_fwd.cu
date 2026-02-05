@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-template <bool UseActivation>
 __global__ void select_fwd_kernel(
     const float* in_v,
     float* linear_out,
@@ -30,7 +29,7 @@ __global__ void select_fwd_kernel(
     const int out_offset = out_r * batch_idx + out_idx;
 
     linear_out[out_offset] = in_value;
-    if (UseActivation)
+    if (has_activation(act_type))
         activated[out_offset] = activate_fwd(in_value, act_type);
 }
 
@@ -50,32 +49,19 @@ void select_fwd(
         indices.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(linear_out.size(), block_size);
-    if (has_activation(act_type)) {
-        ASSERT(activated.is_dev_allocated());
+    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
 
-        select_fwd_kernel<true><<<blocks, block_size>>>(
-            in_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            indices.dev_address(),
-            in_v.rows(),
-            linear_out.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    } else {
-        select_fwd_kernel<false><<<blocks, block_size>>>(
-            in_v.dev_address(),
-            linear_out.dev_address(),
-            activated.dev_address(),
-            indices.dev_address(),
-            in_v.rows(),
-            linear_out.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    }
+    const int blocks = get_num_blocks(linear_out.size(), block_size);
+    select_fwd_kernel<<<blocks, block_size>>>(
+        in_v.dev_address(),
+        linear_out.dev_address(),
+        activated.dev_address(),
+        indices.dev_address(),
+        in_v.rows(),
+        linear_out.rows(),
+        linear_out.cols(),
+        act_type
+    );
 }
 
 } // namespace kernel

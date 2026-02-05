@@ -11,7 +11,7 @@ enum class Activation {
     Sigmoid,
 };
 
-inline bool has_activation(const Activation type) {
+inline __host__ __device__ bool has_activation(const Activation type) {
     return type != Activation::Linear;
 }
 

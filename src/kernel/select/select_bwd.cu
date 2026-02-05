@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-template <bool UseActivation>
 __global__ void select_bwd_kernel(
     float* in_g,
     const float* linear_out,
@@ -28,7 +27,7 @@ __global__ void select_bwd_kernel(
     const int out_offset = out_r * batch_idx + out_idx;
 
     float grad = grads[out_offset];
-    if (UseActivation)
+    if (has_activation(act_type))
         grad *= activate_bwd(linear_out[out_offset], act_type);
 
     in_g[in_offset] += grad;
@@ -51,29 +50,16 @@ void select_bwd(
     );
 
     const int blocks = get_num_blocks(grads.size(), block_size);
-    if (has_activation(act_type)) {
-        select_bwd_kernel<true><<<blocks, block_size>>>(
-            in_g.dev_address(),
-            linear_out.dev_address(),
-            grads.dev_address(),
-            indices.dev_address(),
-            in_g.rows(),
-            linear_out.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    } else {
-        select_bwd_kernel<false><<<blocks, block_size>>>(
-            in_g.dev_address(),
-            linear_out.dev_address(),
-            grads.dev_address(),
-            indices.dev_address(),
-            in_g.rows(),
-            linear_out.rows(),
-            linear_out.cols(),
-            act_type
-        );
-    }
+    select_bwd_kernel<<<blocks, block_size>>>(
+        in_g.dev_address(),
+        linear_out.dev_address(),
+        grads.dev_address(),
+        indices.dev_address(),
+        in_g.rows(),
+        linear_out.rows(),
+        linear_out.cols(),
+        act_type
+    );
 }
 
 } // namespace kernel
