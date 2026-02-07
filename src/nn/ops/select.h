@@ -6,40 +6,24 @@ namespace nn {
 
 class Select : public Operation {
   public:
-    Select(Ptr<Operation> input, const std::function<int(const Position&)>& fn)
+    Select(Ptr<Operation> input, Ptr<SelectIndices> indices)
         : input(input),
-          fn(fn) {
-
-        max_indices = fn(Position::startPosition()) + 1;
+          indices(indices) {
 
         input_dim = input->get_output_dim();
-        output_dim = input_dim / max_indices;
+        output_dim = input_dim / indices->partitions_size();
 
-        if (input_dim % max_indices != 0)
+        if (input_dim % indices->partitions_size() != 0)
             error("Select input dimension must be a multiple of select size!");
     }
 
-    void init(int batch_size) override {
-        Operation::init(batch_size);
-        indices = Array<int>(batch_size, true);
-    }
+    void init(int batch_size) override { Operation::init(batch_size); }
 
-    void step(const std::vector<TrainingDataEntry>& data_entries) override {
-        Operation::step(data_entries);
+    void forward() override { kernel::select_fwd(input->get_data(), output.get_data(), *indices, act_type); }
 
-        for (int i = 0; i < (int)data_entries.size(); i++) {
-            int idx = fn(data_entries[i].pos);
-            if (idx < 0 || idx >= max_indices)
-                error("Index function of Select returned invalid index!");
-            indices(i) = idx;
-        }
+    void backward() override { kernel::select_bwd(input->get_grads(), output, *indices, act_type); }
 
-        indices.host_to_dev();
-    }
-
-    void forward() override { kernel::select_fwd(input->get_data(), output.get_data(), indices, act_type); }
-
-    void backward() override { kernel::select_bwd(input->get_grads(), output, indices, act_type); }
+    Ptr<SelectIndices> get_select_indices() const override { return indices; }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
 
@@ -47,8 +31,7 @@ class Select : public Operation {
     int max_indices;
 
     Ptr<Operation> input;
-    Array<int> indices;
-    std::function<int(const Position&)> fn;
+    Ptr<SelectIndices> indices;
 };
 
 } // namespace nn

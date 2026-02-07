@@ -44,8 +44,13 @@ inline Ptr<nn::Affine> affine(Ptr<nn::Param> params, Ptr<nn::Operation> a) {
     return detail::make<nn::Affine>(params, a);
 }
 
-inline Ptr<nn::Select> select(Ptr<nn::Operation> s, const std::function<int(const Position&)>& fn) {
-    return detail::make<nn::Select>(s, fn);
+template <typename Fn>
+inline Ptr<nn::SelectIndices> select_indices(int count, Fn&& fn) {
+    return detail::make<nn::SelectIndices>(count, std::forward<Fn>(fn));
+}
+
+inline Ptr<nn::Select> select(Ptr<nn::Operation> s, Ptr<nn::SelectIndices> indices) {
+    return detail::make<nn::Select>(s, indices);
 }
 
 inline Ptr<nn::Concat> concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {

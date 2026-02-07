@@ -4,24 +4,6 @@
 
 namespace nn {
 
-class Input {
-  public:
-    Input(int size)
-        : size(size) {}
-
-    void init(int batch_size) { output = Array<int>(size * batch_size, true); }
-
-    Array<int>& get_output() { return output; }
-
-    const Array<int>& get_output() const { return output; }
-
-    int get_size() const { return size; }
-
-  private:
-    int size;
-    Array<int> output;
-};
-
 class FeatureTransformer : public Operation {
   public:
     FeatureTransformer(Ptr<Param> params, Ptr<Input> input)

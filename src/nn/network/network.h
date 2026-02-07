@@ -27,13 +27,22 @@ class Network {
         // set output will initialize operations in reverse order, so reverse it
         std::reverse(operations.begin(), operations.end());
 
-        for (auto& op : operations)
+        std::unordered_set<SelectIndices*> seen;
+        for (auto& op : operations) {
             op->init(batch_size);
+            auto indices = op->get_select_indices();
+            if (indices && seen.insert(indices.get()).second)
+                select_indices.push_back(indices);
+        }
+
+        for (auto& indices : select_indices)
+            indices->init(batch_size);
     }
 
     void forward(const std::vector<TrainingDataEntry>& data_entries) {
-        for (auto& l : operations)
-            l->step(data_entries);
+        for (auto& indices : select_indices)
+            indices->step(data_entries);
+
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->forward();
     }
@@ -65,6 +74,7 @@ class Network {
     }
 
   private:
+    std::vector<Ptr<SelectIndices>> select_indices;
     std::vector<Ptr<Operation>> operations;
 
     void init_operations(const std::vector<Ptr<Operation>>& ops) {

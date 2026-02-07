@@ -15,10 +15,6 @@ constexpr std::array<int, 64> input_bucket = {
     0, 0, 0, 0, 0, 0, 0, 0, //
 };
 
-inline int bucket_index(const Position& pos) {
-    return (pos.pieceCount() - 2) / 4;
-}
-
 struct Astra : Model {
     Astra() {
         name = "astra_model";
@@ -80,6 +76,10 @@ struct Astra : Model {
         auto l1 = param::create(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
         auto l2 = param::create(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
         auto l3 = param::create(L2_SIZE, OUTPUT_BUCKETS);
+
+        auto bucket_index = select_indices(OUTPUT_BUCKETS, [&](const Position& pos) { //
+            return (pos.pieceCount() - 2) / 4;
+        });
 
         // save format
         ft->weights_format().type(save_format::int16).scale(255);
