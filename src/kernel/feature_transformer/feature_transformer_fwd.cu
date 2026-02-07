@@ -20,23 +20,53 @@ __global__ void feature_transformer_fwd_kernel(
         return;
 
     extern __shared__ int shared_features[];
-
     if (threadIdx.x < max_entries)
         shared_features[threadIdx.x] = features[batch_idx * max_entries + threadIdx.x];
     __syncthreads();
 
-    for (int neuron_idx = threadIdx.x; neuron_idx < weights_r; neuron_idx += blockDim.x) {
-        float sum = biases_v[neuron_idx];
-#pragma unroll 8
+    const int iterations = weights_r / 4;
+    const int remainder = weights_r % 4;
+
+    const float4* weights_v4 = (const float4*)weights_v;
+    const float4* biases_v4 = (const float4*)biases_v;
+    float4* out_v4 = (float4*)out_v;
+
+    for (int k = threadIdx.x; k < iterations; k += blockDim.x) {
+        const int neuron_idx_base = k * 4;
+        float4 sum = biases_v4[k];
+
+#pragma unroll
         for (int i = 0; i < max_entries; i++) {
-            int feature_idx = shared_features[i];
+            const int feature_idx = shared_features[i];
             if (feature_idx == -1)
                 break;
-            sum += weights_v[weights_r * feature_idx + neuron_idx];
+            add_t4(sum, weights_v4[feature_idx * iterations + k]);
         }
 
-        const int out_idx = out_r * batch_idx + neuron_idx;
-        out_v[out_idx] = activate_fwd(sum, act_type);
+        sum.x = activate_fwd(sum.x, act_type);
+        sum.y = activate_fwd(sum.y, act_type);
+        sum.z = activate_fwd(sum.z, act_type);
+        sum.w = activate_fwd(sum.w, act_type);
+
+        const int out_idx = (out_r * batch_idx + neuron_idx_base) / 4;
+        out_v4[out_idx] = sum;
+    }
+
+    if (remainder > 0) {
+        for (int neuron_idx = iterations * 4 + threadIdx.x; neuron_idx < weights_r; neuron_idx += blockDim.x) {
+            float sum = biases_v[neuron_idx];
+
+#pragma unroll
+            for (int i = 0; i < max_entries; i++) {
+                const int feature_idx = shared_features[i];
+                if (feature_idx == -1)
+                    break;
+                sum += weights_v[weights_r * feature_idx + neuron_idx];
+            }
+
+            const int out_idx = out_r * batch_idx + neuron_idx;
+            out_v[out_idx] = activate_fwd(sum, act_type);
+        }
     }
 }
 

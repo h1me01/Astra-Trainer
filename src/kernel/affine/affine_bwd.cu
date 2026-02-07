@@ -7,7 +7,7 @@ constexpr float beta = 1;
 
 constexpr int block_size = 256;
 
-__global__ void activate_bwd(const float* out_v, float* out_g, const int size, const Activation act_type) {
+__global__ void activate_bwd_kernel(const float* out_v, float* out_g, const int size, const Activation act_type) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= size)
         return;
@@ -57,7 +57,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, Activa
 
     // first update gradients if activation was used
     if (act_type != Activation::Linear)
-        activate_bwd<<<blocks, block_size>>>(out_v.dev_address(), out_g.dev_address(), out_g.size(), act_type);
+        activate_bwd_kernel<<<blocks, block_size>>>(out_v.dev_address(), out_g.dev_address(), out_g.size(), act_type);
 
     // update biases gradients
     biases_bwd_kernel<<<blocks, block_size>>>(biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols());

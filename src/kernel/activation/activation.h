@@ -13,7 +13,7 @@ enum class Activation {
 
 namespace kernel {
 
-inline __device__ float activate_fwd(float x, const Activation type) {
+__device__ __forceinline__ float activate_fwd(float x, const Activation type) {
     switch (type) {
     case Activation::ReLU:
         return fmaxf(0.0f, x);
@@ -30,7 +30,7 @@ inline __device__ float activate_fwd(float x, const Activation type) {
 }
 
 // assumes x is activated
-inline __device__ float activate_bwd(float x, const Activation type) {
+__device__ __forceinline__ float activate_bwd(float x, const Activation type) {
     switch (type) {
     case Activation::ReLU:
         return (x > 0.0f) ? 1.0f : 0.0f;
