@@ -16,7 +16,6 @@ struct TrainingConfig {
     int batches_per_epoch;
     int save_rate;
     int thread_count;
-    float lr;
     float eval_div;
     float lambda_start;
     float lambda_end;

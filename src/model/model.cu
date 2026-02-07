@@ -69,7 +69,7 @@ void Model::print_info(int epoch, const std::string& output_path) const {
     std::cout << "Batches/Epoch:     " << config.batches_per_epoch << std::endl;
     std::cout << "Save Rate:         " << config.save_rate << std::endl;
     std::cout << "Thread Count:      " << config.thread_count << std::endl;
-    std::cout << "Learning Rate:     " << config.lr << std::endl;
+    std::cout << "Learning Rate:     " << lr_sched->get_lr() << std::endl;
     std::cout << "Eval Div:          " << config.eval_div << std::endl;
     std::cout << "Lambda Start:      " << config.lambda_start << std::endl;
     std::cout << "Lambda End:        " << config.lambda_end << std::endl;
