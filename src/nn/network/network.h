@@ -11,11 +11,22 @@ class Network {
     Network() { kernel::create_cublas(); }
     ~Network() { kernel::destroy_cublas(); }
 
-    void add_operation(Ptr<Operation> op) { operations.push_back(op); }
+    void set_output(Ptr<Operation> op) {
+        if (!op)
+            error("Output operation cannot be null!");
+
+        operations.clear();
+        operations.push_back(op);
+        init_operations(op->get_inputs());
+    }
 
     void init(int batch_size) {
         if (operations.size() == 0)
             error("Network has no operations!");
+
+        // set output will initialize operations in reverse order, so reverse it
+        std::reverse(operations.begin(), operations.end());
+
         for (auto& op : operations)
             op->init(batch_size);
     }
@@ -32,15 +43,20 @@ class Network {
             operations[i]->backward();
     }
 
+    void clear_grads() {
+        for (auto& op : operations)
+            op->clear_grads();
+    }
+
     OpTensor& get_output() { return operations.back()->get_tensor_output(); }
     const OpTensor& get_output() const { return operations.back()->get_tensor_output(); }
 
-    std::vector<Ptr<Params>> get_params() {
-        std::vector<Ptr<Params>> main_params;
-        std::unordered_set<Params*> seen;
+    std::vector<Ptr<Param>> get_params() {
+        std::vector<Ptr<Param>> main_params;
+        std::unordered_set<Param*> seen;
 
         for (auto& l : operations) {
-            auto m = l->get_params();
+            auto m = l->get_param();
             if (m && seen.insert(m.get()).second)
                 main_params.push_back(m);
         }
@@ -50,6 +66,16 @@ class Network {
 
   private:
     std::vector<Ptr<Operation>> operations;
+
+    void init_operations(const std::vector<Ptr<Operation>>& ops) {
+        if (ops.empty())
+            return;
+
+        for (const auto& l : ops) {
+            operations.push_back(l);
+            init_operations(l->get_inputs());
+        }
+    }
 };
 
 } // namespace nn

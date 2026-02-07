@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model.h"
+#include "../model/include.h"
 
 namespace model {
 
@@ -23,15 +23,15 @@ struct Astra : Model {
     Astra() {
         name = "astra_model";
 
-        params.epochs = 100;
-        params.batch_size = 16384;
-        params.batches_per_epoch = 6104;
-        params.save_rate = 20;
-        params.thread_count = 4;
-        params.lr = 0.001;
-        params.eval_div = 400.0;
-        params.lambda_start = 0.5;
-        params.lambda_end = 0.5;
+        config.epochs = 100;
+        config.batch_size = 16384;
+        config.batches_per_epoch = 6104;
+        config.save_rate = 20;
+        config.thread_count = 4;
+        config.lr = 0.001;
+        config.eval_div = 400.0;
+        config.lambda_start = 0.5;
+        config.lambda_end = 0.5;
     }
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
@@ -68,52 +68,49 @@ struct Astra : Model {
         return false;
     }
 
-    void build(const Ptr<Input>& stm_in, const Ptr<Input>& nstm_in) override {
+    Ptr<nn::Operation> build(const Ptr<nn::Input>& stm_in, const Ptr<nn::Input>& nstm_in) override {
         const int FT_SIZE = 1024;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
         const int OUTPUT_BUCKETS = 8;
 
         // create params
-        auto ft_params = make<Params>(num_buckets(input_bucket) * 768, FT_SIZE);
-        auto l1_params = make<Params>(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2_params = make<Params>(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3_params = make<Params>(L2_SIZE, OUTPUT_BUCKETS);
+        auto ft = params::create(num_buckets(input_bucket) * 768, FT_SIZE);
+        auto l1 = params::create(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
+        auto l2 = params::create(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
+        auto l3 = params::create(L2_SIZE, OUTPUT_BUCKETS);
 
         // save format
-        ft_params->weights_format().type(SaveFormat::Type::INT16).scale(255);
-        ft_params->biases_format().type(SaveFormat::Type::INT16).scale(255);
+        ft->weights_format().type(save_format::int16).scale(255);
+        ft->biases_format().type(save_format::int16).scale(255);
 
-        l1_params->weights_format().type(SaveFormat::Type::INT8).scale(64).transpose();
-        l2_params->weights_format().transpose();
-        l3_params->weights_format().transpose();
+        l1->weights_format().type(save_format::int8).scale(64).transpose();
+        l2->weights_format().transpose();
+        l3->weights_format().transpose();
 
         // build network
-        auto ft_stm = make<FeatureTransformer>(ft_params, stm_in)->crelu();
-        auto ft_nstm = make<FeatureTransformer>(ft_params, nstm_in)->crelu();
+        auto ft_stm = op::feature_transformer(ft, stm_in)->crelu();
+        auto ft_nstm = op::feature_transformer(ft, nstm_in)->crelu();
 
-        auto pwm_out = make<PairwiseMul>(ft_stm, ft_nstm);
+        auto pwm_out = op::pairwise_mul(ft_stm, ft_nstm);
 
-        auto l1_out = make<Affine>(l1_params, pwm_out);
-        auto select_l1 = make<Select>(l1_out, bucket_index)->crelu();
+        auto l1_out = op::select(op::affine(l1, pwm_out), bucket_index)->crelu();
+        auto l2_out = op::select(op::affine(l2, l1_out), bucket_index)->crelu();
+        auto l3_out = op::select(op::affine(l3, l2_out), bucket_index);
 
-        auto l2_out = make<Affine>(l2_params, select_l1);
-        auto select_l2 = make<Select>(l2_out, bucket_index)->crelu();
-
-        auto l3_out = make<Affine>(l3_params, select_l2);
-        auto select_l3 = make<Select>(l3_out, bucket_index);
+        return l3_out;
     }
 
-    Ptr<Loss> get_loss() override { return make<MSE>(Activation::Sigmoid); }
+    Ptr<nn::Loss> get_loss() override { return loss::mse()->sigmoid(); }
 
-    Ptr<Optimizer> get_optim() override {
-        auto optim = make<Adam>(0.9, 0.999, 1e-8, 0.01);
+    Ptr<nn::Optimizer> get_optim() override {
+        auto optim = optim::adam(0.9, 0.999, 1e-8, 0.01);
         optim->clamp(-0.99, 0.99);
         return optim;
     }
 
-    Ptr<LRScheduler> get_lr_scheduler() override {
-        return make<CosineAnnealing>(params.epochs, params.lr, params.lr * 0.3 * 0.3 * 0.3);
+    Ptr<nn::LRScheduler> get_lr_scheduler() override {
+        return lr_sched::cosine_annealing(config.epochs, config.lr, config.lr * 0.3 * 0.3 * 0.3);
     }
 
     std::vector<std::string> get_training_files() override {

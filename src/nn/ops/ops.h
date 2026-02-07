@@ -4,7 +4,7 @@
 #include "../../kernel/include.h"
 #include "../../misc.h"
 #include "../../training_data_format/include.h"
-#include "../params/params.h"
+#include "../param/param.h"
 
 namespace nn {
 
@@ -51,10 +51,12 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     virtual void init(int batch_size) { tensor_output = OpTensor(batch_size, output_dim, act_type); }
 
-    virtual void step(const std::vector<TrainingDataEntry>& data_entries) { tensor_output.clear_grads(); }
+    virtual void step(const std::vector<TrainingDataEntry>& data_entries) {}
 
     virtual void forward() = 0;
     virtual void backward() = 0;
+
+    virtual void clear_grads() { tensor_output.clear_grads(); }
 
     Ptr<Operation> relu() {
         act_type = Activation::ReLU;
@@ -87,7 +89,9 @@ class Operation : public std::enable_shared_from_this<Operation> {
     OpTensor& get_tensor_output() { return tensor_output; }
     const OpTensor& get_tensor_output() const { return tensor_output; }
 
-    virtual Ptr<Params> get_params() { return nullptr; }
+    virtual std::vector<Ptr<Operation>> get_inputs() const { return {}; }
+
+    virtual Ptr<Param> get_param() { return nullptr; }
 
   protected:
     int input_dim = 0;

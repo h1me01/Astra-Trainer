@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 128;
+constexpr int block_size = 256;
 
 __global__ void feature_transformer_fwd_kernel(
     const float* weights_v,
@@ -17,28 +17,33 @@ __global__ void feature_transformer_fwd_kernel(
     const int out_offset,
     const Activation act_type
 ) {
-    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= weights_r * batch_size)
+    const int batch_idx = blockIdx.x;
+    if (batch_idx >= batch_size)
         return;
 
-    const int batch_idx = idx / weights_r;
-    const int neuron_idx = idx % weights_r;
-    const int offset = batch_idx * max_entries;
+    __shared__ int shared_features[32]; // TODO: make this dynamic based on max_entries
+    if (threadIdx.x < max_entries)
+        shared_features[threadIdx.x] = features[batch_idx * max_entries + threadIdx.x];
 
-    float sum = biases_v[neuron_idx];
+    __syncthreads();
 
-    for (int i = 0; i < max_entries; i++) {
-        int feature_idx = features[i + offset];
-        if (feature_idx == -1)
-            break;
-        sum += weights_v[weights_r * feature_idx + neuron_idx];
+    for (int neuron_idx = threadIdx.x; neuron_idx < weights_r; neuron_idx += blockDim.x) {
+        float sum = biases_v[neuron_idx];
+
+#pragma unroll 8
+        for (int i = 0; i < max_entries; i++) {
+            int feature_idx = shared_features[i];
+            if (feature_idx == -1)
+                break;
+            sum += weights_v[weights_r * feature_idx + neuron_idx];
+        }
+
+        const int out_idx = out_r * batch_idx + neuron_idx + out_offset;
+        linear_out[out_idx] = sum;
+
+        if (has_activation(act_type))
+            activated[out_idx] = activate_fwd(sum, act_type);
     }
-
-    const int out_idx = out_r * batch_idx + neuron_idx + out_offset;
-    linear_out[out_idx] = sum;
-
-    if (has_activation(act_type))
-        activated[out_idx] = activate_fwd(sum, act_type);
 }
 
 void feature_transformer_fwd(

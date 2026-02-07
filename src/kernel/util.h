@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-inline __device__ float clamp(float x, float min, float max) {
+__device__ __forceinline__ float clamp(float x, float min, float max) {
     return fmaxf(min, fminf(x, max));
 }
 

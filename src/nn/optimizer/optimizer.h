@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 #include "../../kernel/include.h"
-#include "../params/params.h"
+#include "../param/param.h"
 
 namespace nn {
 
@@ -21,7 +21,7 @@ class Optimizer {
     Optimizer(Optimizer&&) = default;
     Optimizer& operator=(Optimizer&&) = default;
 
-    void init(const std::vector<Ptr<Params>>& params) {
+    void init(const std::vector<Ptr<Param>>& params) {
         for (const auto& l : params) {
             for (auto& t : l->get()) {
                 if (min_val.has_value())

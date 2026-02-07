@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 1024;
+constexpr int block_size = 256;
 
 __global__ void pairwise_mul_fwd_kernel(
     const float* in_v,

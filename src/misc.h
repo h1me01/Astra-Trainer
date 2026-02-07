@@ -113,17 +113,6 @@ class Timer {
 
     long long elapsed_time() const { return std::chrono::duration_cast<ms>(end_point - start_point).count(); }
 
-    // returns true if the provided has elapsed since the last call
-    bool is_time_reached(long long time) {
-        long long elapsed = elapsed_time();
-        if (elapsed - prev_duration > time) {
-            prev_duration = elapsed;
-            return true;
-        }
-
-        return false;
-    }
-
   private:
     using ms = std::chrono::milliseconds;
     using steady_clock = std::chrono::steady_clock;

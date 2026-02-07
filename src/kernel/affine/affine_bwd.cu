@@ -5,7 +5,7 @@ namespace kernel {
 constexpr float alpha = 1;
 constexpr float beta = 1;
 
-constexpr int block_size = 128;
+constexpr int block_size = 256;
 
 __global__ void activate_bwd(const float* linear_out, float* grads, const int size, const Activation act_type) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;

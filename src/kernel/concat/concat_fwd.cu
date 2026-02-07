@@ -3,7 +3,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 1024;
+constexpr int block_size = 256;
 
 __global__ void concat_fwd_kernel(
     const float* in1_v,

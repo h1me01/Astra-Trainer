@@ -4,11 +4,8 @@
 
 namespace nn {
 
-class Loss {
+class Loss : public std::enable_shared_from_this<Loss> {
   public:
-    Loss(Activation act_type)
-        : act_type(act_type) {}
-
     virtual ~Loss() = default;
 
     virtual void compute(const Array<float>& target, OpTensor& output) = 0;
@@ -20,8 +17,28 @@ class Loss {
 
     void reset() { loss.clear(); }
 
+    Ptr<Loss> relu() {
+        act_type = Activation::ReLU;
+        return shared_from_this();
+    }
+
+    Ptr<Loss> crelu() {
+        act_type = Activation::CReLU;
+        return shared_from_this();
+    }
+
+    Ptr<Loss> screlu() {
+        act_type = Activation::SCReLU;
+        return shared_from_this();
+    }
+
+    Ptr<Loss> sigmoid() {
+        act_type = Activation::Sigmoid;
+        return shared_from_this();
+    }
+
   protected:
-    Activation act_type;
+    Activation act_type = Activation::Linear;
     Array<float> loss{1};
 };
 

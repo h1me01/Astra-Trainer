@@ -29,7 +29,7 @@ inline __device__ float activate_fwd(float x, const Activation type) {
     case Activation::Sigmoid:
         return 1.0f / (1.0f + expf(-x));
     default:
-        return x; // Linear
+        return x;
     }
 }
 
@@ -43,9 +43,9 @@ inline __device__ float activate_bwd(float x, const Activation type) {
         return (x > 0.0f && x < 1.0f) ? 2.0f * x : 0.0f;
     case Activation::Sigmoid:
         x = activate_fwd(x, Activation::Sigmoid);
-        return x * (1 - x);
+        return x * (1.0f - x);
     default:
-        return 1.0f; // Linear
+        return 1.0f;
     }
 }
 

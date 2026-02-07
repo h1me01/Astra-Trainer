@@ -9,7 +9,7 @@ class Input {
     Input(int size)
         : size(size) {}
 
-    void init(int batch_size) { output = Array<int>(size * batch_size); }
+    void init(int batch_size) { output = Array<int>(size * batch_size, true); }
 
     Array<int>& get_output() { return output; }
 
@@ -24,10 +24,10 @@ class Input {
 
 class FeatureTransformer : public Operation {
   public:
-    FeatureTransformer(Ptr<Params> params, Ptr<Input> input)
+    FeatureTransformer(Ptr<Param> params, Ptr<Input> input)
         : FeatureTransformer(params, input, nullptr) {}
 
-    FeatureTransformer(Ptr<Params> params, Ptr<Input> input1, Ptr<Input> input2)
+    FeatureTransformer(Ptr<Param> params, Ptr<Input> input1, Ptr<Input> input2)
         : params(params) {
 
         inputs.push_back(input1);
@@ -73,10 +73,10 @@ class FeatureTransformer : public Operation {
         }
     }
 
-    Ptr<Params> get_params() override { return params; }
+    Ptr<Param> get_param() override { return params; }
 
   private:
-    Ptr<Params> params;
+    Ptr<Param> params;
     std::vector<Ptr<Input>> inputs;
 };
 

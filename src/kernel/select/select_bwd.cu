@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 1024;
+constexpr int block_size = 256;
 
 __global__ void select_bwd_kernel(
     float* in_g,

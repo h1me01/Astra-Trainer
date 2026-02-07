@@ -6,9 +6,8 @@ namespace nn {
 
 class MPE : public Loss {
   public:
-    MPE(float power, Activation act_type = Activation::Linear)
-        : power(power),
-          Loss(act_type) {}
+    MPE(float power)
+        : power(power) {}
 
     void compute(const Array<float>& targets, OpTensor& output) {
         kernel::mpe_loss(targets, loss, output.get_output(), output.get_gradients(), power, act_type);

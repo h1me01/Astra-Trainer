@@ -5,7 +5,7 @@ namespace kernel {
 constexpr float alpha = 1;
 constexpr float beta = 0;
 
-constexpr int block_size = 128;
+constexpr int block_size = 256;
 
 __global__ void biases_fwd_kernel(
     const float* biases_v, float* linear_out, float* activated, const int r, const int c, const Activation act_type

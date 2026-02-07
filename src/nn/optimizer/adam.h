@@ -6,7 +6,7 @@ namespace nn {
 
 class Adam : public Optimizer {
   public:
-    Adam(float beta1 = 0.9, float beta2 = 0.999, float epsilon = 1e-8, float decay = 0.01)
+    Adam(float beta1 = 0.9, float beta2 = 0.999, float epsilon = 1e-8, float decay = 0.0)
         : beta1(beta1),
           beta2(beta2),
           epsilon(epsilon),

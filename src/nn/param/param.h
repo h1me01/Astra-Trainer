@@ -6,7 +6,7 @@ namespace nn {
 
 class SaveFormat {
   public:
-    enum class Type { INT8, INT16, FLOAT };
+    enum class Type { int8, int16, float32 };
 
     SaveFormat& transpose() {
         m_transpose = true;
@@ -30,14 +30,15 @@ class SaveFormat {
   private:
     int m_scale = 1;
     bool m_transpose = false;
-    Type m_type = Type::FLOAT;
+    Type m_type = Type::float32;
 };
 
-class Params {
+class Param {
   public:
-    Params(int input_dim, int output_dim)
+    Param(int input_dim, int output_dim)
         : weights(output_dim, input_dim),
           biases(output_dim, 1) {
+
         weights.he_init(input_dim);
         biases.zero_init();
     }
@@ -126,13 +127,13 @@ class Params {
     void save_tensor_quantized(FILE* f, Tensor& tensor, const SaveFormat& format) {
         tensor.get_values().dev_to_host();
         switch (format.get_type()) {
-        case SaveFormat::Type::INT8:
+        case SaveFormat::Type::int8:
             write_quantized<int8_t>(f, tensor, format);
             break;
-        case SaveFormat::Type::INT16:
+        case SaveFormat::Type::int16:
             write_quantized<int16_t>(f, tensor, format);
             break;
-        case SaveFormat::Type::FLOAT:
+        case SaveFormat::Type::float32:
             write_quantized<float>(f, tensor, format);
             break;
         }

@@ -6,11 +6,11 @@ namespace nn {
 
 class Select : public Operation {
   public:
-    Select(Ptr<Operation> input, const std::function<int(const Position&)>& select_fn)
+    Select(Ptr<Operation> input, const std::function<int(const Position&)>& fn)
         : input(input),
-          select_fn(select_fn) {
+          fn(fn) {
 
-        max_indices = select_fn(Position::startPosition()) + 1;
+        max_indices = fn(Position::startPosition()) + 1;
 
         input_dim = input->get_output_dim();
         output_dim = input_dim / max_indices;
@@ -21,14 +21,14 @@ class Select : public Operation {
 
     void init(int batch_size) override {
         Operation::init(batch_size);
-        indices = Array<int>(batch_size);
+        indices = Array<int>(batch_size, true);
     }
 
     void step(const std::vector<TrainingDataEntry>& data_entries) override {
         Operation::step(data_entries);
 
         for (int i = 0; i < (int)data_entries.size(); i++) {
-            int idx = select_fn(data_entries[i].pos);
+            int idx = fn(data_entries[i].pos);
             if (idx < 0 || idx >= max_indices)
                 error("Index function of Select returned invalid index!");
             indices(i) = idx;
@@ -49,12 +49,14 @@ class Select : public Operation {
         );
     }
 
+    std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
+
   private:
     int max_indices;
 
     Ptr<Operation> input;
     Array<int> indices;
-    std::function<int(const Position&)> select_fn;
+    std::function<int(const Position&)> fn;
 };
 
 } // namespace nn

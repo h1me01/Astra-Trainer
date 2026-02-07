@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 128;
+constexpr int block_size = 256;
 
 __global__ void feature_transformer_bwd_kernel(
     float* weights_g,

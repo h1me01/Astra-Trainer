@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 1024;
+constexpr int block_size = 256;
 
 __global__ void concat_bwd_kernel(
     const float* linear_out,

@@ -10,7 +10,7 @@ using namespace dataloader;
 
 namespace model {
 
-struct HyperParams {
+struct TrainingConfig {
     int epochs;
     int batch_size;
     int batches_per_epoch;
@@ -70,19 +70,9 @@ class Model {
 
   protected:
     std::string name;
-    HyperParams params;
+    TrainingConfig config;
 
-    template <typename T, typename... Args>
-    auto make(Args&&... args) {
-        auto op = std::make_shared<T>(std::forward<Args>(args)...);
-
-        if constexpr (std::is_base_of_v<Operation, T>)
-            network->add_operation(op);
-
-        return op;
-    }
-
-    virtual void build(const Ptr<Input>& stm_in, const Ptr<Input>& nstm_in) = 0;
+    virtual Ptr<nn::Operation> build(const Ptr<nn::Input>& stm_in, const Ptr<nn::Input>& nstm_in) = 0;
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
 
     virtual bool filter_entry(const TrainingDataEntry& e) { return false; }
@@ -94,9 +84,9 @@ class Model {
         return max_bucket + 1;
     }
 
-    virtual Ptr<Loss> get_loss() = 0;
-    virtual Ptr<Optimizer> get_optim() = 0;
-    virtual Ptr<LRScheduler> get_lr_scheduler() = 0;
+    virtual Ptr<nn::Loss> get_loss() = 0;
+    virtual Ptr<nn::Optimizer> get_optim() = 0;
+    virtual Ptr<nn::LRScheduler> get_lr_scheduler() = 0;
     virtual std::vector<std::string> get_training_files() = 0;
 
   private:
@@ -104,12 +94,12 @@ class Model {
 
     Array<float> targets;
 
-    Ptr<Loss> loss;
-    Ptr<Optimizer> optim;
-    Ptr<LRScheduler> lr_sched;
-    Ptr<Input> stm_input, nstm_input;
+    Ptr<nn::Loss> loss;
+    Ptr<nn::Optimizer> optim;
+    Ptr<nn::LRScheduler> lr_sched;
+    Ptr<nn::Input> stm_input, nstm_input;
 
-    std::unique_ptr<Network> network;
+    std::unique_ptr<nn::Network> network;
     std::unique_ptr<Dataloader> dataloader;
 
     std::string loaded_model;

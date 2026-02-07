@@ -48,6 +48,8 @@ class PairwiseMul : public Operation {
         }
     }
 
+    std::vector<Ptr<Operation>> get_inputs() const override { return inputs; }
+
   private:
     std::vector<Ptr<Operation>> inputs;
 };
