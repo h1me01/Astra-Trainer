@@ -9,6 +9,7 @@ class PairwiseMul : public Operation {
     PairwiseMul(Ptr<Operation> input)
         : PairwiseMul(input, nullptr) {}
 
+    // output will be concatenation of the two inputs
     PairwiseMul(Ptr<Operation> input1, Ptr<Operation> input2) {
         inputs.push_back(input1);
         if (input2)

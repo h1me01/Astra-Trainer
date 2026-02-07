@@ -27,6 +27,7 @@ class FeatureTransformer : public Operation {
     FeatureTransformer(Ptr<Param> params, Ptr<Input> input)
         : FeatureTransformer(params, input, nullptr) {}
 
+    // output will be concatenation of the two inputs
     FeatureTransformer(Ptr<Param> params, Ptr<Input> input1, Ptr<Input> input2)
         : params(params) {
 

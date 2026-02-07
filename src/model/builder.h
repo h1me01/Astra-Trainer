@@ -35,6 +35,7 @@ inline Ptr<nn::FeatureTransformer> feature_transformer(Ptr<nn::Param> params, Pt
     return detail::make<nn::FeatureTransformer>(params, a);
 }
 
+// output will be concatenation of the two inputs
 inline Ptr<nn::FeatureTransformer> feature_transformer(Ptr<nn::Param> params, Ptr<nn::Input> a, Ptr<nn::Input> b) {
     return detail::make<nn::FeatureTransformer>(params, a, b);
 }
@@ -55,6 +56,7 @@ inline Ptr<nn::PairwiseMul> pairwise_mul(Ptr<nn::Operation> a) {
     return detail::make<nn::PairwiseMul>(a);
 }
 
+// output will be concatenation of the two inputs
 inline Ptr<nn::PairwiseMul> pairwise_mul(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
     return detail::make<nn::PairwiseMul>(a, b);
 }
