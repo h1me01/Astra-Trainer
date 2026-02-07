@@ -25,7 +25,7 @@ __global__ void select_bwd_kernel(
     const int in_offset = in_r * batch_idx + out_r * bucket + out_idx;
 
     const int out_offset = out_r * batch_idx + out_idx;
-    in_g[in_offset] += out_g[out_offset] * activate_bwd(out_v[out_offset], act_type);
+    in_g[in_offset] = out_g[out_offset] * activate_bwd(out_v[out_offset], act_type);
 }
 
 void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices, const Activation act_type) {

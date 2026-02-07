@@ -14,7 +14,6 @@ __global__ void feature_transformer_bwd_kernel(
     const int out_r,
     const int batch_size,
     const int max_entries,
-    const int out_offset,
     const Activation act_type
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -23,7 +22,7 @@ __global__ void feature_transformer_bwd_kernel(
 
     const int batch_idx = idx / weights_r;
     const int neuron_idx = idx % weights_r;
-    const int out_idx = out_r * batch_idx + neuron_idx + out_offset;
+    const int out_idx = out_r * batch_idx + neuron_idx;
 
     const float grad = out_g[out_idx] * activate_bwd(out_v[out_idx], act_type);
     if (grad == 0.0f)
@@ -69,14 +68,13 @@ void feature_transformer_bwd(
     feature_transformer_bwd_kernel<<<blocks, block_size>>>(
         weights_g.dev_address(),
         biases_g.dev_address(),
-        out_v.dev_address(),
-        out_g.dev_address(),
+        out_v.dev_address() + out_offset,
+        out_g.dev_address() + out_offset,
         features.dev_address(),
         weights_g.rows(),
         out_g.rows(),
         out_g.cols(),
         max_entries,
-        out_offset,
         act_type
     );
 }

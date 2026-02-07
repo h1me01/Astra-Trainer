@@ -26,10 +26,10 @@ __global__ void concat_bwd_kernel(
 
     if (out_idx < in1_r) {
         const int in1_offset = out_idx + batch_idx * in1_r;
-        in1_g[in1_offset] += grad;
+        in1_g[in1_offset] = grad;
     } else {
         const int in2_offset = (out_idx - in1_r) + batch_idx * (out_r - in1_r);
-        in2_g[in2_offset] += grad;
+        in2_g[in2_offset] = grad;
     }
 }
 
