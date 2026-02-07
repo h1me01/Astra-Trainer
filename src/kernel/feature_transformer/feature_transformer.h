@@ -10,8 +10,7 @@ namespace kernel {
 void feature_transformer_fwd(
     const DenseMatrix& weights_v,
     const DenseMatrix& biases_v,
-    DenseMatrix& linear_out,
-    DenseMatrix& activated,
+    DenseMatrix& out_v,
     const Array<int>& features,
     const int max_entries,
     const int out_offset,
@@ -22,8 +21,7 @@ void feature_transformer_fwd(
 void feature_transformer_bwd(
     DenseMatrix& weights_g,
     DenseMatrix& biases_g,
-    const DenseMatrix& grads,
-    const DenseMatrix& linear_out,
+    const Tensor& out,
     const Array<int>& features,
     const int max_entries,
     const int out_offset,

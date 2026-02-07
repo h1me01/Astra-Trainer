@@ -14,25 +14,9 @@ class Concat : public Operation {
         output_dim = input_dim;
     }
 
-    void forward() override {
-        kernel::concat_fwd(
-            input1->get_output(),
-            input2->get_output(),
-            tensor_output.get_linear_output(),
-            tensor_output.get_activated(),
-            act_type
-        );
-    }
+    void forward() override { kernel::concat_fwd(input1->get_data(), input2->get_data(), output.get_data(), act_type); }
 
-    void backward() override {
-        kernel::concat_bwd(
-            input1->get_gradients(),
-            input2->get_gradients(),
-            tensor_output.get_linear_output(),
-            tensor_output.get_gradients(),
-            act_type
-        );
-    }
+    void backward() override { kernel::concat_bwd(input1->get_grads(), input2->get_grads(), output, act_type); }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return {input1, input2}; }
 

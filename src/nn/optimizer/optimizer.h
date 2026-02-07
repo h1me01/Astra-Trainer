@@ -40,7 +40,7 @@ class Optimizer {
         velocity.reserve(params.size());
 
         for (const auto* t : params) {
-            int size = t->get_values().size();
+            int size = t->get_data().size();
             momentum.emplace_back(size);
             velocity.emplace_back(size);
         }

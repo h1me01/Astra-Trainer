@@ -46,10 +46,9 @@ class FeatureTransformer : public Operation {
         const int input_count = inputs.size();
         for (int i = 0; i < input_count; i++) {
             kernel::feature_transformer_fwd(
-                params->get_weights().get_values(),
-                params->get_biases().get_values(),
-                tensor_output.get_linear_output(),
-                tensor_output.get_activated(),
+                params->get_weights().get_data(),
+                params->get_biases().get_data(),
+                output.get_data(),
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
                 i * (output_dim / input_count),
@@ -62,10 +61,9 @@ class FeatureTransformer : public Operation {
         const int input_count = inputs.size();
         for (int i = 0; i < input_count; i++) {
             kernel::feature_transformer_bwd(
-                params->get_weights().get_gradients(),
-                params->get_biases().get_gradients(),
-                tensor_output.get_gradients(),
-                tensor_output.get_linear_output(),
+                params->get_weights().get_grads(),
+                params->get_biases().get_grads(),
+                output,
                 inputs[i]->get_output(),
                 inputs[i]->get_size(),
                 i * (output_dim / input_count),

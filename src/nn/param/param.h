@@ -58,8 +58,8 @@ class Param {
         save_tensor_quantized(f, biases, biases_save_format);
     }
 
-    int get_input_dim() const { return weights.get_values().cols(); }
-    int get_output_dim() const { return weights.get_values().rows(); }
+    int get_input_dim() const { return weights.get_data().cols(); }
+    int get_output_dim() const { return weights.get_data().rows(); }
 
     SaveFormat& weights_format() { return weights_save_format; }
     SaveFormat& biases_format() { return biases_save_format; }
@@ -82,24 +82,24 @@ class Param {
     SaveFormat biases_save_format;
 
     void load_tensor(FILE* f, Tensor& tensor) {
-        auto& values = tensor.get_values();
-        if ((int)fread(values.host_address(), sizeof(float), values.size(), f) != values.size())
+        auto& data = tensor.get_data();
+        if ((int)fread(data.host_address(), sizeof(float), data.size(), f) != data.size())
             error("Failed reading tensor data from file!");
-        values.host_to_dev();
+        data.host_to_dev();
     }
 
     void write_tensor(FILE* f, Tensor& tensor) {
-        auto& value = tensor.get_values();
+        auto& data = tensor.get_data();
 
-        value.dev_to_host();
-        if ((int)fwrite(value.host_address(), sizeof(float), value.size(), f) != value.size())
+        data.dev_to_host();
+        if ((int)fwrite(data.host_address(), sizeof(float), data.size(), f) != data.size())
             error("Failed writing tensor data to file!");
     }
 
     template <typename T>
     void write_quantized(FILE* f, Tensor& tensor, const SaveFormat& format) {
-        auto& values = tensor.get_values();
-        Array<T> quantized(values.size());
+        auto& data = tensor.get_data();
+        Array<T> quantized(data.size());
 
         auto quantize = [&](float v) -> T {
             if constexpr (std::is_same_v<T, float>)
@@ -112,12 +112,12 @@ class Param {
         };
 
         if (format.is_transposed()) {
-            for (int r = 0; r < values.rows(); r++)
-                for (int c = 0; c < values.cols(); c++)
-                    quantized(values.cols() * r + c) = quantize(values(r, c));
+            for (int r = 0; r < data.rows(); r++)
+                for (int c = 0; c < data.cols(); c++)
+                    quantized(data.cols() * r + c) = quantize(data(r, c));
         } else {
-            for (int i = 0; i < values.size(); i++)
-                quantized(i) = quantize(values(i));
+            for (int i = 0; i < data.size(); i++)
+                quantized(i) = quantize(data(i));
         }
 
         if ((int)fwrite(quantized.host_address(), sizeof(T), quantized.size(), f) != quantized.size())
@@ -125,7 +125,7 @@ class Param {
     }
 
     void save_tensor_quantized(FILE* f, Tensor& tensor, const SaveFormat& format) {
-        tensor.get_values().dev_to_host();
+        tensor.get_data().dev_to_host();
         switch (format.get_type()) {
         case SaveFormat::Type::int8:
             write_quantized<int8_t>(f, tensor, format);

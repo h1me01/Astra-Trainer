@@ -11,10 +11,6 @@ enum class Activation {
     Sigmoid,
 };
 
-inline __host__ __device__ bool has_activation(const Activation type) {
-    return type != Activation::Linear;
-}
-
 namespace kernel {
 
 inline __device__ float activate_fwd(float x, const Activation type) {
@@ -33,6 +29,7 @@ inline __device__ float activate_fwd(float x, const Activation type) {
     }
 }
 
+// assumes x is activated
 inline __device__ float activate_bwd(float x, const Activation type) {
     switch (type) {
     case Activation::ReLU:
@@ -42,7 +39,6 @@ inline __device__ float activate_bwd(float x, const Activation type) {
     case Activation::SCReLU:
         return (x > 0.0f && x < 1.0f) ? 2.0f * x : 0.0f;
     case Activation::Sigmoid:
-        x = activate_fwd(x, Activation::Sigmoid);
         return x * (1.0f - x);
     default:
         return 1.0f;

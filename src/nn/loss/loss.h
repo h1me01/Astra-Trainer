@@ -8,7 +8,7 @@ class Loss : public std::enable_shared_from_this<Loss> {
   public:
     virtual ~Loss() = default;
 
-    virtual void compute(const Array<float>& target, OpTensor& output) = 0;
+    virtual void compute(const Array<float>& target, Tensor& output) = 0;
 
     float get_loss() {
         loss.dev_to_host();

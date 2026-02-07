@@ -17,7 +17,7 @@ class Ranger : public Optimizer {
         Optimizer::init_buffers();
 
         for (auto* t : params)
-            slow_buffer.push_back(Array<float>{t->get_values().size()});
+            slow_buffer.push_back(Array<float>{t->get_data().size()});
     }
 
     void step(float lr, int batch_size) override {

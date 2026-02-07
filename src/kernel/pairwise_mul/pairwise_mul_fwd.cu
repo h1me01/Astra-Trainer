@@ -6,8 +6,7 @@ constexpr int block_size = 256;
 
 __global__ void pairwise_mul_fwd_kernel(
     const float* in_v,
-    float* linear_out,
-    float* activated,
+    float* out_v,
     const int feature_size,
     const int out_r,
     const int batch_size,
@@ -27,40 +26,23 @@ __global__ void pairwise_mul_fwd_kernel(
     const int out_idx = batch_idx * out_r + feature_idx + out_offset;
 
     const float val = in_v[in_offset_a] * in_v[in_offset_b];
-
-    linear_out[out_idx] = val;
-    if (has_activation(act_type))
-        activated[out_idx] = activate_fwd(val, act_type);
+    out_v[out_idx] = activate_fwd(val, act_type);
 }
 
-void pairwise_mul_fwd(
-    const DenseMatrix& in_v,
-    DenseMatrix& linear_out,
-    DenseMatrix& activated,
-    const int out_offset,
-    const Activation act_type
-) {
+void pairwise_mul_fwd(const DenseMatrix& in_v, DenseMatrix& out_v, const int out_offset, const Activation act_type) {
     const int feature_size = in_v.rows() / 2;
 
     ASSERT(
-        in_v.rows() % 2 == 0 &&             //
-        in_v.cols() == linear_out.cols() && //
-        linear_out.rows() >= out_offset + feature_size
+        in_v.rows() % 2 == 0 &&        //
+        in_v.cols() == out_v.cols() && //
+        out_v.rows() >= out_offset + feature_size
     );
 
-    ASSERT(in_v.is_dev_allocated() && linear_out.is_dev_allocated());
-    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
+    ASSERT(in_v.is_dev_allocated() && out_v.is_dev_allocated());
 
     const int blocks = get_num_blocks(feature_size * in_v.cols(), block_size);
     pairwise_mul_fwd_kernel<<<blocks, block_size>>>(
-        in_v.dev_address(),
-        linear_out.dev_address(),
-        activated.dev_address(),
-        feature_size,
-        linear_out.rows(),
-        in_v.cols(),
-        out_offset,
-        act_type
+        in_v.dev_address(), out_v.dev_address(), feature_size, out_v.rows(), in_v.cols(), out_offset, act_type
     );
 }
 

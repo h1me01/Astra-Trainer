@@ -9,8 +9,8 @@ class MPE : public Loss {
     MPE(float power)
         : power(power) {}
 
-    void compute(const Array<float>& targets, OpTensor& output) {
-        kernel::mpe_loss(targets, loss, output.get_output(), output.get_gradients(), power, act_type);
+    void compute(const Array<float>& targets, Tensor& output) {
+        kernel::mpe_loss(targets, loss, output.get_data(), output.get_grads(), power, act_type);
     }
 
   private:

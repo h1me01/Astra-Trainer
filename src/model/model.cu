@@ -140,7 +140,7 @@ float Model::predict(const std::string& fen) {
     fill_inputs(ds, 0.0f);
     network->forward(ds);
 
-    auto& output = network->get_output().get_output();
+    auto& output = network->get_output().get_data();
     output.dev_to_host();
 
     return output(0) * config.eval_div;

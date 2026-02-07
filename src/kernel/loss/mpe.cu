@@ -17,14 +17,13 @@ __global__ void mpe_kernel(
     if (idx >= size)
         return;
 
-    const float pred = out[idx];
-    const float act = activate_fwd(pred, act_type);
+    const float act = activate_fwd(out[idx], act_type);
     const float diff = act - targets[idx];
     const float abs_diff = fabsf(diff);
 
     const float grad_magnitude = power * powf(abs_diff, power - 1.0f);
     const float sign_diff = (diff > 0.0f) ? 1.0f : -1.0f;
-    grads[idx] = grad_magnitude * sign_diff * activate_bwd(pred, act_type);
+    grads[idx] = grad_magnitude * sign_diff * activate_bwd(act, act_type);
 
     float p = powf(abs_diff, power);
     if (p != 0.0f)

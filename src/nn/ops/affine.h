@@ -16,25 +16,16 @@ class Affine : public Operation {
 
     void forward() override {
         kernel::affine_fwd(
-            param->get_weights().get_values(),
-            param->get_biases().get_values(),
-            input->get_output(),
-            tensor_output.get_linear_output(),
-            tensor_output.get_activated(),
+            param->get_weights().get_data(),
+            param->get_biases().get_data(),
+            input->get_data(),
+            output.get_data(),
             act_type
         );
     }
 
     void backward() override {
-        kernel::affine_bwd(
-            param->get_weights(),
-            param->get_biases(),
-            input->get_output(),
-            input->get_gradients(),
-            tensor_output.get_linear_output(),
-            tensor_output.get_gradients(),
-            act_type
-        );
+        kernel::affine_bwd(param->get_weights(), param->get_biases(), input->get_output(), output, act_type);
     }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }

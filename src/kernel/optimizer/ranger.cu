@@ -67,8 +67,8 @@ void ranger_optim(
     const RAdamParams radam_params,
     const int step
 ) {
-    auto& vals = param.get_values();
-    auto& grads = param.get_gradients();
+    auto& vals = param.get_data();
+    auto& grads = param.get_grads();
 
     ASSERT(
         moms.size() == vals.size() && //

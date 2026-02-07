@@ -26,27 +26,13 @@ class PairwiseMul : public Operation {
 
     void forward() override {
         for (int i = 0; i < (int)inputs.size(); i++) {
-            kernel::pairwise_mul_fwd(
-                inputs[i]->get_output(),
-                tensor_output.get_linear_output(),
-                tensor_output.get_activated(),
-                i * (input_dim / 2),
-                act_type
-            );
+            kernel::pairwise_mul_fwd(inputs[i]->get_data(), output.get_data(), i * (input_dim / 2), act_type);
         }
     }
 
     void backward() override {
-        for (int i = 0; i < (int)inputs.size(); i++) {
-            kernel::pairwise_mul_bwd(
-                inputs[i]->get_output(),
-                inputs[i]->get_gradients(),
-                tensor_output.get_linear_output(),
-                tensor_output.get_gradients(),
-                i * (input_dim / 2),
-                act_type
-            );
-        }
+        for (int i = 0; i < (int)inputs.size(); i++)
+            kernel::pairwise_mul_bwd(inputs[i]->get_output(), output, i * (input_dim / 2), act_type);
     }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return inputs; }

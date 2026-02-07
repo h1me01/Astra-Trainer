@@ -8,8 +8,7 @@ constexpr int block_size = 256;
 __global__ void concat_fwd_kernel(
     const float* in1_v,
     const float* in2_v,
-    float* linear_out,
-    float* activated,
+    float* out_v,
     const int out_r,
     const int in1_r,
     const int batch_size,
@@ -33,41 +32,30 @@ __global__ void concat_fwd_kernel(
         val = in2_v[in2_offset];
     }
 
-    linear_out[out_offset] = val;
-    if (has_activation(act_type))
-        activated[out_offset] = activate_fwd(val, act_type);
+    out_v[out_offset] = activate_fwd(val, act_type);
 }
 
-void concat_fwd(
-    const DenseMatrix& in1_v,
-    const DenseMatrix& in2_v,
-    DenseMatrix& linear_out,
-    DenseMatrix& activated,
-    const Activation act_type
-) {
+void concat_fwd(const DenseMatrix& in1_v, const DenseMatrix& in2_v, DenseMatrix& out_v, const Activation act_type) {
     ASSERT(
-        in1_v.cols() == linear_out.cols() && //
-        in2_v.cols() == linear_out.cols() && //
-        in1_v.rows() + in2_v.rows() == linear_out.rows()
+        in1_v.cols() == out_v.cols() && //
+        in2_v.cols() == out_v.cols() && //
+        in1_v.rows() + in2_v.rows() == out_v.rows()
     );
 
     ASSERT(
         in1_v.is_dev_allocated() && //
         in2_v.is_dev_allocated() && //
-        linear_out.is_dev_allocated()
+        out_v.is_dev_allocated()
     );
 
-    ASSERT(!has_activation(act_type) || activated.is_dev_allocated());
-
-    const int blocks = get_num_blocks(linear_out.size(), block_size);
+    const int blocks = get_num_blocks(out_v.size(), block_size);
     concat_fwd_kernel<<<blocks, block_size>>>(
         in1_v.dev_address(),
         in2_v.dev_address(),
-        linear_out.dev_address(),
-        activated.dev_address(),
-        linear_out.rows(),
+        out_v.dev_address(),
+        out_v.rows(),
         in1_v.rows(),
-        linear_out.cols(),
+        out_v.cols(),
         act_type
     );
 }

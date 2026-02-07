@@ -37,17 +37,9 @@ class Select : public Operation {
         indices.host_to_dev();
     }
 
-    void forward() override {
-        kernel::select_fwd(
-            input->get_output(), tensor_output.get_linear_output(), tensor_output.get_activated(), indices, act_type
-        );
-    }
+    void forward() override { kernel::select_fwd(input->get_data(), output.get_data(), indices, act_type); }
 
-    void backward() override {
-        kernel::select_bwd(
-            input->get_gradients(), tensor_output.get_linear_output(), tensor_output.get_gradients(), indices, act_type
-        );
-    }
+    void backward() override { kernel::select_bwd(input->get_grads(), output, indices, act_type); }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
 

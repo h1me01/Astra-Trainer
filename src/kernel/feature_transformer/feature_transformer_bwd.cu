@@ -7,8 +7,8 @@ constexpr int block_size = 256;
 __global__ void feature_transformer_bwd_kernel(
     float* weights_g,
     float* biases_g,
-    const float* linear_out,
-    const float* grads,
+    const float* out_v,
+    const float* out_g,
     const int* features,
     const int weights_r,
     const int out_r,
@@ -25,11 +25,7 @@ __global__ void feature_transformer_bwd_kernel(
     const int neuron_idx = idx % weights_r;
     const int out_idx = out_r * batch_idx + neuron_idx + out_offset;
 
-    float grad = grads[out_idx];
-
-    if (has_activation(act_type))
-        grad *= activate_bwd(linear_out[out_idx], act_type);
-
+    const float grad = out_g[out_idx] * activate_bwd(out_v[out_idx], act_type);
     if (grad == 0.0f)
         return;
 
@@ -47,36 +43,38 @@ __global__ void feature_transformer_bwd_kernel(
 void feature_transformer_bwd(
     DenseMatrix& weights_g,
     DenseMatrix& biases_g,
-    const DenseMatrix& grads,
-    const DenseMatrix& linear_out,
+    const Tensor& out,
     const Array<int>& features,
     const int max_entries,
     const int out_offset,
     const Activation act_type
 ) {
-    const bool is_double = grads.rows() / 2 == weights_g.rows();
+    const auto& out_v = out.get_data();
+    const auto& out_g = out.get_grads();
+
+    const bool is_double = out_g.rows() / 2 == weights_g.rows();
 
     ASSERT(weights_g.rows() == biases_g.rows());
-    ASSERT(weights_g.rows() == grads.rows() / (is_double ? 2 : 1));
+    ASSERT(weights_g.rows() == out_g.rows() / (is_double ? 2 : 1));
 
     ASSERT(
-        weights_g.is_dev_allocated() &&  //
-        biases_g.is_dev_allocated() &&   //
-        grads.is_dev_allocated() &&      //
-        linear_out.is_dev_allocated() && //
+        weights_g.is_dev_allocated() && //
+        biases_g.is_dev_allocated() &&  //
+        out_g.is_dev_allocated() &&     //
+        out_v.is_dev_allocated() &&     //
         features.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(weights_g.rows() * grads.cols(), block_size);
+    const int blocks = get_num_blocks(weights_g.rows() * out_g.cols(), block_size);
     feature_transformer_bwd_kernel<<<blocks, block_size>>>(
         weights_g.dev_address(),
         biases_g.dev_address(),
-        linear_out.dev_address(),
-        grads.dev_address(),
+        out_v.dev_address(),
+        out_g.dev_address(),
         features.dev_address(),
         weights_g.rows(),
-        grads.rows(),
-        grads.cols(),
+        out_g.rows(),
+        out_g.cols(),
         max_entries,
         out_offset,
         act_type

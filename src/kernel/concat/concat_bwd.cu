@@ -5,8 +5,8 @@ namespace kernel {
 constexpr int block_size = 256;
 
 __global__ void concat_bwd_kernel(
-    const float* linear_out,
-    const float* grads,
+    const float* out_v,
+    const float* out_g,
     float* in1_g,
     float* in2_g,
     const int in1_r,
@@ -22,10 +22,7 @@ __global__ void concat_bwd_kernel(
     const int out_idx = idx % out_r;
 
     const int out_offset = out_idx + batch_idx * out_r;
-
-    float grad = grads[out_offset];
-    if (has_activation(act_type))
-        grad *= activate_bwd(linear_out[out_offset], act_type);
+    const float grad = out_g[out_offset] * activate_bwd(out_v[out_offset], act_type);
 
     if (out_idx < in1_r) {
         const int in1_offset = out_idx + batch_idx * in1_r;
@@ -36,35 +33,32 @@ __global__ void concat_bwd_kernel(
     }
 }
 
-void concat_bwd(
-    DenseMatrix& in1_g,
-    DenseMatrix& in2_g,
-    const DenseMatrix& linear_out,
-    const DenseMatrix& grads,
-    const Activation act_type
-) {
+void concat_bwd(DenseMatrix& in1_g, DenseMatrix& in2_g, const Tensor& out, const Activation act_type) {
+    const auto& out_v = out.get_data();
+    auto& out_g = out.get_grads();
+
     ASSERT(
-        in1_g.cols() == grads.cols() && //
-        in2_g.cols() == grads.cols() && //
-        in1_g.rows() + in2_g.rows() == grads.rows()
+        in1_g.cols() == out_g.cols() && //
+        in2_g.cols() == out_g.cols() && //
+        in1_g.rows() + in2_g.rows() == out_g.rows()
     );
 
     ASSERT(
-        in1_g.is_dev_allocated() &&      //
-        in2_g.is_dev_allocated() &&      //
-        linear_out.is_dev_allocated() && //
-        grads.is_dev_allocated()
+        in1_g.is_dev_allocated() && //
+        in2_g.is_dev_allocated() && //
+        out_v.is_dev_allocated() && //
+        out_g.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(grads.size(), block_size);
+    const int blocks = get_num_blocks(out_g.size(), block_size);
     concat_bwd_kernel<<<blocks, block_size>>>(
-        linear_out.dev_address(),
-        grads.dev_address(),
+        out_v.dev_address(),
+        out_g.dev_address(),
         in1_g.dev_address(),
         in2_g.dev_address(),
         in1_g.rows(),
-        grads.rows(),
-        grads.cols(),
+        out_g.rows(),
+        out_g.cols(),
         act_type
     );
 }

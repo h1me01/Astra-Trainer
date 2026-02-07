@@ -11,11 +11,10 @@ __global__ void mse_kernel(
     if (idx >= size)
         return;
 
-    const float pred = out[idx];
-    const float act = activate_fwd(pred, act_type);
+    const float act = activate_fwd(out[idx], act_type);
     const float diff = act - targets[idx];
 
-    grads[idx] = 2.0f * diff * activate_bwd(pred, act_type);
+    grads[idx] = 2.0f * diff * activate_bwd(act, act_type);
 
     float sq = diff * diff;
     if (sq != 0.0f)

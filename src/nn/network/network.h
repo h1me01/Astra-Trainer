@@ -48,8 +48,8 @@ class Network {
             op->clear_grads();
     }
 
-    OpTensor& get_output() { return operations.back()->get_tensor_output(); }
-    const OpTensor& get_output() const { return operations.back()->get_tensor_output(); }
+    Tensor& get_output() { return operations.back()->get_output(); }
+    const Tensor& get_output() const { return operations.back()->get_output(); }
 
     std::vector<Ptr<Param>> get_params() {
         std::vector<Ptr<Param>> main_params;
