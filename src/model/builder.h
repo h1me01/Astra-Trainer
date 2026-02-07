@@ -94,14 +94,6 @@ inline Ptr<nn::Optimizer> adamw(float beta1, float beta2, float eps, float decay
     return detail::make<nn::Adam>(beta1, beta2, eps, decay);
 }
 
-inline Ptr<nn::Optimizer> radam(float beta1, float beta2, float eps, float lr) {
-    return detail::make<nn::RAdam>(beta1, beta2, eps, lr);
-}
-
-inline Ptr<nn::Optimizer> ranger(float beta1, float beta2, float eps, float lr) {
-    return detail::make<nn::Ranger>(beta1, beta2, eps, lr);
-}
-
 } // namespace optim
 
 namespace loss {
