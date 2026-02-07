@@ -5,14 +5,14 @@
 namespace model {
 
 constexpr std::array<int, 64> input_bucket = {
-    0, 1, 2, 3, 3, 2, 1, 0, //
-    4, 4, 5, 5, 5, 5, 4, 4, //
-    6, 6, 6, 6, 6, 6, 6, 6, //
-    7, 7, 7, 7, 7, 7, 7, 7, //
-    8, 8, 8, 8, 8, 8, 8, 8, //
-    8, 8, 8, 8, 8, 8, 8, 8, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
 };
 
 inline int bucket_index(const Position& pos) {
@@ -68,16 +68,16 @@ struct Astra : Model {
     }
 
     Ptr<nn::Operation> build(const Ptr<nn::Input>& stm_in, const Ptr<nn::Input>& nstm_in) override {
-        const int FT_SIZE = 1024;
+        const int FT_SIZE = 512;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
         const int OUTPUT_BUCKETS = 8;
 
         // create params
-        auto ft = params::create(num_buckets(input_bucket) * 768, FT_SIZE);
-        auto l1 = params::create(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2 = params::create(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3 = params::create(L2_SIZE, OUTPUT_BUCKETS);
+        auto ft = param::create(num_buckets(input_bucket) * 768, FT_SIZE);
+        auto l1 = param::create(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
+        auto l2 = param::create(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
+        auto l3 = param::create(L2_SIZE, OUTPUT_BUCKETS);
 
         // save format
         ft->weights_format().type(save_format::int16).scale(255);
@@ -103,7 +103,7 @@ struct Astra : Model {
     Ptr<nn::Loss> get_loss() override { return loss::mse()->sigmoid(); }
 
     Ptr<nn::Optimizer> get_optim() override {
-        auto optim = optim::adam(0.9, 0.999, 1e-8, 0.01);
+        auto optim = optim::adamw(0.9, 0.999, 1e-8, 0.01);
         optim->clamp(-0.99, 0.99);
         return optim;
     }

@@ -21,13 +21,13 @@ constexpr auto float32 = Type::float32;
 
 } // namespace save_format
 
-namespace params {
+namespace param {
 
 inline Ptr<nn::Param> create(int input_dim, int output_dim) {
     return detail::make<nn::Param>(input_dim, output_dim);
 }
 
-} // namespace params
+} // namespace param
 
 namespace op {
 
@@ -81,11 +81,11 @@ inline Ptr<nn::LRScheduler> cosine_annealing(int total_epochs, float initial_lr,
 
 namespace optim {
 
-inline Ptr<nn::Optimizer> adam(float beta1, float beta2, float eps, float lr) {
-    return detail::make<nn::Adam>(beta1, beta2, eps, lr);
+inline Ptr<nn::Optimizer> adam(float beta1, float beta2, float eps) {
+    return detail::make<nn::Adam>(beta1, beta2, eps);
 }
 
-inline Ptr<nn::Optimizer> adamw(float beta1, float beta2, float eps, float lr, float decay) {
+inline Ptr<nn::Optimizer> adamw(float beta1, float beta2, float eps, float decay) {
     return detail::make<nn::Adam>(beta1, beta2, eps, decay);
 }
 
