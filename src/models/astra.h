@@ -68,7 +68,9 @@ struct Astra : Model {
     }
 
     Ptr<nn::Operation> build(const Ptr<nn::Input>& stm_in, const Ptr<nn::Input>& nstm_in) override {
-        const int FT_SIZE = 512;
+        using namespace op;
+
+        const int FT_SIZE = 1024;
         const int L1_SIZE = 16;
         const int L2_SIZE = 32;
         const int OUTPUT_BUCKETS = 8;
@@ -88,14 +90,14 @@ struct Astra : Model {
         l3->weights_format().transpose();
 
         // build network
-        auto ft_stm = op::feature_transformer(ft, stm_in)->crelu();
-        auto ft_nstm = op::feature_transformer(ft, nstm_in)->crelu();
+        auto ft_stm = feature_transformer(ft, stm_in)->crelu();
+        auto ft_nstm = feature_transformer(ft, nstm_in)->crelu();
 
-        auto pwm_out = op::pairwise_mul(ft_stm, ft_nstm);
+        auto pwm_out = pairwise_mul(ft_stm, ft_nstm);
 
-        auto l1_out = op::select(op::affine(l1, pwm_out), bucket_index)->crelu();
-        auto l2_out = op::select(op::affine(l2, l1_out), bucket_index)->crelu();
-        auto l3_out = op::select(op::affine(l3, l2_out), bucket_index);
+        auto l1_out = select(affine(l1, pwm_out), bucket_index)->crelu();
+        auto l2_out = select(affine(l2, l1_out), bucket_index)->crelu();
+        auto l3_out = select(affine(l3, l2_out), bucket_index);
 
         return l3_out;
     }
