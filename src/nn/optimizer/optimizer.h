@@ -35,17 +35,6 @@ class Optimizer {
         init_buffers();
     }
 
-    virtual void init_buffers() {
-        momentum.reserve(params.size());
-        velocity.reserve(params.size());
-
-        for (const auto* t : params) {
-            int size = t->get_data().size();
-            momentum.emplace_back(size);
-            velocity.emplace_back(size);
-        }
-    }
-
     void clamp(float min, float max) {
         if (min > max)
             error("Optimizer clamp: min cannot be greater than max!");
@@ -67,6 +56,17 @@ class Optimizer {
 
     std::optional<float> min_val;
     std::optional<float> max_val;
+
+    virtual void init_buffers() {
+        momentum.reserve(params.size());
+        velocity.reserve(params.size());
+
+        for (const auto* t : params) {
+            int size = t->get_data().size();
+            momentum.emplace_back(size);
+            velocity.emplace_back(size);
+        }
+    }
 
   private:
     void load_buffer(

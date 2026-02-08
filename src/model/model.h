@@ -10,6 +10,12 @@ using namespace dataloader;
 
 namespace model {
 
+using Loss = Ptr<nn::Loss>;
+using Optimizer = Ptr<nn::Optimizer>;
+using LRScheduler = Ptr<nn::LRScheduler>;
+using Operation = Ptr<nn::Operation>;
+using Input = Ptr<nn::Input>;
+
 struct TrainingConfig {
     int epochs;
     int batch_size;
@@ -71,7 +77,7 @@ class Model {
     std::string name;
     TrainingConfig config;
 
-    virtual Ptr<nn::Operation> build(const Ptr<nn::Input> stm_in, const Ptr<nn::Input> nstm_in) = 0;
+    virtual Operation build(const Input stm_in, const Input nstm_in) = 0;
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
 
     virtual bool filter_entry(const TrainingDataEntry& e) { return false; }
@@ -83,9 +89,9 @@ class Model {
         return max_bucket + 1;
     }
 
-    virtual Ptr<nn::Loss> get_loss() = 0;
-    virtual Ptr<nn::Optimizer> get_optim() = 0;
-    virtual Ptr<nn::LRScheduler> get_lr_scheduler() = 0;
+    virtual Loss get_loss() = 0;
+    virtual Optimizer get_optim() = 0;
+    virtual LRScheduler get_lr_scheduler() = 0;
     virtual std::vector<std::string> get_training_files() = 0;
 
   private:
@@ -93,10 +99,10 @@ class Model {
 
     Array<float> targets;
 
-    Ptr<nn::Loss> loss;
-    Ptr<nn::Optimizer> optim;
-    Ptr<nn::LRScheduler> lr_sched;
-    Ptr<nn::Input> stm_input, nstm_input;
+    Loss loss;
+    Optimizer optim;
+    LRScheduler lr_sched;
+    Input stm_input, nstm_input;
 
     std::unique_ptr<nn::Network> network;
     std::unique_ptr<Dataloader> dataloader;

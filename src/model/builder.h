@@ -31,17 +31,90 @@ inline Ptr<nn::Param> create(int input_dim, int output_dim) {
 
 namespace op {
 
-inline Ptr<nn::FeatureTransformer> feature_transformer(Ptr<nn::Param> params, Ptr<nn::Input> a) {
-    return detail::make<nn::FeatureTransformer>(params, a);
+class OpHandle {
+  public:
+    OpHandle(Ptr<nn::Operation> op) : op(op) {}
+
+    OpHandle relu() {
+        op->relu();
+        return *this;
+    }
+
+    OpHandle crelu() {
+        op->crelu();
+        return *this;
+    }
+
+    OpHandle screlu() {
+        op->screlu();
+        return *this;
+    }
+
+    OpHandle sigmoid() {
+        op->sigmoid();
+        return *this;
+    }
+
+    operator Ptr<nn::Operation>() const { return op; }
+    
+    Ptr<nn::Operation> get() const { return op; }
+
+  private:
+    Ptr<nn::Operation> op;
+};
+
+class FeatureTransformerBuilder {
+  public:
+    FeatureTransformerBuilder(int input_dim, int output_dim)
+        : params(detail::make<nn::Param>(input_dim, output_dim)) {}
+
+    OpHandle operator()(Ptr<nn::Input> a) {
+        return OpHandle(detail::make<nn::FeatureTransformer>(params, a));
+    }
+
+    OpHandle operator()(Ptr<nn::Input> a, Ptr<nn::Input> b) {
+        return OpHandle(detail::make<nn::FeatureTransformer>(params, a, b));
+    }
+
+    nn::SaveFormat& weights_format() { return params->weights_format(); }
+    nn::SaveFormat& biases_format() { return params->biases_format(); }
+
+    const nn::SaveFormat& weights_format() const { return params->weights_format(); }
+    const nn::SaveFormat& biases_format() const { return params->biases_format(); }
+
+    Ptr<nn::Param> get_param() { return params; }
+
+  private:
+    Ptr<nn::Param> params;
+};
+
+class AffineBuilder {
+  public:
+    AffineBuilder(int input_dim, int output_dim)
+        : params(detail::make<nn::Param>(input_dim, output_dim)) {}
+
+    OpHandle operator()(Ptr<nn::Operation> a) {
+        return OpHandle(detail::make<nn::Affine>(params, a));
+    }
+
+    nn::SaveFormat& weights_format() { return params->weights_format(); }
+    nn::SaveFormat& biases_format() { return params->biases_format(); }
+
+    const nn::SaveFormat& weights_format() const { return params->weights_format(); }
+    const nn::SaveFormat& biases_format() const { return params->biases_format(); }
+
+    Ptr<nn::Param> get_param() { return params; }
+
+  private:
+    Ptr<nn::Param> params;
+};
+
+inline FeatureTransformerBuilder feature_transformer(int input_dim, int output_dim) {
+    return FeatureTransformerBuilder(input_dim, output_dim);
 }
 
-// output will be concatenation of the two inputs
-inline Ptr<nn::FeatureTransformer> feature_transformer(Ptr<nn::Param> params, Ptr<nn::Input> a, Ptr<nn::Input> b) {
-    return detail::make<nn::FeatureTransformer>(params, a, b);
-}
-
-inline Ptr<nn::Affine> affine(Ptr<nn::Param> params, Ptr<nn::Operation> a) {
-    return detail::make<nn::Affine>(params, a);
+inline AffineBuilder affine(int input_dim, int output_dim) {
+    return AffineBuilder(input_dim, output_dim);
 }
 
 template <typename Fn>
@@ -49,21 +122,21 @@ inline Ptr<nn::SelectIndices> select_indices(int count, Fn&& fn) {
     return detail::make<nn::SelectIndices>(count, std::forward<Fn>(fn));
 }
 
-inline Ptr<nn::Select> select(Ptr<nn::Operation> s, Ptr<nn::SelectIndices> indices) {
-    return detail::make<nn::Select>(s, indices);
+inline OpHandle select(Ptr<nn::Operation> s, Ptr<nn::SelectIndices> indices) {
+    return OpHandle(detail::make<nn::Select>(s, indices));
 }
 
-inline Ptr<nn::Concat> concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
-    return detail::make<nn::Concat>(a, b);
+inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
+    return OpHandle(detail::make<nn::Concat>(a, b));
 }
 
-inline Ptr<nn::PairwiseMul> pairwise_mul(Ptr<nn::Operation> a) {
-    return detail::make<nn::PairwiseMul>(a);
+inline OpHandle pairwise_mul(Ptr<nn::Operation> a) {
+    return OpHandle(detail::make<nn::PairwiseMul>(a));
 }
 
 // output will be concatenation of the two inputs
-inline Ptr<nn::PairwiseMul> pairwise_mul(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
-    return detail::make<nn::PairwiseMul>(a, b);
+inline OpHandle pairwise_mul(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
+    return OpHandle(detail::make<nn::PairwiseMul>(a, b));
 }
 
 } // namespace op
@@ -86,12 +159,29 @@ inline Ptr<nn::LRScheduler> cosine_annealing(int total_epochs, float initial_lr,
 
 namespace optim {
 
-inline Ptr<nn::Optimizer> adam(float beta1, float beta2, float eps) {
-    return detail::make<nn::Adam>(beta1, beta2, eps);
+class OptimHandle {
+  public:
+    OptimHandle(Ptr<nn::Optimizer> optim) : optim(optim) {}
+
+    OptimHandle clamp(float min, float max) {
+        optim->clamp(min, max);
+        return *this;
+    }
+    
+    operator Ptr<nn::Optimizer>() const { return optim; }
+    
+    Ptr<nn::Optimizer> get() const { return optim; }
+
+  private:
+    Ptr<nn::Optimizer> optim;
+};
+
+inline OptimHandle adam(float beta1, float beta2, float eps) {
+    return OptimHandle(detail::make<nn::Adam>(beta1, beta2, eps));
 }
 
-inline Ptr<nn::Optimizer> adamw(float beta1, float beta2, float eps, float decay) {
-    return detail::make<nn::Adam>(beta1, beta2, eps, decay);
+inline OptimHandle adamw(float beta1, float beta2, float eps, float decay) {
+    return OptimHandle(detail::make<nn::Adam>(beta1, beta2, eps, decay));
 }
 
 } // namespace optim

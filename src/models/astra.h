@@ -56,61 +56,54 @@ struct Astra : Model {
             auto& prng = rng::get_thread_local_rng();
             return distrib(prng);
         };
-
         if (do_wld_skip())
             return true;
 
         return false;
     }
 
-    Ptr<nn::Operation> build(const Ptr<nn::Input> stm_in, const Ptr<nn::Input> nstm_in) override {
+    Operation build(const Input stm_in, const Input nstm_in) override {
         using namespace op;
 
-        const int FT_SIZE = 1024;
-        const int L1_SIZE = 16;
-        const int L2_SIZE = 32;
-        const int OUTPUT_BUCKETS = 8;
+        const int ft_size = 1024;
+        const int bucket_count = 8;
 
-        // create params
-        auto ft = param::create(num_buckets(input_bucket) * 768, FT_SIZE);
-        auto l1 = param::create(FT_SIZE, L1_SIZE * OUTPUT_BUCKETS);
-        auto l2 = param::create(L1_SIZE, L2_SIZE * OUTPUT_BUCKETS);
-        auto l3 = param::create(L2_SIZE, OUTPUT_BUCKETS);
+        // create layers
+        auto ft = feature_transformer(num_buckets(input_bucket) * 768, ft_size);
+        auto l1 = affine(ft_size, 16 * bucket_count);
+        auto l2 = affine(16, 32 * bucket_count);
+        auto l3 = affine(32, bucket_count);
 
-        auto bucket_index = select_indices(OUTPUT_BUCKETS, [&](const Position& pos) { //
+        auto bucket_index = select_indices(bucket_count, [&](const Position& pos) { //
             return (pos.pieceCount() - 2) / 4;
         });
 
         // save format
-        ft->weights_format().type(save_format::int16).scale(255);
-        ft->biases_format().type(save_format::int16).scale(255);
+        ft.weights_format().type(save_format::int16).scale(255);
+        ft.biases_format().type(save_format::int16).scale(255);
 
-        l1->weights_format().type(save_format::int8).scale(64).transpose();
-        l2->weights_format().transpose();
-        l3->weights_format().transpose();
+        l1.weights_format().type(save_format::int8).scale(64).transpose();
+        l2.weights_format().transpose();
+        l3.weights_format().transpose();
 
         // build network
-        auto ft_stm = feature_transformer(ft, stm_in)->crelu();
-        auto ft_nstm = feature_transformer(ft, nstm_in)->crelu();
+        auto ft_stm = ft(stm_in).crelu();
+        auto ft_nstm = ft(nstm_in).crelu();
 
         auto pwm_out = pairwise_mul(ft_stm, ft_nstm);
 
-        auto l1_out = select(affine(l1, pwm_out), bucket_index)->crelu();
-        auto l2_out = select(affine(l2, l1_out), bucket_index)->crelu();
-        auto l3_out = select(affine(l3, l2_out), bucket_index);
+        auto l1_out = select(l1(pwm_out), bucket_index).crelu();
+        auto l2_out = select(l2(l1_out), bucket_index).crelu();
+        auto l3_out = select(l3(l2_out), bucket_index);
 
         return l3_out;
     }
 
-    Ptr<nn::Loss> get_loss() override { return loss::mse(Activation::Sigmoid); }
+    Loss get_loss() override { return loss::mse(Activation::Sigmoid); }
 
-    Ptr<nn::Optimizer> get_optim() override {
-        auto optim = optim::adamw(0.9, 0.999, 1e-8, 0.01);
-        optim->clamp(-0.99, 0.99);
-        return optim;
-    }
+    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 1e-8, 0.01).clamp(-0.99, 0.99); }
 
-    Ptr<nn::LRScheduler> get_lr_scheduler() override {
+    LRScheduler get_lr_scheduler() override {
         float lr = 0.001;
         return lr_sched::cosine_annealing(config.epochs, lr, lr * 0.3 * 0.3 * 0.3);
     }
