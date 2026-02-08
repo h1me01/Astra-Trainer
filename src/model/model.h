@@ -71,7 +71,7 @@ class Model {
     std::string name;
     TrainingConfig config;
 
-    virtual Ptr<nn::Operation> build(const Ptr<nn::Input>& stm_in, const Ptr<nn::Input>& nstm_in) = 0;
+    virtual Ptr<nn::Operation> build(const Ptr<nn::Input> stm_in, const Ptr<nn::Input> nstm_in) = 0;
     virtual int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) = 0;
 
     virtual bool filter_entry(const TrainingDataEntry& e) { return false; }

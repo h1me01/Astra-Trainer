@@ -98,12 +98,12 @@ inline Ptr<nn::Optimizer> adamw(float beta1, float beta2, float eps, float decay
 
 namespace loss {
 
-inline Ptr<nn::Loss> mse() {
-    return detail::make<nn::MSE>();
+inline Ptr<nn::Loss> mse(Activation act = Activation::Linear) {
+    return detail::make<nn::MSE>(act);
 }
 
-inline Ptr<nn::Loss> mpe(float power) {
-    return detail::make<nn::MPE>(power);
+inline Ptr<nn::Loss> mpe(float power, Activation act = Activation::Linear) {
+    return detail::make<nn::MPE>(power, act);
 }
 
 } // namespace loss

@@ -23,7 +23,7 @@ struct Astra : Model {
         config.batch_size = 16384;
         config.batches_per_epoch = 6104;
         config.save_rate = 20;
-        config.thread_count = 4;
+        config.thread_count = 2;
         config.eval_div = 400.0;
         config.lambda_start = 0.5;
         config.lambda_end = 0.5;
@@ -63,7 +63,7 @@ struct Astra : Model {
         return false;
     }
 
-    Ptr<nn::Operation> build(const Ptr<nn::Input>& stm_in, const Ptr<nn::Input>& nstm_in) override {
+    Ptr<nn::Operation> build(const Ptr<nn::Input> stm_in, const Ptr<nn::Input> nstm_in) override {
         using namespace op;
 
         const int FT_SIZE = 1024;
@@ -102,7 +102,7 @@ struct Astra : Model {
         return l3_out;
     }
 
-    Ptr<nn::Loss> get_loss() override { return loss::mse()->sigmoid(); }
+    Ptr<nn::Loss> get_loss() override { return loss::mse(Activation::Sigmoid); }
 
     Ptr<nn::Optimizer> get_optim() override {
         auto optim = optim::adamw(0.9, 0.999, 1e-8, 0.01);
