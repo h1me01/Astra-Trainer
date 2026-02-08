@@ -14,20 +14,27 @@ __global__ void mpe_kernel(
     const Activation act_type
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size)
-        return;
+    float val = 0.0f;
 
-    const float act = activate_fwd(out[idx], act_type);
-    const float diff = act - targets[idx];
-    const float abs_diff = fabsf(diff);
+    if (idx < size) {
+        const float act = activate_fwd(out[idx], act_type);
+        const float diff = act - targets[idx];
+        const float abs_diff = fabsf(diff);
 
-    const float grad_magnitude = power * powf(abs_diff, power - 1.0f);
-    const float sign_diff = (diff > 0.0f) ? 1.0f : -1.0f;
-    grads[idx] = grad_magnitude * sign_diff * activate_bwd(act, act_type);
+        const float p = powf(abs_diff, power);
 
-    float p = powf(abs_diff, power);
-    if (p != 0.0f)
-        atomicAdd(&loss[0], p);
+        const float grad_mag = (abs_diff > 1e-9f) ? (power * p / abs_diff) : 0.0f;
+        const float sign = (diff > 0.0f) ? 1.0f : -1.0f;
+
+        grads[idx] = grad_mag * sign * activate_bwd(act, act_type);
+        val = p;
+    }
+
+    for (int offset = 16; offset > 0; offset /= 2)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+
+    if ((threadIdx.x % 32) == 0 && val != 0.0f)
+        atomicAdd(loss, val);
 }
 
 void mpe_loss(

@@ -35,6 +35,11 @@ class Optimizer {
         init_buffers();
     }
 
+    void clear_grads() {
+        for (auto* t : params)
+            t->get_grads().clear();
+    }
+
     void clamp(float min, float max) {
         if (min > max)
             error("Optimizer clamp: min cannot be greater than max!");

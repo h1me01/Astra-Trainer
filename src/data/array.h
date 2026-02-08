@@ -170,7 +170,10 @@ class Array {
     }
 
     void host_to_dev_async(cudaStream_t stream) {
-        ASSERT(stream != nullptr && use_pinned);
+        if (!stream) {
+            host_to_dev();
+            return;
+        }
 
         if (!is_host_allocated() || !is_dev_allocated())
             return;

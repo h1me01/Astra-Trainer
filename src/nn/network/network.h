@@ -52,11 +52,6 @@ class Network {
             operations[i]->backward();
     }
 
-    void clear_grads() {
-        for (auto& op : operations)
-            op->clear_grads();
-    }
-
     Tensor& get_output() { return operations.back()->get_output(); }
     const Tensor& get_output() const { return operations.back()->get_output(); }
 

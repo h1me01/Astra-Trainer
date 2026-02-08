@@ -33,7 +33,8 @@ namespace op {
 
 class OpHandle {
   public:
-    OpHandle(Ptr<nn::Operation> op) : op(op) {}
+    OpHandle(Ptr<nn::Operation> op)
+        : op(op) {}
 
     OpHandle relu() {
         op->relu();
@@ -56,7 +57,7 @@ class OpHandle {
     }
 
     operator Ptr<nn::Operation>() const { return op; }
-    
+
     Ptr<nn::Operation> get() const { return op; }
 
   private:
@@ -68,9 +69,7 @@ class FeatureTransformerBuilder {
     FeatureTransformerBuilder(int input_dim, int output_dim)
         : params(detail::make<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Ptr<nn::Input> a) {
-        return OpHandle(detail::make<nn::FeatureTransformer>(params, a));
-    }
+    OpHandle operator()(Ptr<nn::Input> a) { return OpHandle(detail::make<nn::FeatureTransformer>(params, a)); }
 
     OpHandle operator()(Ptr<nn::Input> a, Ptr<nn::Input> b) {
         return OpHandle(detail::make<nn::FeatureTransformer>(params, a, b));
@@ -93,9 +92,7 @@ class AffineBuilder {
     AffineBuilder(int input_dim, int output_dim)
         : params(detail::make<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Ptr<nn::Operation> a) {
-        return OpHandle(detail::make<nn::Affine>(params, a));
-    }
+    OpHandle operator()(Ptr<nn::Operation> a) { return OpHandle(detail::make<nn::Affine>(params, a)); }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
@@ -161,15 +158,16 @@ namespace optim {
 
 class OptimHandle {
   public:
-    OptimHandle(Ptr<nn::Optimizer> optim) : optim(optim) {}
+    OptimHandle(Ptr<nn::Optimizer> optim)
+        : optim(optim) {}
 
     OptimHandle clamp(float min, float max) {
         optim->clamp(min, max);
         return *this;
     }
-    
+
     operator Ptr<nn::Optimizer>() const { return optim; }
-    
+
     Ptr<nn::Optimizer> get() const { return optim; }
 
   private:

@@ -2,17 +2,34 @@
 
 namespace kernel {
 
-constexpr float alpha = 1;
-constexpr float beta = 1;
+constexpr float alpha = 1.0f;
+constexpr float beta = 1.0f;
+constexpr float beta_zero = 0.0f;
 
 constexpr int block_size = 256;
 
 __global__ void activate_bwd_kernel(const float* out_v, float* out_g, const int size, const Activation act_type) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size)
+    const int vec_idx = idx * 4;
+
+    if (vec_idx >= size)
         return;
 
-    out_g[idx] *= activate_bwd(out_v[idx], act_type);
+    const int remaining = min(4, size - vec_idx);
+    if (remaining == 4) {
+        float4 v = ((const float4*)out_v)[idx];
+        float4 g = ((float4*)out_g)[idx];
+
+        g.x *= activate_bwd(v.x, act_type);
+        g.y *= activate_bwd(v.y, act_type);
+        g.z *= activate_bwd(v.z, act_type);
+        g.w *= activate_bwd(v.w, act_type);
+
+        ((float4*)out_g)[idx] = g;
+    } else {
+        for (int i = vec_idx; i < vec_idx + remaining; i++)
+            out_g[i] *= activate_bwd(out_v[i], act_type);
+    }
 }
 
 __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int r, const int c) {
@@ -53,14 +70,19 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, Activa
         out_g.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(out_g.size(), block_size);
-
-    // first update gradients if activation was used
-    if (act_type != Activation::Linear)
+    // update gradients if activation was used
+    if (act_type != Activation::Linear) {
+        const int blocks = get_num_blocks((out_g.size() + 3) / 4, block_size);
         activate_bwd_kernel<<<blocks, block_size>>>(out_v.dev_address(), out_g.dev_address(), out_g.size(), act_type);
+    }
 
     // update biases gradients
-    biases_bwd_kernel<<<blocks, block_size>>>(biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols());
+    {
+        const int blocks = get_num_blocks(out_g.size(), block_size);
+        biases_bwd_kernel<<<blocks, block_size>>>(
+            biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols()
+        );
+    }
 
     // update weights gradient
     cublasSgemm(
@@ -93,7 +115,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, Activa
         weights_v.rows(),        // lda
         out_g.dev_address(),     // B
         out_g.rows(),            // ldb
-        &beta,                   // beta
+        &beta_zero,              // beta
         in_g.dev_address(),      // C
         in_g.rows()              // ldc
     );

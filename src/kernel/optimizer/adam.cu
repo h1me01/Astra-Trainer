@@ -50,23 +50,23 @@ __global__ void adam_kernel(
     const float grad_scale,
     const int size
 ) {
-    const int idx4 = blockIdx.x * blockDim.x + threadIdx.x;
-    const int base_idx = idx4 * 4;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int vec_idx = idx * 4;
 
-    if (base_idx >= size)
+    if (vec_idx >= size)
         return;
 
-    const int remaining = min(4, size - base_idx);
+    const int remaining = min(4, size - vec_idx);
     if (remaining == 4) {
         float4* vals_v4 = (float4*)vals;
         float4* moms_v4 = (float4*)moms;
         float4* vels_v4 = (float4*)vels;
         const float4* grads_v4 = (const float4*)grads;
 
-        float4 grad = grads_v4[idx4];
-        float4 val = vals_v4[idx4];
-        float4 mom = moms_v4[idx4];
-        float4 vel = vels_v4[idx4];
+        float4 grad = grads_v4[idx];
+        float4 val = vals_v4[idx];
+        float4 mom = moms_v4[idx];
+        float4 vel = vels_v4[idx];
 
         mul_t4(grad, grad_scale);
         mul_t4(val, decay);
@@ -76,24 +76,23 @@ __global__ void adam_kernel(
         adam_update_t4(val, mom, vel, lr, eps);
         clamp_t4(val, min_val, max_val);
 
-        vals_v4[idx4] = val;
-        moms_v4[idx4] = mom;
-        vels_v4[idx4] = vel;
+        vals_v4[idx] = val;
+        moms_v4[idx] = mom;
+        vels_v4[idx] = vel;
     } else {
-        for (int i = 0; i < remaining; i++) {
-            const int idx = base_idx + i;
-            const float grad = grads[idx] * grad_scale;
-            float mom = moms[idx];
-            float vel = vels[idx];
-            float val = vals[idx] * decay;
+        for (int i = vec_idx; i < vec_idx + remaining; i++) {
+            const float grad = grads[i] * grad_scale;
+            float mom = moms[i];
+            float vel = vels[i];
+            float val = vals[i] * decay;
 
             mom = beta1 * mom + (1.0f - beta1) * grad;
             vel = beta2 * vel + (1.0f - beta2) * grad * grad;
             val -= lr * mom / (sqrtf(vel) + eps);
 
-            moms[idx] = mom;
-            vels[idx] = vel;
-            vals[idx] = clamp(val, min_val, max_val);
+            moms[i] = mom;
+            vels[i] = vel;
+            vals[i] = clamp(val, min_val, max_val);
         }
     }
 }
@@ -140,8 +139,6 @@ void adam_optim(
         grad_scale,
         vals.size()
     );
-
-    grads.clear_dev();
 }
 
 } // namespace kernel

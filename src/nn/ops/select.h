@@ -21,7 +21,11 @@ class Select : public Operation {
 
     void forward() override { kernel::select_fwd(input->get_data(), output.get_data(), *indices, act_type); }
 
-    void backward() override { kernel::select_bwd(input->get_grads(), output, *indices, act_type); }
+    void backward() override {
+        // have to clear all input grads since only certain selected grads will be overwritten
+        input->get_grads().clear_dev();
+        kernel::select_bwd(input->get_grads(), output, *indices, act_type);
+    }
 
     Ptr<SelectIndices> get_select_indices() const override { return indices; }
 

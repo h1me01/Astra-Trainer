@@ -198,7 +198,7 @@ void Model::train(const std::string& output_path, const std::string& checkpoint_
             loss->compute(targets, network->get_output());
             network->backward();
             optim->step(lr_sched->get_lr(), data_entries.size());
-            network->clear_grads();
+            optim->clear_grads();
 
             if (batch == config.batches_per_epoch || !(batch % 100)) {
                 timer.stop();
@@ -215,7 +215,7 @@ void Model::train(const std::string& output_path, const std::string& checkpoint_
         }
 
         float epoch_loss = loss->get_loss() / positions_per_epoch;
-        
+
         timer.stop();
         auto elapsed = timer.elapsed_time();
 

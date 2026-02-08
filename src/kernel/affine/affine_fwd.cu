@@ -2,8 +2,8 @@
 
 namespace kernel {
 
-constexpr float alpha = 1;
-constexpr float beta = 0;
+constexpr float alpha = 1.0f;
+constexpr float beta = 0.0f;
 
 constexpr int block_size = 256;
 

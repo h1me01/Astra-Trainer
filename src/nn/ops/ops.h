@@ -65,8 +65,6 @@ class Operation : public std::enable_shared_from_this<Operation> {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
-    virtual void clear_grads() { get_grads().clear_dev(); }
-
     Ptr<Operation> relu() {
         act_type = Activation::ReLU;
         return shared_from_this();

@@ -8,17 +8,20 @@ __global__ void mse_kernel(
     const float* targets, const float* out, float* grads, float* loss, const int size, const Activation act_type
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size)
-        return;
+    float val = 0.0f;
 
-    const float act = activate_fwd(out[idx], act_type);
-    const float diff = act - targets[idx];
+    if (idx < size) {
+        const float act = activate_fwd(out[idx], act_type);
+        const float diff = act - targets[idx];
+        grads[idx] = 2.0f * diff * activate_bwd(act, act_type);
+        val = diff * diff;
+    }
 
-    grads[idx] = 2.0f * diff * activate_bwd(act, act_type);
+    for (int offset = 16; offset > 0; offset /= 2)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
 
-    float sq = diff * diff;
-    if (sq != 0.0f)
-        atomicAdd(&loss[0], sq);
+    if ((threadIdx.x % 32) == 0 && val != 0.0f)
+        atomicAdd(loss, val);
 }
 
 void mse_loss(
