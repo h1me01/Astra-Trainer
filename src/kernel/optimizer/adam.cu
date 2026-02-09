@@ -4,6 +4,8 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
+constexpr float epsilon = 1e-8f;
+
 __device__ __forceinline__ void update_mom_t4(float4& mom, const float4& grad, const float beta1) {
     const float one_minus_beta1 = 1.0f - beta1;
     mom.x = beta1 * mom.x + one_minus_beta1 * grad.x;
@@ -28,11 +30,11 @@ __device__ __forceinline__ void clamp_t4(float4& val, const float min_val, const
 }
 
 __device__ __forceinline__ void
-adam_update_t4(float4& val, const float4& mom, const float4& vel, const float lr, const float eps) {
-    val.x -= lr * mom.x / (sqrtf(vel.x) + eps);
-    val.y -= lr * mom.y / (sqrtf(vel.y) + eps);
-    val.z -= lr * mom.z / (sqrtf(vel.z) + eps);
-    val.w -= lr * mom.w / (sqrtf(vel.w) + eps);
+adam_update_t4(float4& val, const float4& mom, const float4& vel, const float lr) {
+    val.x -= lr * mom.x / (sqrtf(vel.x) + epsilon);
+    val.y -= lr * mom.y / (sqrtf(vel.y) + epsilon);
+    val.z -= lr * mom.z / (sqrtf(vel.z) + epsilon);
+    val.w -= lr * mom.w / (sqrtf(vel.w) + epsilon);
 }
 
 __global__ void adam_kernel(
@@ -43,7 +45,6 @@ __global__ void adam_kernel(
     const float lr,
     const float beta1,
     const float beta2,
-    const float eps,
     const float decay,
     const float min_val,
     const float max_val,
@@ -73,7 +74,7 @@ __global__ void adam_kernel(
 
         update_mom_t4(mom, grad, beta1);
         update_vel_t4(vel, grad, beta2);
-        adam_update_t4(val, mom, vel, lr, eps);
+        adam_update_t4(val, mom, vel, lr);
         clamp_t4(val, min_val, max_val);
 
         vals_v4[idx] = val;
@@ -88,7 +89,7 @@ __global__ void adam_kernel(
 
             mom = beta1 * mom + (1.0f - beta1) * grad;
             vel = beta2 * vel + (1.0f - beta2) * grad * grad;
-            val -= lr * mom / (sqrtf(vel) + eps);
+            val -= lr * mom / (sqrtf(vel) + epsilon);
 
             moms[i] = mom;
             vels[i] = vel;
@@ -104,7 +105,6 @@ void adam_optim(
     const float lr,
     const float beta1,
     const float beta2,
-    const float eps,
     const float decay,
     const float grad_scale
 ) {
@@ -132,7 +132,6 @@ void adam_optim(
         lr,
         beta1,
         beta2,
-        eps,
         1.0f - lr * decay,
         min_val,
         max_val,

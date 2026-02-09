@@ -7,10 +7,15 @@ namespace nn {
 class PairwiseMul : public Operation {
   public:
     PairwiseMul(Ptr<Operation> input)
-        : PairwiseMul(input, nullptr) {}
+        : PairwiseMul(input, nullptr) {
+            name = "pairwise_mul";
+        }
 
     // output will be concatenation of the two inputs
     PairwiseMul(Ptr<Operation> input1, Ptr<Operation> input2) {
+
+        name = "pairwise_mul_fused";
+
         inputs.push_back(input1);
         if (input2)
             inputs.push_back(input2);

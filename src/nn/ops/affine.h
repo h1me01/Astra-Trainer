@@ -10,6 +10,8 @@ class Affine : public Operation {
         : param(param),
           input(input) {
 
+        name = "affine";
+
         input_dim = param->get_input_dim();
         output_dim = param->get_output_dim();
     }

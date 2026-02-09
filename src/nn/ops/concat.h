@@ -10,6 +10,8 @@ class Concat : public Operation {
         : input1(input1),
           input2(input2) {
 
+        name = "concat";
+
         input_dim = input1->get_output_dim() + input2->get_output_dim();
         output_dim = input_dim;
     }

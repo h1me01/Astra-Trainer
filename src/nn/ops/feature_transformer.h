@@ -7,11 +7,15 @@ namespace nn {
 class FeatureTransformer : public Operation {
   public:
     FeatureTransformer(Ptr<Param> params, Ptr<Input> input)
-        : FeatureTransformer(params, input, nullptr) {}
+        : FeatureTransformer(params, input, nullptr) {
+            name = "feature_transformer";
+        }
 
     // output will be concatenation of the two inputs
     FeatureTransformer(Ptr<Param> params, Ptr<Input> input1, Ptr<Input> input2)
         : params(params) {
+
+        name = "feature_transformer_fused";
 
         inputs.push_back(input1);
         if (input2)
@@ -55,6 +59,8 @@ class FeatureTransformer : public Operation {
     }
 
     Ptr<Param> get_param() override { return params; }
+
+    std::vector<Ptr<Input>> get_inputs_ft() const { return inputs; }
 
   private:
     Ptr<Param> params;

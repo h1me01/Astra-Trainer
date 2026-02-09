@@ -62,7 +62,7 @@ struct Astra : Model {
         return false;
     }
 
-    Operation build(const Input stm_in, const Input nstm_in) override {
+    Operation build(const Input stm_in, const Input nstm_in) {
         using namespace op;
 
         const int ft_size = 1024;
@@ -87,21 +87,21 @@ struct Astra : Model {
         l3.weights_format().transpose();
 
         // build network
-        auto ft_stm = ft(stm_in).crelu();
-        auto ft_nstm = ft(nstm_in).crelu();
+        auto ft_stm = ft(stm_in).clamped_relu().pairwise_mul();
+        auto ft_nstm = ft(nstm_in).clamped_relu().pairwise_mul();
 
-        auto pwm_out = pairwise_mul(ft_stm, ft_nstm);
+        auto cat_ft = concat(ft_stm, ft_nstm);
 
-        auto l1_out = select(l1(pwm_out), bucket_index).crelu();
-        auto l2_out = select(l2(l1_out), bucket_index).crelu();
-        auto l3_out = select(l3(l2_out), bucket_index);
+        auto l1_out = l1(cat_ft).select(bucket_index).clamped_relu();
+        auto l2_out = l2(l1_out).select(bucket_index).clamped_relu();
+        auto l3_out = l3(l2_out).select(bucket_index);
 
         return l3_out;
     }
 
     Loss get_loss() override { return loss::mse(Activation::Sigmoid); }
 
-    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 1e-8, 0.01).clamp(-0.99, 0.99); }
+    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
         float lr = 0.001;

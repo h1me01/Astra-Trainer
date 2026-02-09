@@ -17,14 +17,14 @@ using Operation = Ptr<nn::Operation>;
 using Input = Ptr<nn::Input>;
 
 struct TrainingConfig {
-    int epochs;
-    int batch_size;
-    int batches_per_epoch;
-    int save_rate;
-    int thread_count;
-    float eval_div;
-    float lambda_start;
-    float lambda_end;
+    int epochs = 100;
+    int batch_size = 16384;
+    int batches_per_epoch = 6104;
+    int save_rate = 20;
+    int thread_count = 2;
+    float eval_div = 400.0f;
+    float lambda_start = 0.5f;
+    float lambda_end = 0.5f;
 };
 
 class Model {
@@ -74,7 +74,7 @@ class Model {
     }
 
   protected:
-    std::string name;
+    std::string name = "Model";
     TrainingConfig config;
 
     virtual Operation build(const Input stm_in, const Input nstm_in) = 0;

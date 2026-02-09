@@ -10,6 +10,8 @@ class Select : public Operation {
         : input(input),
           indices(indices) {
 
+        name = "select";
+
         input_dim = input->get_output_dim();
         output_dim = input_dim / indices->partitions_size();
 

@@ -41,13 +41,13 @@ class OpHandle {
         return *this;
     }
 
-    OpHandle crelu() {
-        op->crelu();
+    OpHandle clamped_relu() {
+        op->clamped_relu();
         return *this;
     }
 
-    OpHandle screlu() {
-        op->screlu();
+    OpHandle squared_clamped_relu() {
+        op->squared_clamped_relu();
         return *this;
     }
 
@@ -55,6 +55,10 @@ class OpHandle {
         op->sigmoid();
         return *this;
     }
+
+    OpHandle select(Ptr<nn::SelectIndices> indices) { return OpHandle(detail::make<nn::Select>(op, indices)); }
+
+    OpHandle pairwise_mul() { return OpHandle(detail::make<nn::PairwiseMul>(op)); }
 
     operator Ptr<nn::Operation>() const { return op; }
 
@@ -70,10 +74,6 @@ class FeatureTransformerBuilder {
         : params(detail::make<nn::Param>(input_dim, output_dim)) {}
 
     OpHandle operator()(Ptr<nn::Input> a) { return OpHandle(detail::make<nn::FeatureTransformer>(params, a)); }
-
-    OpHandle operator()(Ptr<nn::Input> a, Ptr<nn::Input> b) {
-        return OpHandle(detail::make<nn::FeatureTransformer>(params, a, b));
-    }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
@@ -92,7 +92,11 @@ class AffineBuilder {
     AffineBuilder(int input_dim, int output_dim)
         : params(detail::make<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Ptr<nn::Operation> a) { return OpHandle(detail::make<nn::Affine>(params, a)); }
+    OpHandle operator()(Ptr<nn::Operation> a) {
+        if (a->get_output_dim() != params->get_input_dim())
+            error("Affine input dimension does not match parameter input dimension!");
+        return OpHandle(detail::make<nn::Affine>(params, a));
+    }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
@@ -119,21 +123,65 @@ inline Ptr<nn::SelectIndices> select_indices(int count, Fn&& fn) {
     return detail::make<nn::SelectIndices>(count, std::forward<Fn>(fn));
 }
 
-inline OpHandle select(Ptr<nn::Operation> s, Ptr<nn::SelectIndices> indices) {
-    return OpHandle(detail::make<nn::Select>(s, indices));
-}
-
 inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
+    if (a->get_name() == "pairwise_mul" && b->get_name() == "pairwise_mul") {
+        auto pwm_a = std::dynamic_pointer_cast<nn::PairwiseMul>(a);
+        auto pwm_b = std::dynamic_pointer_cast<nn::PairwiseMul>(b);
+
+        if (pwm_a && pwm_b) {
+            auto inputs_a = pwm_a->get_inputs();
+            auto inputs_b = pwm_b->get_inputs();
+
+            if (inputs_a.size() == 1 && inputs_b.size() == 1 && a->get_activation() == b->get_activation()) {
+                auto fused = detail::make<nn::PairwiseMul>(inputs_a[0], inputs_b[0]);
+
+                Activation act = a->get_activation();
+                if (act == Activation::ClampedReLU)
+                    fused->clamped_relu();
+                else if (act == Activation::ReLU)
+                    fused->relu();
+                else if (act == Activation::SquaredClampedReLU)
+                    fused->squared_clamped_relu();
+                else if (act == Activation::Sigmoid)
+                    fused->sigmoid();
+
+                return OpHandle(fused);
+            }
+        }
+    }
+
+    if (a->get_name() == "feature_transformer" && b->get_name() == "feature_transformer") {
+        auto ft_a = std::dynamic_pointer_cast<nn::FeatureTransformer>(a);
+        auto ft_b = std::dynamic_pointer_cast<nn::FeatureTransformer>(b);
+
+        if (ft_a && ft_b) {
+            auto param_a = ft_a->get_param();
+            auto param_b = ft_b->get_param();
+
+            if (param_a == param_b && a->get_activation() == b->get_activation()) {
+                auto inputs_a = ft_a->get_inputs_ft();
+                auto inputs_b = ft_b->get_inputs_ft();
+
+                if (inputs_a.size() == 1 && inputs_b.size() == 1) {
+                    auto fused = detail::make<nn::FeatureTransformer>(param_a, inputs_a[0], inputs_b[0]);
+
+                    Activation act = a->get_activation();
+                    if (act == Activation::ClampedReLU)
+                        fused->clamped_relu();
+                    else if (act == Activation::ReLU)
+                        fused->relu();
+                    else if (act == Activation::SquaredClampedReLU)
+                        fused->squared_clamped_relu();
+                    else if (act == Activation::Sigmoid)
+                        fused->sigmoid();
+
+                    return OpHandle(fused);
+                }
+            }
+        }
+    }
+
     return OpHandle(detail::make<nn::Concat>(a, b));
-}
-
-inline OpHandle pairwise_mul(Ptr<nn::Operation> a) {
-    return OpHandle(detail::make<nn::PairwiseMul>(a));
-}
-
-// output will be concatenation of the two inputs
-inline OpHandle pairwise_mul(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
-    return OpHandle(detail::make<nn::PairwiseMul>(a, b));
 }
 
 } // namespace op
@@ -174,12 +222,12 @@ class OptimHandle {
     Ptr<nn::Optimizer> optim;
 };
 
-inline OptimHandle adam(float beta1, float beta2, float eps) {
-    return OptimHandle(detail::make<nn::Adam>(beta1, beta2, eps));
+inline OptimHandle adam(float beta1, float beta2) {
+    return OptimHandle(detail::make<nn::Adam>(beta1, beta2));
 }
 
-inline OptimHandle adamw(float beta1, float beta2, float eps, float decay) {
-    return OptimHandle(detail::make<nn::Adam>(beta1, beta2, eps, decay));
+inline OptimHandle adamw(float beta1, float beta2, float decay) {
+    return OptimHandle(detail::make<nn::Adam>(beta1, beta2, decay));
 }
 
 } // namespace optim

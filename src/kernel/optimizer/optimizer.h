@@ -12,7 +12,6 @@ void adam_optim(
     const float lr,
     const float beta1,
     const float beta2,
-    const float eps,
     const float decay,
     const float grad_scale
 );

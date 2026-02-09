@@ -70,13 +70,13 @@ class Operation : public std::enable_shared_from_this<Operation> {
         return shared_from_this();
     }
 
-    Ptr<Operation> crelu() {
-        act_type = Activation::CReLU;
+    Ptr<Operation> clamped_relu() {
+        act_type = Activation::ClampedReLU;
         return shared_from_this();
     }
 
-    Ptr<Operation> screlu() {
-        act_type = Activation::SCReLU;
+    Ptr<Operation> squared_clamped_relu() {
+        act_type = Activation::SquaredClampedReLU;
         return shared_from_this();
     }
 
@@ -102,7 +102,13 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     virtual Ptr<Param> get_param() { return nullptr; }
 
+    std::string get_name() const { return name; }
+
+    Activation get_activation() const { return act_type; }
+
   protected:
+    std::string name = "";
+
     int input_dim = 0;
     int output_dim = 0;
     Activation act_type = Activation::Linear;
