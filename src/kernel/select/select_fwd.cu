@@ -4,14 +4,9 @@ namespace kernel {
 
 constexpr int block_size = 256;
 
+template <Activation act_type>
 __global__ void select_fwd_kernel(
-    const float* in_v,
-    float* out_v,
-    const int* indices,
-    const int in_r,
-    const int out_r,
-    const int batch_size,
-    const Activation act_type
+    const float* in_v, float* out_v, const int* indices, const int in_r, const int out_r, const int batch_size
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= batch_size * out_r)
@@ -26,7 +21,7 @@ __global__ void select_fwd_kernel(
     const float in_value = in_v[in_offset];
 
     const int out_offset = out_r * batch_idx + out_idx;
-    out_v[out_offset] = activate_fwd(in_value, act_type);
+    out_v[out_offset] = activate_fwd<act_type>(in_value);
 }
 
 void select_fwd(const DenseMatrix& in_v, DenseMatrix& out_v, const Array<int>& indices, const Activation act_type) {
@@ -40,14 +35,12 @@ void select_fwd(const DenseMatrix& in_v, DenseMatrix& out_v, const Array<int>& i
     );
 
     const int blocks = get_num_blocks(out_v.size(), block_size);
-    select_fwd_kernel<<<blocks, block_size>>>(
-        in_v.dev_address(),
-        out_v.dev_address(),
-        indices.dev_address(),
-        in_v.rows(),
-        out_v.rows(),
-        out_v.cols(),
-        act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        select_fwd_kernel,
+        <<<blocks, block_size>>>(
+            in_v.dev_address(), out_v.dev_address(), indices.dev_address(), in_v.rows(), out_v.rows(), out_v.cols()
+        )
     );
 }
 

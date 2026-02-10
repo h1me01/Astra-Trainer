@@ -6,7 +6,7 @@ constexpr int block_size = 1024;
 
 constexpr float epsilon = 1e-8f;
 
-__device__ __forceinline__ void update_mom_t4(float4& mom, const float4& grad, const float beta1) {
+__device__ __forceinline__ void update_mom_f4(float4& mom, const float4& grad, const float beta1) {
     const float one_minus_beta1 = 1.0f - beta1;
     mom.x = beta1 * mom.x + one_minus_beta1 * grad.x;
     mom.y = beta1 * mom.y + one_minus_beta1 * grad.y;
@@ -14,7 +14,7 @@ __device__ __forceinline__ void update_mom_t4(float4& mom, const float4& grad, c
     mom.w = beta1 * mom.w + one_minus_beta1 * grad.w;
 }
 
-__device__ __forceinline__ void update_vel_t4(float4& vel, const float4& grad, const float beta2) {
+__device__ __forceinline__ void update_vel_f4(float4& vel, const float4& grad, const float beta2) {
     const float one_minus_beta2 = 1.0f - beta2;
     vel.x = beta2 * vel.x + one_minus_beta2 * grad.x * grad.x;
     vel.y = beta2 * vel.y + one_minus_beta2 * grad.y * grad.y;
@@ -22,15 +22,14 @@ __device__ __forceinline__ void update_vel_t4(float4& vel, const float4& grad, c
     vel.w = beta2 * vel.w + one_minus_beta2 * grad.w * grad.w;
 }
 
-__device__ __forceinline__ void clamp_t4(float4& val, const float min_val, const float max_val) {
+__device__ __forceinline__ void clamp_f4(float4& val, const float min_val, const float max_val) {
     val.x = clamp(val.x, min_val, max_val);
     val.y = clamp(val.y, min_val, max_val);
     val.z = clamp(val.z, min_val, max_val);
     val.w = clamp(val.w, min_val, max_val);
 }
 
-__device__ __forceinline__ void
-adam_update_t4(float4& val, const float4& mom, const float4& vel, const float lr) {
+__device__ __forceinline__ void adam_update_f4(float4& val, const float4& mom, const float4& vel, const float lr) {
     val.x -= lr * mom.x / (sqrtf(vel.x) + epsilon);
     val.y -= lr * mom.y / (sqrtf(vel.y) + epsilon);
     val.z -= lr * mom.z / (sqrtf(vel.z) + epsilon);
@@ -72,10 +71,10 @@ __global__ void adam_kernel(
         mul_t4(grad, grad_scale);
         mul_t4(val, decay);
 
-        update_mom_t4(mom, grad, beta1);
-        update_vel_t4(vel, grad, beta2);
-        adam_update_t4(val, mom, vel, lr);
-        clamp_t4(val, min_val, max_val);
+        update_mom_f4(mom, grad, beta1);
+        update_vel_f4(vel, grad, beta2);
+        adam_update_f4(val, mom, vel, lr);
+        clamp_f4(val, min_val, max_val);
 
         vals_v4[idx] = val;
         moms_v4[idx] = mom;

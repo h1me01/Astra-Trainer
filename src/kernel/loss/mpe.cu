@@ -4,20 +4,14 @@ namespace kernel {
 
 constexpr int block_size = 1024;
 
-__global__ void mpe_kernel(
-    const float* targets,
-    const float* out,
-    float* grads,
-    float* loss,
-    const float power,
-    const int size,
-    const Activation act_type
-) {
+template <Activation act_type>
+__global__ void
+mpe_kernel(const float* targets, const float* out, float* grads, float* loss, const float power, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     float val = 0.0f;
 
     if (idx < size) {
-        const float act = activate_fwd(out[idx], act_type);
+        const float act = activate_fwd<act_type>(out[idx]);
         const float diff = act - targets[idx];
         const float abs_diff = fabsf(diff);
 
@@ -26,7 +20,7 @@ __global__ void mpe_kernel(
         const float grad_mag = (abs_diff > 1e-9f) ? (power * p / abs_diff) : 0.0f;
         const float sign = (diff > 0.0f) ? 1.0f : -1.0f;
 
-        grads[idx] = grad_mag * sign * activate_bwd(act, act_type);
+        grads[idx] = grad_mag * sign * activate_bwd<act_type>(act);
         val = p;
     }
 
@@ -53,8 +47,12 @@ void mpe_loss(
     );
 
     const int blocks = get_num_blocks(out.size(), block_size);
-    mpe_kernel<<<blocks, block_size>>>(
-        targets.dev_address(), out.dev_address(), grads.dev_address(), loss.dev_address(), power, out.size(), act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        mpe_kernel,
+        <<<blocks, block_size>>>(
+            targets.dev_address(), out.dev_address(), grads.dev_address(), loss.dev_address(), power, out.size()
+        )
     );
 }
 

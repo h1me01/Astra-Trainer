@@ -4,6 +4,7 @@ namespace kernel {
 
 constexpr int block_size = 256;
 
+template <Activation act_type>
 __global__ void select_bwd_kernel(
     float* in_g,
     const float* out_v,
@@ -11,8 +12,7 @@ __global__ void select_bwd_kernel(
     const int* indices,
     const int in_r,
     const int out_r,
-    const int batch_size,
-    const Activation act_type
+    const int batch_size
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= batch_size * out_r)
@@ -25,7 +25,7 @@ __global__ void select_bwd_kernel(
     const int in_offset = in_r * batch_idx + out_r * bucket + out_idx;
 
     const int out_offset = out_r * batch_idx + out_idx;
-    in_g[in_offset] = out_g[out_offset] * activate_bwd(out_v[out_offset], act_type);
+    in_g[in_offset] = out_g[out_offset] * activate_bwd<act_type>(out_v[out_offset]);
 }
 
 void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices, const Activation act_type) {
@@ -42,15 +42,18 @@ void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices,
     );
 
     const int blocks = get_num_blocks(out_g.size(), block_size);
-    select_bwd_kernel<<<blocks, block_size>>>(
-        in_g.dev_address(),
-        out_v.dev_address(),
-        out_g.dev_address(),
-        indices.dev_address(),
-        in_g.rows(),
-        out_g.rows(),
-        out_g.cols(),
-        act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        select_bwd_kernel,
+        <<<blocks, block_size>>>(
+            in_g.dev_address(),
+            out_v.dev_address(),
+            out_g.dev_address(),
+            indices.dev_address(),
+            in_g.rows(),
+            out_g.rows(),
+            out_g.cols()
+        )
     );
 }
 

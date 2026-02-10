@@ -68,12 +68,12 @@ class OpHandle {
     Ptr<nn::Operation> op;
 };
 
-class FeatureTransformerBuilder {
+class SparseAffineBuilder {
   public:
-    FeatureTransformerBuilder(int input_dim, int output_dim)
+    SparseAffineBuilder(int input_dim, int output_dim)
         : params(detail::make<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Ptr<nn::Input> a) { return OpHandle(detail::make<nn::FeatureTransformer>(params, a)); }
+    OpHandle operator()(Ptr<nn::Input> a) { return OpHandle(detail::make<nn::SparseAffine>(params, a)); }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
@@ -110,8 +110,8 @@ class AffineBuilder {
     Ptr<nn::Param> params;
 };
 
-inline FeatureTransformerBuilder feature_transformer(int input_dim, int output_dim) {
-    return FeatureTransformerBuilder(input_dim, output_dim);
+inline SparseAffineBuilder sparse_affine(int input_dim, int output_dim) {
+    return SparseAffineBuilder(input_dim, output_dim);
 }
 
 inline AffineBuilder affine(int input_dim, int output_dim) {
@@ -150,9 +150,9 @@ inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
         }
     }
 
-    if (a->get_name() == "feature_transformer" && b->get_name() == "feature_transformer") {
-        auto ft_a = std::dynamic_pointer_cast<nn::FeatureTransformer>(a);
-        auto ft_b = std::dynamic_pointer_cast<nn::FeatureTransformer>(b);
+    if (a->get_name() == "sparse_affine" && b->get_name() == "sparse_affine") {
+        auto ft_a = std::dynamic_pointer_cast<nn::SparseAffine>(a);
+        auto ft_b = std::dynamic_pointer_cast<nn::SparseAffine>(b);
 
         if (ft_a && ft_b) {
             auto param_a = ft_a->get_param();
@@ -163,7 +163,7 @@ inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
                 auto inputs_b = ft_b->get_inputs_ft();
 
                 if (inputs_a.size() == 1 && inputs_b.size() == 1) {
-                    auto fused = detail::make<nn::FeatureTransformer>(param_a, inputs_a[0], inputs_b[0]);
+                    auto fused = detail::make<nn::SparseAffine>(param_a, inputs_a[0], inputs_b[0]);
 
                     Activation act = a->get_activation();
                     if (act == Activation::ClampedReLU)

@@ -8,7 +8,8 @@ constexpr float beta_zero = 0.0f;
 
 constexpr int block_size = 256;
 
-__global__ void activate_bwd_kernel(const float* out_v, float* out_g, const int size, const Activation act_type) {
+template <Activation act_type>
+__global__ void activate_bwd_kernel(const float* out_v, float* out_g, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
 
@@ -20,15 +21,15 @@ __global__ void activate_bwd_kernel(const float* out_v, float* out_g, const int 
         float4 v = ((const float4*)out_v)[idx];
         float4 g = ((float4*)out_g)[idx];
 
-        g.x *= activate_bwd(v.x, act_type);
-        g.y *= activate_bwd(v.y, act_type);
-        g.z *= activate_bwd(v.z, act_type);
-        g.w *= activate_bwd(v.w, act_type);
+        g.x *= activate_bwd<act_type>(v.x);
+        g.y *= activate_bwd<act_type>(v.y);
+        g.z *= activate_bwd<act_type>(v.z);
+        g.w *= activate_bwd<act_type>(v.w);
 
         ((float4*)out_g)[idx] = g;
     } else {
         for (int i = vec_idx; i < vec_idx + remaining; i++)
-            out_g[i] *= activate_bwd(out_v[i], act_type);
+            out_g[i] *= activate_bwd<act_type>(out_v[i]);
     }
 }
 
@@ -73,7 +74,11 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, Activa
     // update gradients if activation was used
     if (act_type != Activation::Linear) {
         const int blocks = get_num_blocks((out_g.size() + 3) / 4, block_size);
-        activate_bwd_kernel<<<blocks, block_size>>>(out_v.dev_address(), out_g.dev_address(), out_g.size(), act_type);
+        DISPATCH_ACTIVATION(
+            act_type,
+            activate_bwd_kernel,
+            <<<blocks, block_size>>>(out_v.dev_address(), out_g.dev_address(), out_g.size())
+        );
     }
 
     // update biases gradients

@@ -8,8 +8,8 @@ class PairwiseMul : public Operation {
   public:
     PairwiseMul(Ptr<Operation> input)
         : PairwiseMul(input, nullptr) {
-            name = "pairwise_mul";
-        }
+        name = "pairwise_mul";
+    }
 
     // output will be concatenation of the two inputs
     PairwiseMul(Ptr<Operation> input1, Ptr<Operation> input2) {

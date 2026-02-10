@@ -4,6 +4,7 @@ namespace kernel {
 
 constexpr int block_size = 256;
 
+template <Activation act_type>
 __global__ void pairwise_mul_bwd_kernel(
     const float* in_v,
     float* in_g,
@@ -11,8 +12,7 @@ __global__ void pairwise_mul_bwd_kernel(
     const float* out_g,
     const int feature_size,
     const int out_r,
-    const int batch_size,
-    const Activation act_type
+    const int batch_size
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= feature_size * batch_size)
@@ -26,7 +26,7 @@ __global__ void pairwise_mul_bwd_kernel(
 
     const int out_idx = batch_idx * out_r + feature_idx;
 
-    const float grad = out_g[out_idx] * activate_bwd(out_v[out_idx], act_type);
+    const float grad = out_g[out_idx] * activate_bwd<act_type>(out_v[out_idx]);
     in_g[in_offset_a] = grad * in_v[in_offset_b];
     in_g[in_offset_b] = grad * in_v[in_offset_a];
 }
@@ -54,15 +54,18 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
     );
 
     const int blocks = get_num_blocks(feature_size * in_v.cols(), block_size);
-    pairwise_mul_bwd_kernel<<<blocks, block_size>>>(
-        in_v.dev_address(),
-        in_g.dev_address(),
-        out_v.dev_address() + out_offset,
-        out_g.dev_address() + out_offset,
-        feature_size,
-        out_g.rows(),
-        in_v.cols(),
-        act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        pairwise_mul_bwd_kernel,
+        <<<blocks, block_size>>>(
+            in_v.dev_address(),
+            in_g.dev_address(),
+            out_v.dev_address() + out_offset,
+            out_g.dev_address() + out_offset,
+            feature_size,
+            out_g.rows(),
+            in_v.cols()
+        )
     );
 }
 

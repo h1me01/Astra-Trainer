@@ -4,18 +4,18 @@
 
 namespace nn {
 
-class FeatureTransformer : public Operation {
+class SparseAffine : public Operation {
   public:
-    FeatureTransformer(Ptr<Param> params, Ptr<Input> input)
-        : FeatureTransformer(params, input, nullptr) {
-            name = "feature_transformer";
-        }
+    SparseAffine(Ptr<Param> params, Ptr<Input> input)
+        : SparseAffine(params, input, nullptr) {
+        name = "sparse_affine";
+    }
 
     // output will be concatenation of the two inputs
-    FeatureTransformer(Ptr<Param> params, Ptr<Input> input1, Ptr<Input> input2)
+    SparseAffine(Ptr<Param> params, Ptr<Input> input1, Ptr<Input> input2)
         : params(params) {
 
-        name = "feature_transformer_fused";
+        name = "sparse_affine_fused";
 
         inputs.push_back(input1);
         if (input2)
@@ -25,13 +25,13 @@ class FeatureTransformer : public Operation {
         output_dim = inputs.size() * params->get_output_dim();
 
         if (input_dim % 768 != 0)
-            error("FeatureTransformer input dimension must be a multiple of 768!");
+            error("SparseAffine input dimension must be a multiple of 768!");
     }
 
     void forward() override {
         const int input_count = inputs.size();
         for (int i = 0; i < input_count; i++) {
-            kernel::feature_transformer_fwd(
+            kernel::sparse_affine_fwd(
                 params->get_weights().get_data(),
                 params->get_biases().get_data(),
                 output.get_data(),
@@ -46,7 +46,7 @@ class FeatureTransformer : public Operation {
     void backward() override {
         const int input_count = inputs.size();
         for (int i = 0; i < input_count; i++) {
-            kernel::feature_transformer_bwd(
+            kernel::sparse_affine_bwd(
                 params->get_weights().get_grads(),
                 params->get_biases().get_grads(),
                 output,

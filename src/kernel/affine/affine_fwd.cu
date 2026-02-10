@@ -7,8 +7,8 @@ constexpr float beta = 0.0f;
 
 constexpr int block_size = 256;
 
-__global__ void
-biases_fwd_kernel(const float* biases_v, float* out_v, const int r, const int c, const Activation act_type) {
+template <Activation act_type>
+__global__ void biases_fwd_kernel(const float* biases_v, float* out_v, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= r * c)
         return;
@@ -16,7 +16,7 @@ biases_fwd_kernel(const float* biases_v, float* out_v, const int r, const int c,
     const int neuron_idx = idx % r;
     const float weighted_sum = out_v[idx] + biases_v[neuron_idx];
 
-    out_v[idx] = activate_fwd(weighted_sum, act_type);
+    out_v[idx] = activate_fwd<act_type>(weighted_sum);
 }
 
 void affine_fwd(
@@ -57,8 +57,10 @@ void affine_fwd(
 
     // add biases to dot product
     const int blocks = get_num_blocks(out_v.size(), block_size);
-    biases_fwd_kernel<<<blocks, block_size>>>(
-        biases_v.dev_address(), out_v.dev_address(), out_v.rows(), out_v.cols(), act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        biases_fwd_kernel,
+        <<<blocks, block_size>>>(biases_v.dev_address(), out_v.dev_address(), out_v.rows(), out_v.cols())
     );
 }
 

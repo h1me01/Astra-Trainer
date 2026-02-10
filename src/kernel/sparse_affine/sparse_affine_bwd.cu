@@ -1,10 +1,11 @@
-#include "feature_transformer.h"
+#include "sparse_affine.h"
 
 namespace kernel {
 
 constexpr dim3 block_size(256, 1);
 
-__global__ void feature_transformer_bwd_kernel(
+template <Activation act_type>
+__global__ void sparse_affine_bwd_kernel(
     float* weights_g,
     float* biases_g,
     const float* out_v,
@@ -13,8 +14,7 @@ __global__ void feature_transformer_bwd_kernel(
     const int weights_r,
     const int out_r,
     const int batch_size,
-    const int max_entries,
-    const Activation act_type
+    const int max_entries
 ) {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.y * blockDim.y + threadIdx.y;
@@ -32,7 +32,7 @@ __global__ void feature_transformer_bwd_kernel(
     __syncthreads();
 
     const int out_idx = out_r * batch_idx + row;
-    const float grad = out_g[out_idx] * activate_bwd(out_v[out_idx], act_type);
+    const float grad = out_g[out_idx] * activate_bwd<act_type>(out_v[out_idx]);
 
     if (grad == 0.0f)
         return;
@@ -48,7 +48,7 @@ __global__ void feature_transformer_bwd_kernel(
     }
 }
 
-void feature_transformer_bwd(
+void sparse_affine_bwd(
     DenseMatrix& weights_g,
     DenseMatrix& biases_g,
     const Tensor& out,
@@ -79,17 +79,20 @@ void feature_transformer_bwd(
 
     const int shared_mem = max_entries * sizeof(int);
 
-    feature_transformer_bwd_kernel<<<grid, block_size, shared_mem>>>(
-        weights_g.dev_address(),
-        biases_g.dev_address(),
-        out_v.dev_address() + out_offset,
-        out_g.dev_address() + out_offset,
-        features.dev_address(),
-        weights_g.rows(),
-        out_g.rows(),
-        out_g.cols(),
-        max_entries,
-        act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        sparse_affine_bwd_kernel,
+        <<<grid, block_size, shared_mem>>>(
+            weights_g.dev_address(),
+            biases_g.dev_address(),
+            out_v.dev_address() + out_offset,
+            out_g.dev_address() + out_offset,
+            features.dev_address(),
+            weights_g.rows(),
+            out_g.rows(),
+            out_g.cols(),
+            max_entries
+        )
     );
 }
 

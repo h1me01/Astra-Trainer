@@ -1,10 +1,11 @@
-#include "feature_transformer.h"
+#include "sparse_affine.h"
 
 namespace kernel {
 
 constexpr int block_size = 256;
 
-__global__ void feature_transformer_fwd_kernel(
+template <Activation act_type>
+__global__ void sparse_affine_fwd_kernel(
     const float* weights_v,
     const float* biases_v,
     float* out_v,
@@ -12,8 +13,7 @@ __global__ void feature_transformer_fwd_kernel(
     const int weights_r,
     const int out_r,
     const int batch_size,
-    const int max_entries,
-    const Activation act_type
+    const int max_entries
 ) {
     const int batch_idx = blockIdx.x;
     if (batch_idx >= batch_size)
@@ -43,10 +43,10 @@ __global__ void feature_transformer_fwd_kernel(
             add_t4(sum, weights_v4[feature_idx * iterations + k]);
         }
 
-        sum.x = activate_fwd(sum.x, act_type);
-        sum.y = activate_fwd(sum.y, act_type);
-        sum.z = activate_fwd(sum.z, act_type);
-        sum.w = activate_fwd(sum.w, act_type);
+        sum.x = activate_fwd<act_type>(sum.x);
+        sum.y = activate_fwd<act_type>(sum.y);
+        sum.z = activate_fwd<act_type>(sum.z);
+        sum.w = activate_fwd<act_type>(sum.w);
 
         const int out_idx = (out_r * batch_idx + neuron_idx_base) / 4;
         out_v4[out_idx] = sum;
@@ -65,12 +65,12 @@ __global__ void feature_transformer_fwd_kernel(
             }
 
             const int out_idx = out_r * batch_idx + neuron_idx;
-            out_v[out_idx] = activate_fwd(sum, act_type);
+            out_v[out_idx] = activate_fwd<act_type>(sum);
         }
     }
 }
 
-void feature_transformer_fwd(
+void sparse_affine_fwd(
     const DenseMatrix& weights_v,
     const DenseMatrix& biases_v,
     DenseMatrix& out_v,
@@ -92,16 +92,19 @@ void feature_transformer_fwd(
     );
 
     int shared_mem_size = max_entries * sizeof(int);
-    feature_transformer_fwd_kernel<<<out_v.cols(), block_size, shared_mem_size>>>(
-        weights_v.dev_address(),
-        biases_v.dev_address(),
-        out_v.dev_address() + out_offset,
-        features.dev_address(),
-        weights_v.rows(),
-        out_v.rows(),
-        out_v.cols(),
-        max_entries,
-        act_type
+    DISPATCH_ACTIVATION(
+        act_type,
+        sparse_affine_fwd_kernel,
+        <<<out_v.cols(), block_size, shared_mem_size>>>(
+            weights_v.dev_address(),
+            biases_v.dev_address(),
+            out_v.dev_address() + out_offset,
+            features.dev_address(),
+            weights_v.rows(),
+            out_v.rows(),
+            out_v.cols(),
+            max_entries
+        )
     );
 }
 
