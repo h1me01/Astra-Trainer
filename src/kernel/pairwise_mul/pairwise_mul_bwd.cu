@@ -8,7 +8,7 @@ template <Activation act_type>
 __global__ void pairwise_mul_bwd_kernel(
     const float* in_v,
     float* in_g,
-    const float* out_v,
+    const float* out_d,
     const float* out_g,
     const int feature_size,
     const int out_r,
@@ -26,7 +26,7 @@ __global__ void pairwise_mul_bwd_kernel(
 
     const int out_idx = batch_idx * out_r + feature_idx;
 
-    const float grad = out_g[out_idx] * activate_bwd<act_type>(out_v[out_idx]);
+    const float grad = out_g[out_idx] * activate_bwd<act_type>(out_d[out_idx]);
     in_g[in_offset_a] = grad * in_v[in_offset_b];
     in_g[in_offset_b] = grad * in_v[in_offset_a];
 }
@@ -35,7 +35,7 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
     const auto& in_v = in.get_data();
     auto& in_g = in.get_grads();
 
-    const auto& out_v = out.get_data();
+    const auto& out_d = out.get_data();
     const auto& out_g = out.get_grads();
 
     const int feature_size = in_v.rows() / 2;
@@ -50,7 +50,7 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
         in_v.is_dev_allocated() &&  //
         in_g.is_dev_allocated() &&  //
         out_g.is_dev_allocated() && //
-        out_v.is_dev_allocated()
+        out_d.is_dev_allocated()
     );
 
     const int blocks = get_num_blocks(feature_size * in_v.cols(), block_size);
@@ -60,7 +60,7 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
         <<<blocks, block_size>>>(
             in_v.dev_address(),
             in_g.dev_address(),
-            out_v.dev_address() + out_offset,
+            out_d.dev_address() + out_offset,
             out_g.dev_address() + out_offset,
             feature_size,
             out_g.rows(),

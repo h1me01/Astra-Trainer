@@ -14,7 +14,7 @@ class PairwiseMul : public Operation {
     // output will be concatenation of the two inputs
     PairwiseMul(Ptr<Operation> input1, Ptr<Operation> input2) {
 
-        name = "pairwise_mul_fused";
+        name = "pairwise_mul_concatenated";
 
         inputs.push_back(input1);
         if (input2)

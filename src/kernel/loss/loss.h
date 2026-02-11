@@ -7,20 +7,9 @@
 namespace kernel {
 
 void mpe_loss(
-    const Array<float>& targets,
-    Array<float>& loss,
-    const DenseMatrix& out,
-    DenseMatrix& grads,
-    const float power,
-    const Activation act_type
+    const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, const Activation act_type
 );
 
-void mse_loss(
-    const Array<float>& targets,
-    Array<float>& loss,
-    const DenseMatrix& out,
-    DenseMatrix& grads,
-    const Activation act_type
-);
+void mse_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, const Activation act_type);
 
 } // namespace kernel

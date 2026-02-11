@@ -4,12 +4,19 @@
 
 namespace model {
 
-namespace detail {
+namespace helper {
+
 template <typename T, typename... Args>
 auto make(Args&&... args) {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
-} // namespace detail
+
+template <typename T, typename U>
+auto dpc(U&& ptr) {
+    return std::dynamic_pointer_cast<T>(std::forward<U>(ptr));
+}
+
+} // namespace helper
 
 namespace save_format {
 
@@ -24,7 +31,7 @@ constexpr auto float32 = Type::float32;
 namespace param {
 
 inline Ptr<nn::Param> create(int input_dim, int output_dim) {
-    return detail::make<nn::Param>(input_dim, output_dim);
+    return helper::make<nn::Param>(input_dim, output_dim);
 }
 
 } // namespace param
@@ -37,28 +44,43 @@ class OpHandle {
         : op(op) {}
 
     OpHandle relu() {
-        op->relu();
+        op->set_activation(Activation::ReLU);
         return *this;
     }
 
     OpHandle clamped_relu() {
-        op->clamped_relu();
+        op->set_activation(Activation::ClampedReLU);
         return *this;
     }
 
     OpHandle squared_clamped_relu() {
-        op->squared_clamped_relu();
+        op->set_activation(Activation::SquaredClampedReLU);
         return *this;
     }
 
     OpHandle sigmoid() {
-        op->sigmoid();
+        op->set_activation(Activation::Sigmoid);
         return *this;
     }
 
-    OpHandle select(Ptr<nn::SelectIndices> indices) { return OpHandle(detail::make<nn::Select>(op, indices)); }
+    OpHandle select(Ptr<nn::SelectIndices> indices) { return OpHandle(helper::make<nn::Select>(op, indices)); }
 
-    OpHandle pairwise_mul() { return OpHandle(detail::make<nn::PairwiseMul>(op)); }
+    OpHandle pairwise_mul() {
+        // fuse sparse_affine + pairwise_mul into single operation
+        if (op->get_name() == "sparse_affine") {
+            auto sa = helper::dpc<nn::SparseAffine>(op);
+            if (sa) {
+                auto inputs = sa->get_inputs_ft();
+                if (inputs.size() == 1) {
+                    auto fused = helper::make<nn::SparseAffine>(sa->get_param(), inputs[0], true);
+                    fused->set_activation(op->get_activation());
+                    return OpHandle(fused);
+                }
+            }
+        }
+
+        return OpHandle(helper::make<nn::PairwiseMul>(op));
+    }
 
     operator Ptr<nn::Operation>() const { return op; }
 
@@ -71,9 +93,9 @@ class OpHandle {
 class SparseAffineBuilder {
   public:
     SparseAffineBuilder(int input_dim, int output_dim)
-        : params(detail::make<nn::Param>(input_dim, output_dim)) {}
+        : params(helper::make<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Ptr<nn::Input> a) { return OpHandle(detail::make<nn::SparseAffine>(params, a)); }
+    OpHandle operator()(Ptr<nn::Input> a) { return OpHandle(helper::make<nn::SparseAffine>(params, a)); }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
@@ -90,12 +112,12 @@ class SparseAffineBuilder {
 class AffineBuilder {
   public:
     AffineBuilder(int input_dim, int output_dim)
-        : params(detail::make<nn::Param>(input_dim, output_dim)) {}
+        : params(helper::make<nn::Param>(input_dim, output_dim)) {}
 
     OpHandle operator()(Ptr<nn::Operation> a) {
         if (a->get_output_dim() != params->get_input_dim())
             error("Affine input dimension does not match parameter input dimension!");
-        return OpHandle(detail::make<nn::Affine>(params, a));
+        return OpHandle(helper::make<nn::Affine>(params, a));
     }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
@@ -120,68 +142,74 @@ inline AffineBuilder affine(int input_dim, int output_dim) {
 
 template <typename Fn>
 inline Ptr<nn::SelectIndices> select_indices(int count, Fn&& fn) {
-    return detail::make<nn::SelectIndices>(count, std::forward<Fn>(fn));
+    return helper::make<nn::SelectIndices>(count, std::forward<Fn>(fn));
 }
 
 inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
-    if (a->get_name() == "pairwise_mul" && b->get_name() == "pairwise_mul") {
-        auto pwm_a = std::dynamic_pointer_cast<nn::PairwiseMul>(a);
-        auto pwm_b = std::dynamic_pointer_cast<nn::PairwiseMul>(b);
+    auto try_fuse_sparse_affine = [](auto sa_a, auto sa_b, bool pairwise) -> OpHandle {
+        if (
+            sa_a &&                                          //
+            sa_b &&                                          //
+            sa_a->get_inputs_ft().size() == 1 &&             //
+            sa_b->get_inputs_ft().size() == 1 &&             //
+            sa_a->get_param() == sa_b->get_param() &&        //
+            sa_a->get_activation() == sa_b->get_activation() //
+        ) {
+            auto fused = helper::make<nn::SparseAffine>(
+                sa_a->get_param(), sa_a->get_inputs_ft()[0], sa_b->get_inputs_ft()[0], pairwise
+            );
 
-        if (pwm_a && pwm_b) {
-            auto inputs_a = pwm_a->get_inputs();
-            auto inputs_b = pwm_b->get_inputs();
+            fused->set_activation(sa_a->get_activation());
+            return OpHandle(fused);
+        }
 
-            if (inputs_a.size() == 1 && inputs_b.size() == 1 && a->get_activation() == b->get_activation()) {
-                auto fused = detail::make<nn::PairwiseMul>(inputs_a[0], inputs_b[0]);
+        return OpHandle(nullptr);
+    };
 
-                Activation act = a->get_activation();
-                if (act == Activation::ClampedReLU)
-                    fused->clamped_relu();
-                else if (act == Activation::ReLU)
-                    fused->relu();
-                else if (act == Activation::SquaredClampedReLU)
-                    fused->squared_clamped_relu();
-                else if (act == Activation::Sigmoid)
-                    fused->sigmoid();
+    auto a_name = a->get_name();
+    auto b_name = b->get_name();
 
-                return OpHandle(fused);
-            }
+    if (a_name == "pairwise_mul" && b_name == "pairwise_mul") {
+        auto pwm_a = helper::dpc<nn::PairwiseMul>(a);
+        auto pwm_b = helper::dpc<nn::PairwiseMul>(b);
+
+        if (
+            pwm_a &&                                           //
+            pwm_b &&                                           //
+            pwm_a->get_inputs().size() == 1 &&                 //
+            pwm_b->get_inputs().size() == 1 &&                 //
+            pwm_a->get_activation() == pwm_b->get_activation() //
+        ) {
+            auto result = try_fuse_sparse_affine(
+                helper::dpc<nn::SparseAffine>(pwm_a->get_inputs()[0]),
+                helper::dpc<nn::SparseAffine>(pwm_b->get_inputs()[0]),
+                true
+            );
+            if (result.get() != nullptr)
+                return result;
+
+            // fall back to regular pairwise mul fusion
+            auto fused = helper::make<nn::PairwiseMul>(pwm_a->get_inputs()[0], pwm_b->get_inputs()[0]);
+            fused->set_activation(a->get_activation());
+
+            return OpHandle(fused);
         }
     }
 
-    if (a->get_name() == "sparse_affine" && b->get_name() == "sparse_affine") {
-        auto ft_a = std::dynamic_pointer_cast<nn::SparseAffine>(a);
-        auto ft_b = std::dynamic_pointer_cast<nn::SparseAffine>(b);
-
-        if (ft_a && ft_b) {
-            auto param_a = ft_a->get_param();
-            auto param_b = ft_b->get_param();
-
-            if (param_a == param_b && a->get_activation() == b->get_activation()) {
-                auto inputs_a = ft_a->get_inputs_ft();
-                auto inputs_b = ft_b->get_inputs_ft();
-
-                if (inputs_a.size() == 1 && inputs_b.size() == 1) {
-                    auto fused = detail::make<nn::SparseAffine>(param_a, inputs_a[0], inputs_b[0]);
-
-                    Activation act = a->get_activation();
-                    if (act == Activation::ClampedReLU)
-                        fused->clamped_relu();
-                    else if (act == Activation::ReLU)
-                        fused->relu();
-                    else if (act == Activation::SquaredClampedReLU)
-                        fused->squared_clamped_relu();
-                    else if (act == Activation::Sigmoid)
-                        fused->sigmoid();
-
-                    return OpHandle(fused);
-                }
-            }
-        }
+    if (a_name == "sparse_affine_pairwise_mul" && b_name == "sparse_affine_pairwise_mul") {
+        auto result = try_fuse_sparse_affine(helper::dpc<nn::SparseAffine>(a), helper::dpc<nn::SparseAffine>(b), true);
+        if (result.get() != nullptr)
+            return result;
     }
 
-    return OpHandle(detail::make<nn::Concat>(a, b));
+    if (a_name == "sparse_affine" && b_name == "sparse_affine") {
+        auto result = try_fuse_sparse_affine(helper::dpc<nn::SparseAffine>(a), helper::dpc<nn::SparseAffine>(b), false);
+        if (result.get() != nullptr)
+            return result;
+    }
+
+    // no fusion
+    return OpHandle(helper::make<nn::Concat>(a, b));
 }
 
 } // namespace op
@@ -189,15 +217,15 @@ inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
 namespace lr_sched {
 
 inline Ptr<nn::LRScheduler> constant(float lr) {
-    return detail::make<nn::Constant>(lr);
+    return helper::make<nn::Constant>(lr);
 }
 
 inline Ptr<nn::LRScheduler> step_decay(int step_size, float decay_factor) {
-    return detail::make<nn::StepDecay>(step_size, decay_factor);
+    return helper::make<nn::StepDecay>(step_size, decay_factor);
 }
 
 inline Ptr<nn::LRScheduler> cosine_annealing(int total_epochs, float initial_lr, float final_lr) {
-    return detail::make<nn::CosineAnnealing>(total_epochs, initial_lr, final_lr);
+    return helper::make<nn::CosineAnnealing>(total_epochs, initial_lr, final_lr);
 }
 
 } // namespace lr_sched
@@ -223,11 +251,11 @@ class OptimHandle {
 };
 
 inline OptimHandle adam(float beta1, float beta2) {
-    return OptimHandle(detail::make<nn::Adam>(beta1, beta2));
+    return OptimHandle(helper::make<nn::Adam>(beta1, beta2));
 }
 
 inline OptimHandle adamw(float beta1, float beta2, float decay) {
-    return OptimHandle(detail::make<nn::Adam>(beta1, beta2, decay));
+    return OptimHandle(helper::make<nn::Adam>(beta1, beta2, decay));
 }
 
 } // namespace optim
@@ -235,11 +263,11 @@ inline OptimHandle adamw(float beta1, float beta2, float decay) {
 namespace loss {
 
 inline Ptr<nn::Loss> mse(Activation act = Activation::Linear) {
-    return detail::make<nn::MSE>(act);
+    return helper::make<nn::MSE>(act);
 }
 
 inline Ptr<nn::Loss> mpe(float power, Activation act = Activation::Linear) {
-    return detail::make<nn::MPE>(power, act);
+    return helper::make<nn::MPE>(power, act);
 }
 
 } // namespace loss

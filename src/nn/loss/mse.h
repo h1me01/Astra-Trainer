@@ -9,7 +9,7 @@ struct MSE : public Loss {
         : Loss(act) {}
 
     void compute(const Array<float>& targets, Tensor& output) {
-        kernel::mse_loss(targets, loss, output.get_data(), output.get_grads(), act_type);
+        kernel::mse_loss(targets, loss, output, act_type);
     }
 };
 

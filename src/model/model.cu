@@ -146,35 +146,25 @@ float Model::predict(const std::string& fen) {
     return output(0) * config.eval_div;
 }
 
-void Model::train(const std::string& output_path, const std::string& checkpoint_name) {
+void Model::train(const std::string& output_path) {
     init();
 
     std::string training_folder;
     Logger log;
     int epoch = 0;
 
-    if (checkpoint_name.empty()) {
+    if (loaded_checkpoint.empty()) {
         training_folder = output_path + "/" + name;
         create_directory(training_folder);
-
         log.open(training_folder + "/log.txt", false);
         log.write({"epoch", "loss"});
     } else {
-        const std::string checkpoint_path = output_path + "/" + checkpoint_name;
-
-        if (!exists(checkpoint_path))
-            error("Checkpoint path does not exist: " + checkpoint_path);
-
-        load_params(checkpoint_path + "/model.bin");
-        optim->load(checkpoint_path);
+        training_folder = loaded_checkpoint.substr(0, loaded_checkpoint.find_last_of('/'));
+        std::string checkpoint_name = loaded_checkpoint.substr(loaded_checkpoint.find_last_of('/') + 1);
 
         epoch = epoch_from_checkpoint(checkpoint_name);
         lr_sched->lr_from_epoch(epoch);
-
-        training_folder = checkpoint_path.substr(0, checkpoint_path.find_last_of('/'));
         log.open(training_folder + "/log.txt", true);
-
-        loaded_checkpoint = checkpoint_name;
     }
 
     print_info(epoch, training_folder);

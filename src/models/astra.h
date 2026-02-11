@@ -5,14 +5,14 @@
 namespace model {
 
 constexpr std::array<int, 64> input_bucket = {
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 1, 2, 3, 3, 2, 1, 0, //
+    4, 5, 6, 7, 7, 6, 5, 4, //
+    8, 8, 8, 8, 8, 8, 8, 8, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
+    9, 9, 9, 9, 9, 9, 9, 9, //
 };
 
 struct Astra : Model {
@@ -27,6 +27,18 @@ struct Astra : Model {
         config.eval_div = 400.0;
         config.lambda_start = 0.5;
         config.lambda_end = 0.5;
+
+        //load_params("/home/h1me/Downloads/model.bin");
+
+        train("/home/h1me/Documents/Coding/Astra-Data/nn_output");
+
+        evaluate_positions({
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "rn1qk2r/ppp1bppp/5n2/3p1bB1/3P4/2N1P3/PP3PPP/R2QKBNR w KQkq - 1 7",
+            "5B2/5ppk/p6p/P7/4b2P/3p1qP1/4rP2/2Q2RK1 w - - 10 33",
+            "8/8/pp3p2/3p4/PP1PkPK1/8/8/8 b - - 4 52",
+            "rnbqkbnr/p3pppp/8/1p6/2pP4/4P3/1P3PPP/RNBQKBNR w KQkq - 0 6",
+        });
     }
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
@@ -65,12 +77,11 @@ struct Astra : Model {
     Operation build(const Input stm_in, const Input nstm_in) {
         using namespace op;
 
-        const int ft_size = 1024;
         const int bucket_count = 8;
 
         // create layers
-        auto ft = sparse_affine(num_buckets(input_bucket) * 768, ft_size);
-        auto l1 = affine(ft_size, 16 * bucket_count);
+        auto ft = sparse_affine(num_buckets(input_bucket) * 768, 1024);
+        auto l1 = affine(1024, 16 * bucket_count);
         auto l2 = affine(16, 32 * bucket_count);
         auto l3 = affine(32, bucket_count);
 

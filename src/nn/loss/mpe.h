@@ -11,7 +11,7 @@ class MPE : public Loss {
           power(power) {}
 
     void compute(const Array<float>& targets, Tensor& output) {
-        kernel::mpe_loss(targets, loss, output.get_data(), output.get_grads(), power, act_type);
+        kernel::mpe_loss(targets, loss, output, power, act_type);
     }
 
   private:

@@ -45,9 +45,6 @@ __device__ __forceinline__ float activate_bwd(float x) {
     }
 }
 
-// Helper macro to dispatch activation types to templated kernel calls
-// Usage: DISPATCH_ACTIVATION(act_type, MY_KERNEL_CALL, kernel_args...)
-// Expands to: MY_KERNEL_CALL<Activation::Type> kernel_args
 #define DISPATCH_ACTIVATION(act_type, KERNEL_NAME, ...)                                                                \
     switch (act_type) {                                                                                                \
     case Activation::Linear:                                                                                           \

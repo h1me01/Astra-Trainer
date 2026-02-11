@@ -65,26 +65,6 @@ class Operation : public std::enable_shared_from_this<Operation> {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
-    Ptr<Operation> relu() {
-        act_type = Activation::ReLU;
-        return shared_from_this();
-    }
-
-    Ptr<Operation> clamped_relu() {
-        act_type = Activation::ClampedReLU;
-        return shared_from_this();
-    }
-
-    Ptr<Operation> squared_clamped_relu() {
-        act_type = Activation::SquaredClampedReLU;
-        return shared_from_this();
-    }
-
-    Ptr<Operation> sigmoid() {
-        act_type = Activation::Sigmoid;
-        return shared_from_this();
-    }
-
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }
 
@@ -103,6 +83,12 @@ class Operation : public std::enable_shared_from_this<Operation> {
     virtual Ptr<Param> get_param() { return nullptr; }
 
     std::string get_name() const { return name; }
+
+    void set_activation(Activation act) {
+        if (act_type != Activation::Linear)
+            error("Cannot chain multiple activations on the same operation!");
+        act_type = act;
+    }
 
     Activation get_activation() const { return act_type; }
 

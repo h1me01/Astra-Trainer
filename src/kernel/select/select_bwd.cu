@@ -7,7 +7,7 @@ constexpr int block_size = 256;
 template <Activation act_type>
 __global__ void select_bwd_kernel(
     float* in_g,
-    const float* out_v,
+    const float* out_d,
     const float* out_g,
     const int* indices,
     const int in_r,
@@ -25,18 +25,18 @@ __global__ void select_bwd_kernel(
     const int in_offset = in_r * batch_idx + out_r * bucket + out_idx;
 
     const int out_offset = out_r * batch_idx + out_idx;
-    in_g[in_offset] = out_g[out_offset] * activate_bwd<act_type>(out_v[out_offset]);
+    in_g[in_offset] = out_g[out_offset] * activate_bwd<act_type>(out_d[out_offset]);
 }
 
 void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices, const Activation act_type) {
-    auto& out_v = out.get_data();
+    auto& out_d = out.get_data();
     auto& out_g = out.get_grads();
 
     ASSERT(in_g.cols() == out_g.cols() && out_g.cols() == indices.size());
 
     ASSERT(
         in_g.is_dev_allocated() &&  //
-        out_v.is_dev_allocated() && //
+        out_d.is_dev_allocated() && //
         out_g.is_dev_allocated()    //
         && indices.is_dev_allocated()
     );
@@ -47,7 +47,7 @@ void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices,
         select_bwd_kernel,
         <<<blocks, block_size>>>(
             in_g.dev_address(),
-            out_v.dev_address(),
+            out_d.dev_address(),
             out_g.dev_address(),
             indices.dev_address(),
             in_g.rows(),

@@ -29,6 +29,7 @@ class Network {
 
         std::unordered_set<SelectIndices*> seen;
         for (auto& op : operations) {
+            std::cout << "Initializing operation: " << op->get_name() << std::endl;
             op->init(batch_size);
             auto indices = op->get_select_indices();
             if (indices && seen.insert(indices.get()).second)

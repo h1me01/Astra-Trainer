@@ -6,7 +6,7 @@ constexpr int block_size = 256;
 
 template <Activation act_type>
 __global__ void concat_bwd_kernel(
-    const float* out_v,
+    const float* out_d,
     const float* out_g,
     float* in1_g,
     float* in2_g,
@@ -22,7 +22,7 @@ __global__ void concat_bwd_kernel(
     const int out_idx = idx % out_r;
 
     const int out_offset = out_idx + batch_idx * out_r;
-    const float grad = out_g[out_offset] * activate_bwd<act_type>(out_v[out_offset]);
+    const float grad = out_g[out_offset] * activate_bwd<act_type>(out_d[out_offset]);
 
     if (out_idx < in1_r) {
         const int in1_offset = out_idx + batch_idx * in1_r;
@@ -34,7 +34,7 @@ __global__ void concat_bwd_kernel(
 }
 
 void concat_bwd(DenseMatrix& in1_g, DenseMatrix& in2_g, const Tensor& out, const Activation act_type) {
-    const auto& out_v = out.get_data();
+    const auto& out_d = out.get_data();
     auto& out_g = out.get_grads();
 
     ASSERT(
@@ -46,7 +46,7 @@ void concat_bwd(DenseMatrix& in1_g, DenseMatrix& in2_g, const Tensor& out, const
     ASSERT(
         in1_g.is_dev_allocated() && //
         in2_g.is_dev_allocated() && //
-        out_v.is_dev_allocated() && //
+        out_d.is_dev_allocated() && //
         out_g.is_dev_allocated()
     );
 
@@ -55,7 +55,7 @@ void concat_bwd(DenseMatrix& in1_g, DenseMatrix& in2_g, const Tensor& out, const
         act_type,
         concat_bwd_kernel,
         <<<blocks, block_size>>>(
-            out_v.dev_address(),
+            out_d.dev_address(),
             out_g.dev_address(),
             in1_g.dev_address(),
             in2_g.dev_address(),

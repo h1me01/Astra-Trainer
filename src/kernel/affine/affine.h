@@ -12,7 +12,7 @@ void create_cublas();
 void destroy_cublas();
 
 void affine_fwd(
-    DenseMatrix& weights_v, DenseMatrix& biases_v, const DenseMatrix& inputs_v, DenseMatrix& out_v, Activation act_type
+    DenseMatrix& weights_v, DenseMatrix& biases_v, const DenseMatrix& inputs_v, DenseMatrix& out_d, Activation act_type
 );
 
 void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, Activation act_type);

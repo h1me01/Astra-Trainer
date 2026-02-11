@@ -31,7 +31,7 @@ class Model {
   public:
     virtual ~Model() = default;
 
-    void train(const std::string& output_path, const std::string& checkpoint_name = "");
+    void train(const std::string& output_path);
 
     void load_params(const std::string& file) {
         init();
@@ -60,6 +60,16 @@ class Model {
     void save_quantized_params(const std::string& file) {
         init();
         save_params_helper(file, true);
+    }
+
+    void load_checkpoint(const std::string& checkpoint_path) {
+        if (!exists(checkpoint_path))
+            error("Checkpoint path does not exist: " + checkpoint_path);
+
+        load_params(checkpoint_path + "/model.bin");
+        optim->load(checkpoint_path);
+
+        loaded_checkpoint = checkpoint_path;
     }
 
     void evaluate_positions(const std::vector<std::string>& positions) {
