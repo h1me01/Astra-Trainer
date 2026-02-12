@@ -6,62 +6,46 @@ constexpr int block_size = 256;
 
 template <Activation act_type>
 __global__ void concat_bwd_kernel(
-    const float* out_d,
+    const float* out_v,
     const float* out_g,
-    float* in1_g,
-    float* in2_g,
-    const int in1_r,
+    float* in_g,
+    const int in_r,
     const int out_r,
-    const int batch_size
+    const int batch_size,
+    const int offset
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= out_r * batch_size)
+    if (idx >= in_r * batch_size)
         return;
 
-    const int batch_idx = idx / out_r;
-    const int out_idx = idx % out_r;
+    const int batch_idx = idx / in_r;
+    const int curr_in_r = idx % in_r;
 
-    const int out_offset = out_idx + batch_idx * out_r;
-    const float grad = out_g[out_offset] * activate_bwd<act_type>(out_d[out_offset]);
+    const int in_idx = curr_in_r + batch_idx * in_r;
+    const int out_idx = curr_in_r + batch_idx * out_r + offset;
 
-    if (out_idx < in1_r) {
-        const int in1_offset = out_idx + batch_idx * in1_r;
-        in1_g[in1_offset] = grad;
-    } else {
-        const int in2_offset = (out_idx - in1_r) + batch_idx * (out_r - in1_r);
-        in2_g[in2_offset] = grad;
-    }
+    in_g[in_idx] = out_g[out_idx] * activate_bwd<act_type>(out_v[out_idx]);
 }
 
-void concat_bwd(DenseMatrix& in1_g, DenseMatrix& in2_g, const Tensor& out, const Activation act_type) {
-    const auto& out_d = out.get_data();
+void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Activation act_type) {
     auto& out_g = out.get_grads();
+    auto& out_v = out.get_data();
 
-    ASSERT(
-        in1_g.cols() == out_g.cols() && //
-        in2_g.cols() == out_g.cols() && //
-        in1_g.rows() + in2_g.rows() == out_g.rows()
-    );
+    ASSERT(in_g.cols() == out_g.cols());
+    ASSERT(in_g.is_dev_allocated() && out_v.is_dev_allocated() && out_g.is_dev_allocated());
 
-    ASSERT(
-        in1_g.is_dev_allocated() && //
-        in2_g.is_dev_allocated() && //
-        out_d.is_dev_allocated() && //
-        out_g.is_dev_allocated()
-    );
-
-    const int blocks = get_num_blocks(out_g.size(), block_size);
+    const int blocks = get_num_blocks(in_g.size(), block_size);
     DISPATCH_ACTIVATION(
         act_type,
         concat_bwd_kernel,
         <<<blocks, block_size>>>(
-            out_d.dev_address(),
+            out_v.dev_address(),
             out_g.dev_address(),
-            in1_g.dev_address(),
-            in2_g.dev_address(),
-            in1_g.rows(),
+            in_g.dev_address(),
+            in_g.rows(),
             out_g.rows(),
-            out_g.cols()
+            out_g.cols(),
+            offset
         )
     );
 }

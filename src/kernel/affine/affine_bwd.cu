@@ -42,7 +42,7 @@ __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int
     atomicAdd(&biases_g[neuron_idx], out_g[idx]);
 }
 
-void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, Activation act_type) {
+void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const Activation act_type) {
     const auto& in_v = in.get_data();
     auto& in_g = in.get_grads();
 

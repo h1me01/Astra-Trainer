@@ -1,5 +1,6 @@
 #pragma once
 
+#include "activate.h"
 #include "affine.h"
 #include "concat.h"
 #include "pairwise_mul.h"

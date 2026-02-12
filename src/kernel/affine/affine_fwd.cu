@@ -16,7 +16,11 @@ __global__ void biases_fwd_kernel(const float* biases_v, float* out_d, const int
 }
 
 void affine_fwd(
-    DenseMatrix& weights_v, DenseMatrix& biases_v, const DenseMatrix& inputs_v, DenseMatrix& out_d, Activation act_type
+    DenseMatrix& weights_v,
+    DenseMatrix& biases_v,
+    const DenseMatrix& inputs_v,
+    DenseMatrix& out_d,
+    const Activation act_type
 ) {
     ASSERT(
         biases_v.cols() == 1 &&             //

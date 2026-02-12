@@ -1,4 +1,4 @@
-#include "sparse_affine.h"
+#include "sparse_affine_pairwise_mul.h"
 
 namespace kernel {
 

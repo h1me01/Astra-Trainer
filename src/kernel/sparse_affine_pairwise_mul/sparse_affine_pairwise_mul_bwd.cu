@@ -1,4 +1,4 @@
-#include "sparse_affine.h"
+#include "sparse_affine_pairwise_mul.h"
 
 namespace kernel {
 
@@ -68,16 +68,19 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
 }
 
 void sparse_affine_pairwise_mul_bwd(
-    DenseMatrix& weights_g,
-    DenseMatrix& biases_g,
-    const DenseMatrix& weights_v,
-    const DenseMatrix& biases_v,
+    Tensor& weights,
+    Tensor& biases,
     const Tensor& out,
     const Array<int>& features,
     const int max_entries,
     const int out_offset,
     const Activation act_type
 ) {
+    const auto& weights_v = weights.get_data();
+    auto& weights_g = weights.get_grads();
+    const auto& biases_v = biases.get_data();
+    auto& biases_g = biases.get_grads();
+
     const auto& out_d = out.get_data();
     const auto& out_g = out.get_grads();
 

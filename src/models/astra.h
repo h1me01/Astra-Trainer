@@ -28,7 +28,7 @@ struct Astra : Model {
         config.lambda_start = 0.5;
         config.lambda_end = 0.5;
 
-        //load_params("/home/h1me/Downloads/model.bin");
+        // load_params("/home/h1me/Downloads/model.bin");
 
         train("/home/h1me/Documents/Coding/Astra-Data/nn_output");
 
@@ -101,7 +101,7 @@ struct Astra : Model {
         auto ft_stm = ft(stm_in).clamped_relu().pairwise_mul();
         auto ft_nstm = ft(nstm_in).clamped_relu().pairwise_mul();
 
-        auto cat_ft = concat(ft_stm, ft_nstm);
+        auto cat_ft = concat({ft_stm, ft_nstm});
 
         auto l1_out = l1(cat_ft).select(bucket_index).clamped_relu();
         auto l2_out = l2(l1_out).select(bucket_index).clamped_relu();

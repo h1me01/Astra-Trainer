@@ -6,8 +6,8 @@ namespace nn {
 
 class MPE : public Loss {
   public:
-    MPE(float power, Activation act)
-        : Loss(act),
+    MPE(float power, Activation act_type)
+        : Loss(act_type),
           power(power) {}
 
     void compute(const Array<float>& targets, Tensor& output) {

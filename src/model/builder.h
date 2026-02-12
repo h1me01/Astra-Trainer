@@ -43,44 +43,12 @@ class OpHandle {
     OpHandle(Ptr<nn::Operation> op)
         : op(op) {}
 
-    OpHandle relu() {
-        op->set_activation(Activation::ReLU);
-        return *this;
-    }
-
-    OpHandle clamped_relu() {
-        op->set_activation(Activation::ClampedReLU);
-        return *this;
-    }
-
-    OpHandle squared_clamped_relu() {
-        op->set_activation(Activation::SquaredClampedReLU);
-        return *this;
-    }
-
-    OpHandle sigmoid() {
-        op->set_activation(Activation::Sigmoid);
-        return *this;
-    }
-
+    OpHandle relu() { return set_activation<Activation::SquaredClampedReLU>(); }
+    OpHandle clamped_relu() { return set_activation<Activation::ClampedReLU>(); }
+    OpHandle squared_clamped_relu() { return set_activation<Activation::SquaredClampedReLU>(); }
+    OpHandle sigmoid() { return set_activation<Activation::Sigmoid>(); }
     OpHandle select(Ptr<nn::SelectIndices> indices) { return OpHandle(helper::make<nn::Select>(op, indices)); }
-
-    OpHandle pairwise_mul() {
-        // fuse sparse_affine + pairwise_mul into single operation
-        if (op->get_name() == "sparse_affine") {
-            auto sa = helper::dpc<nn::SparseAffine>(op);
-            if (sa) {
-                auto inputs = sa->get_inputs_ft();
-                if (inputs.size() == 1) {
-                    auto fused = helper::make<nn::SparseAffine>(sa->get_param(), inputs[0], true);
-                    fused->set_activation(op->get_activation());
-                    return OpHandle(fused);
-                }
-            }
-        }
-
-        return OpHandle(helper::make<nn::PairwiseMul>(op));
-    }
+    OpHandle pairwise_mul() { return OpHandle(helper::make<nn::PairwiseMul>(op)); }
 
     operator Ptr<nn::Operation>() const { return op; }
 
@@ -88,6 +56,23 @@ class OpHandle {
 
   private:
     Ptr<nn::Operation> op;
+
+    template <Activation act_type>
+    OpHandle set_activation() {
+        if (op->get_name() == "concat") {
+            auto concat_op = helper::dpc<nn::Concat>(op);
+            // for concats who are fused we want them to not have an activation
+            // since it would mess up the fusion, so seperate it
+            if (concat_op->should_skip())
+                return OpHandle(helper::make<nn::Activate>(op, act_type));
+        }
+
+        if (op->get_activation() != Activation::Linear)
+            return OpHandle(helper::make<nn::Activate>(op, act_type));
+
+        op->set_activation(act_type);
+        return *this;
+    }
 };
 
 class SparseAffineBuilder {
@@ -145,71 +130,57 @@ inline Ptr<nn::SelectIndices> select_indices(int count, Fn&& fn) {
     return helper::make<nn::SelectIndices>(count, std::forward<Fn>(fn));
 }
 
-inline OpHandle concat(Ptr<nn::Operation> a, Ptr<nn::Operation> b) {
-    auto try_fuse_sparse_affine = [](auto sa_a, auto sa_b, bool pairwise) -> OpHandle {
-        if (
-            sa_a &&                                          //
-            sa_b &&                                          //
-            sa_a->get_inputs_ft().size() == 1 &&             //
-            sa_b->get_inputs_ft().size() == 1 &&             //
-            sa_a->get_param() == sa_b->get_param() &&        //
-            sa_a->get_activation() == sa_b->get_activation() //
-        ) {
-            auto fused = helper::make<nn::SparseAffine>(
-                sa_a->get_param(), sa_a->get_inputs_ft()[0], sa_b->get_inputs_ft()[0], pairwise
-            );
+inline OpHandle concat(std::vector<Ptr<nn::Operation>> inputs) {
+    auto output = OpHandle(helper::make<nn::Concat>(inputs));
 
-            fused->set_activation(sa_a->get_activation());
-            return OpHandle(fused);
+    if (inputs.empty())
+        return output;
+
+    const auto& type = inputs[0]->get_name();
+    for (const auto& input : inputs)
+        if (input->get_name() != type)
+            return output;
+
+    if (type != "pairwise_mul" && type != "sparse_affine")
+        return output;
+
+    auto concat_op = helper::dpc<nn::Concat>(output.get());
+    concat_op->set_skip();
+
+    // special multi-layer specific fusion
+    if (type == "pairwise_mul") {
+        bool all_have_sparse_affine = true;
+        for (const auto& input : inputs) {
+            auto pw_mul = helper::dpc<nn::PairwiseMul>(input);
+            if (!pw_mul || pw_mul->get_inputs()[0]->get_name() != "sparse_affine") {
+                all_have_sparse_affine = false;
+                break;
+            }
         }
 
-        return OpHandle(nullptr);
-    };
-
-    auto a_name = a->get_name();
-    auto b_name = b->get_name();
-
-    if (a_name == "pairwise_mul" && b_name == "pairwise_mul") {
-        auto pwm_a = helper::dpc<nn::PairwiseMul>(a);
-        auto pwm_b = helper::dpc<nn::PairwiseMul>(b);
-
-        if (
-            pwm_a &&                                           //
-            pwm_b &&                                           //
-            pwm_a->get_inputs().size() == 1 &&                 //
-            pwm_b->get_inputs().size() == 1 &&                 //
-            pwm_a->get_activation() == pwm_b->get_activation() //
-        ) {
-            auto result = try_fuse_sparse_affine(
-                helper::dpc<nn::SparseAffine>(pwm_a->get_inputs()[0]),
-                helper::dpc<nn::SparseAffine>(pwm_b->get_inputs()[0]),
-                true
-            );
-            if (result.get() != nullptr)
-                return result;
-
-            // fall back to regular pairwise mul fusion
-            auto fused = helper::make<nn::PairwiseMul>(pwm_a->get_inputs()[0], pwm_b->get_inputs()[0]);
-            fused->set_activation(a->get_activation());
-
-            return OpHandle(fused);
+        if (all_have_sparse_affine) {
+            for (auto& input : inputs) {
+                auto pw_mul = helper::dpc<nn::PairwiseMul>(input);
+                pw_mul->set_skip();
+                if (auto sparse_aff = helper::dpc<nn::SparseAffine>(pw_mul->get_inputs()[0]))
+                    sparse_aff->set_concat(concat_op, true);
+            }
+            return output;
         }
     }
 
-    if (a_name == "sparse_affine_pairwise_mul" && b_name == "sparse_affine_pairwise_mul") {
-        auto result = try_fuse_sparse_affine(helper::dpc<nn::SparseAffine>(a), helper::dpc<nn::SparseAffine>(b), true);
-        if (result.get() != nullptr)
-            return result;
+    // standard fusion
+    for (auto& input : inputs) {
+        if (type == "sparse_affine") {
+            if (auto op = helper::dpc<nn::SparseAffine>(input))
+                op->set_concat(concat_op);
+        } else { // pairwise_mul
+            if (auto op = helper::dpc<nn::PairwiseMul>(input))
+                op->set_concat(concat_op);
+        }
     }
 
-    if (a_name == "sparse_affine" && b_name == "sparse_affine") {
-        auto result = try_fuse_sparse_affine(helper::dpc<nn::SparseAffine>(a), helper::dpc<nn::SparseAffine>(b), false);
-        if (result.get() != nullptr)
-            return result;
-    }
-
-    // no fusion
-    return OpHandle(helper::make<nn::Concat>(a, b));
+    return output;
 }
 
 } // namespace op

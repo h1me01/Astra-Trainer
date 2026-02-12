@@ -6,7 +6,9 @@
 
 namespace kernel {
 
-void sparse_affine_fwd(
+// fairly specific fusion for typical multi-layer models
+
+void sparse_affine_pairwise_mul_fwd(
     const DenseMatrix& weights_v,
     const DenseMatrix& biases_v,
     DenseMatrix& out_d,
@@ -16,9 +18,9 @@ void sparse_affine_fwd(
     const Activation act_type
 );
 
-void sparse_affine_bwd(
-    DenseMatrix& weights_g,
-    DenseMatrix& biases_g,
+void sparse_affine_pairwise_mul_bwd(
+    Tensor& weights,
+    Tensor& biases,
     const Tensor& out,
     const Array<int>& features,
     const int max_entries,

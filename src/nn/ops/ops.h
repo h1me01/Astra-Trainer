@@ -68,8 +68,8 @@ class Operation : public std::enable_shared_from_this<Operation> {
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }
 
-    Tensor& get_output() { return output; }
-    const Tensor& get_output() const { return output; }
+    virtual Tensor& get_output() { return output; }
+    virtual const Tensor& get_output() const { return output; }
 
     DenseMatrix& get_data() { return output.get_data(); }
     const DenseMatrix& get_data() const { return output.get_data(); }
@@ -84,17 +84,13 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     std::string get_name() const { return name; }
 
-    void set_activation(Activation act) {
-        if (act_type != Activation::Linear)
-            error("Cannot chain multiple activations on the same operation!");
-        act_type = act;
-    }
-
+    void set_activation(Activation act_type) { this->act_type = act_type; }
     Activation get_activation() const { return act_type; }
 
   protected:
     std::string name = "";
 
+    bool skip = false;
     int input_dim = 0;
     int output_dim = 0;
     Activation act_type = Activation::Linear;

@@ -145,6 +145,18 @@ class Array {
     T* host_address() const { return use_pinned ? pinned_host_data.get() : host_data.get(); }
     T* dev_address() const { return dev_data.get(); }
 
+    void free_dev() { dev_data = CudaDevicePtr<T>(); }
+
+    void free_host() {
+        host_data.reset();
+        pinned_host_data = CudaHostPtr<T>();
+    }
+
+    void free() {
+        free_host();
+        free_dev();
+    }
+
     void clear() {
         clear_host();
         clear_dev();
