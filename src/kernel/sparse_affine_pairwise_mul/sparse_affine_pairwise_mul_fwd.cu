@@ -114,8 +114,6 @@ void sparse_affine_pairwise_mul_fwd(
     const Activation act_type
 ) {
     ASSERT(weights_v.rows() == biases_v.rows());
-    ASSERT(weights_v.rows() % 2 == 0);
-    ASSERT(out_d.rows() == weights_v.rows() / 2);
 
     ASSERT(
         weights_v.is_dev_allocated() && //

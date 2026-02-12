@@ -21,14 +21,16 @@ class PairwiseMul : public Operation {
     void forward() override {
         if (skip)
             return;
-        auto& real_output = concat ? concat->get_output() : output;
+        auto concat_ptr = concat.lock();
+        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
         kernel::pairwise_mul_fwd(input->get_data(), real_output.get_data(), out_offset * output_dim, act_type);
     }
 
     void backward() override {
         if (skip)
             return;
-        auto& real_output = concat ? concat->get_output() : output;
+        auto concat_ptr = concat.lock();
+        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
         kernel::pairwise_mul_bwd(input->get_output(), real_output, out_offset * output_dim, act_type);
     }
 
@@ -40,13 +42,13 @@ class PairwiseMul : public Operation {
     }
 
     Tensor& get_output() override {
-        if (concat || skip)
+        if (!concat.expired() || skip)
             error("Cannot use non existing output! (This should never happen)");
         return output;
     }
 
     const Tensor& get_output() const override {
-        if (concat || skip)
+        if (!concat.expired() || skip)
             error("Cannot use non existing output! (This should never happen)");
         return output;
     }
@@ -66,7 +68,7 @@ class PairwiseMul : public Operation {
   private:
     bool skip = false;
     int out_offset = 0;
-    Ptr<Concat> concat;
+    WeakPtr<Concat> concat;
     Ptr<Operation> input;
 };
 

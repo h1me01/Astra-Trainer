@@ -21,7 +21,8 @@ class SparseAffine : public Operation {
     }
 
     void forward() override {
-        auto& real_output = concat ? concat->get_output() : output;
+        auto concat_ptr = concat.lock();
+        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
 
         if (pairwise_fused) {
             kernel::sparse_affine_pairwise_mul_fwd(
@@ -47,7 +48,8 @@ class SparseAffine : public Operation {
     }
 
     void backward() override {
-        auto& real_output = concat ? concat->get_output() : output;
+        auto concat_ptr = concat.lock();
+        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
 
         if (pairwise_fused) {
             kernel::sparse_affine_pairwise_mul_bwd(
@@ -80,13 +82,13 @@ class SparseAffine : public Operation {
     }
 
     Tensor& get_output() override {
-        if (concat)
+        if (!concat.expired())
             error("Cannot use non existing output! (This should never happen)");
         return output;
     }
 
     const Tensor& get_output() const override {
-        if (concat)
+        if (!concat.expired())
             error("Cannot use non existing output! (This should never happen)");
         return output;
     }
@@ -100,7 +102,7 @@ class SparseAffine : public Operation {
     bool pairwise_fused = false;
 
     Ptr<Param> params;
-    Ptr<Concat> concat;
+    WeakPtr<Concat> concat;
     Ptr<Input> input;
 };
 

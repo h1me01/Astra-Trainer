@@ -44,6 +44,9 @@ using namespace std::filesystem;
 template <typename T>
 using Ptr = std::shared_ptr<T>;
 
+template <typename T>
+using WeakPtr = std::weak_ptr<T>;
+
 inline void error(const std::string& message) {
     std::cerr << "Error: " << message << std::endl;
     std::abort();
