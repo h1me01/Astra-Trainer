@@ -11,8 +11,8 @@ mpe_kernel(const float* targets, const float* out_d, float* out_g, float* loss, 
     float val = 0.0f;
 
     if (idx < size) {
-        const float pre_act = out_d[idx];
-        const float diff = activate_fwd<act_type>(pre_act) - targets[idx];
+        const float act = activate_fwd<act_type>(out_d[idx]);
+        const float diff = act - targets[idx];
         const float abs_diff = fabsf(diff);
 
         const float p = powf(abs_diff, power);
@@ -20,7 +20,7 @@ mpe_kernel(const float* targets, const float* out_d, float* out_g, float* loss, 
         const float grad_mag = (abs_diff > 1e-9f) ? (power * p / abs_diff) : 0.0f;
         const float sign = (diff > 0.0f) ? 1.0f : -1.0f;
 
-        out_g[idx] = grad_mag * sign * activate_bwd<act_type>(pre_act);
+        out_g[idx] = grad_mag * sign * activate_bwd<act_type, true>(act);
         val = p;
     }
 

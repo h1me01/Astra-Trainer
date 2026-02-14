@@ -126,9 +126,9 @@ void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
         targets(i) = lambda * score_target + (1.0f - lambda) * wdl_target;
     }
 
-    stm_features.host_to_dev();
-    nstm_features.host_to_dev();
-    targets.host_to_dev();
+    stm_features.host_to_dev_async();
+    nstm_features.host_to_dev_async();
+    targets.host_to_dev_async();
 }
 
 float Model::predict(const std::string& fen) {
@@ -184,11 +184,11 @@ void Model::train(const std::string& output_path) {
             auto data_entries = dataloader->next();
             fill_inputs(data_entries, lambda);
 
+            network->clear_all_grads(optim.get());
             network->forward(data_entries);
             loss->compute(targets, network->get_output());
             network->backward();
             optim->step(lr_sched->get_lr(), data_entries.size());
-            optim->clear_grads();
 
             if (batch == config.batches_per_epoch || !(batch % 100)) {
                 timer.stop();

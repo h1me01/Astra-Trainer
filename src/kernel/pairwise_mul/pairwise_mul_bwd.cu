@@ -26,9 +26,9 @@ __global__ void pairwise_mul_bwd_kernel(
 
     const int out_idx = batch_idx * out_r + feature_idx;
 
-    const float grad = out_g[out_idx] * activate_bwd<act_type>(out_d[out_idx]);
-    in_g[in_offset_a] = grad * in_v[in_offset_b];
-    in_g[in_offset_b] = grad * in_v[in_offset_a];
+    const float grad = out_g[out_idx] * activate_bwd<act_type, true>(out_d[out_idx]);
+    in_g[in_offset_a] += grad * in_v[in_offset_b];
+    in_g[in_offset_b] += grad * in_v[in_offset_a];
 }
 
 void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const Activation act_type) {

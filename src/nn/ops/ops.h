@@ -42,7 +42,7 @@ class SelectIndices {
                 error("Index function of Select returned negative index!");
             indices(i) = idx;
         }
-        indices.host_to_dev();
+        indices.host_to_dev_async();
     }
 
     int partitions_size() const { return num_partitions; }
@@ -64,6 +64,8 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     virtual void forward() = 0;
     virtual void backward() = 0;
+
+    virtual void clear_grads() { output.get_grads().clear_dev(); }
 
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }

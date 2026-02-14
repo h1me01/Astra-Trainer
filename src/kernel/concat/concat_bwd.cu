@@ -24,7 +24,7 @@ __global__ void concat_bwd_kernel(
     const int in_idx = curr_in_r + batch_idx * in_r;
     const int out_idx = curr_in_r + batch_idx * out_r + offset;
 
-    in_g[in_idx] = out_g[out_idx] * activate_bwd<act_type>(out_v[out_idx]);
+    in_g[in_idx] += out_g[out_idx] * activate_bwd<act_type, true>(out_v[out_idx]);
 }
 
 void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Activation act_type) {

@@ -74,6 +74,11 @@ class SparseAffine : public Operation {
         }
     }
 
+    void clear_grads() override {
+        if (concat.expired())
+            output.get_grads().clear_dev();
+    }
+
     void set_concat(Ptr<Concat> concat, bool pairwise_fused = false) {
         this->concat = concat;
         this->pairwise_fused = pairwise_fused;

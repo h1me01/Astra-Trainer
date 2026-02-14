@@ -77,7 +77,6 @@ __global__ void sparse_affine_pairwise_mul_fwd_kernel(
 
     if (remainder > 0) {
         for (int neuron_idx = iterations * 4 + threadIdx.x; neuron_idx < half_size; neuron_idx += blockDim.x) {
-            // first half
             float sum_a = biases_v[neuron_idx];
 #pragma unroll
             for (int i = 0; i < max_entries; i++) {
@@ -87,7 +86,6 @@ __global__ void sparse_affine_pairwise_mul_fwd_kernel(
                 sum_a += weights_v[weights_r * feature_idx + neuron_idx];
             }
 
-            // second half
             float sum_b = biases_v[neuron_idx + half_size];
 #pragma unroll
             for (int i = 0; i < max_entries; i++) {
@@ -97,7 +95,6 @@ __global__ void sparse_affine_pairwise_mul_fwd_kernel(
                 sum_b += weights_v[weights_r * feature_idx + neuron_idx + half_size];
             }
 
-            // Apply activation then multiply
             const int out_idx = out_r * batch_idx + neuron_idx;
             out_d[out_idx] = activate_fwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
         }

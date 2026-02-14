@@ -6,34 +6,35 @@ constexpr int block_size = 1024;
 
 constexpr float epsilon = 1e-8f;
 
-__device__ __forceinline__ void update_mom_f4(float4& mom, const float4& grad, const float beta1) {
+__device__ __forceinline__ void adam_update_f4(
+    float4& val,
+    float4& mom,
+    float4& vel,
+    const float4& grad,
+    const float lr,
+    const float beta1,
+    const float beta2,
+    const float decay,
+    const float min_val,
+    const float max_val,
+    const float grad_scale
+) {
     const float one_minus_beta1 = 1.0f - beta1;
-    mom.x = beta1 * mom.x + one_minus_beta1 * grad.x;
-    mom.y = beta1 * mom.y + one_minus_beta1 * grad.y;
-    mom.z = beta1 * mom.z + one_minus_beta1 * grad.z;
-    mom.w = beta1 * mom.w + one_minus_beta1 * grad.w;
-}
-
-__device__ __forceinline__ void update_vel_f4(float4& vel, const float4& grad, const float beta2) {
     const float one_minus_beta2 = 1.0f - beta2;
-    vel.x = beta2 * vel.x + one_minus_beta2 * grad.x * grad.x;
-    vel.y = beta2 * vel.y + one_minus_beta2 * grad.y * grad.y;
-    vel.z = beta2 * vel.z + one_minus_beta2 * grad.z * grad.z;
-    vel.w = beta2 * vel.w + one_minus_beta2 * grad.w * grad.w;
-}
 
-__device__ __forceinline__ void clamp_f4(float4& val, const float min_val, const float max_val) {
-    val.x = clamp(val.x, min_val, max_val);
-    val.y = clamp(val.y, min_val, max_val);
-    val.z = clamp(val.z, min_val, max_val);
-    val.w = clamp(val.w, min_val, max_val);
-}
+#pragma unroll
+    for (int i = 0; i < 4; i++) {
+        float* v = &val.x + i;
+        float* m = &mom.x + i;
+        float* ve = &vel.x + i;
+        const float* g = &grad.x + i;
 
-__device__ __forceinline__ void adam_update_f4(float4& val, const float4& mom, const float4& vel, const float lr) {
-    val.x -= lr * mom.x / (sqrtf(vel.x) + epsilon);
-    val.y -= lr * mom.y / (sqrtf(vel.y) + epsilon);
-    val.z -= lr * mom.z / (sqrtf(vel.z) + epsilon);
-    val.w -= lr * mom.w / (sqrtf(vel.w) + epsilon);
+        const float scaled_grad = (*g) * grad_scale;
+        *v *= decay;
+        *m = beta1 * (*m) + one_minus_beta1 * scaled_grad;
+        *ve = beta2 * (*ve) + one_minus_beta2 * scaled_grad * scaled_grad;
+        *v = clamp(*v - lr * (*m) / (sqrtf(*ve) + epsilon), min_val, max_val);
+    }
 }
 
 __global__ void adam_kernel(
@@ -56,43 +57,27 @@ __global__ void adam_kernel(
     if (vec_idx >= size)
         return;
 
-    const int remaining = min(4, size - vec_idx);
-    if (remaining == 4) {
-        float4* vals_v4 = (float4*)vals;
-        float4* moms_v4 = (float4*)moms;
-        float4* vels_v4 = (float4*)vels;
-        const float4* grads_v4 = (const float4*)grads;
+    if (vec_idx + 4 <= size) {
+        float4 val = ((float4*)vals)[idx];
+        float4 mom = ((float4*)moms)[idx];
+        float4 vel = ((float4*)vels)[idx];
+        const float4 grad = ((const float4*)grads)[idx];
 
-        float4 grad = grads_v4[idx];
-        float4 val = vals_v4[idx];
-        float4 mom = moms_v4[idx];
-        float4 vel = vels_v4[idx];
+        adam_update_f4(val, mom, vel, grad, lr, beta1, beta2, decay, min_val, max_val, grad_scale);
 
-        mul_t4(grad, grad_scale);
-        mul_t4(val, decay);
-
-        update_mom_f4(mom, grad, beta1);
-        update_vel_f4(vel, grad, beta2);
-        adam_update_f4(val, mom, vel, lr);
-        clamp_f4(val, min_val, max_val);
-
-        vals_v4[idx] = val;
-        moms_v4[idx] = mom;
-        vels_v4[idx] = vel;
+        ((float4*)vals)[idx] = val;
+        ((float4*)moms)[idx] = mom;
+        ((float4*)vels)[idx] = vel;
     } else {
-        for (int i = vec_idx; i < vec_idx + remaining; i++) {
-            const float grad = grads[i] * grad_scale;
-            float mom = moms[i];
-            float vel = vels[i];
-            float val = vals[i] * decay;
+        const float one_minus_beta1 = 1.0f - beta1;
+        const float one_minus_beta2 = 1.0f - beta2;
 
-            mom = beta1 * mom + (1.0f - beta1) * grad;
-            vel = beta2 * vel + (1.0f - beta2) * grad * grad;
-            val -= lr * mom / (sqrtf(vel) + epsilon);
-
-            moms[i] = mom;
-            vels[i] = vel;
-            vals[i] = clamp(val, min_val, max_val);
+        for (int i = vec_idx; i < size; i++) {
+            const float scaled_grad = grads[i] * grad_scale;
+            vals[i] *= decay;
+            moms[i] = beta1 * moms[i] + one_minus_beta1 * scaled_grad;
+            vels[i] = beta2 * vels[i] + one_minus_beta2 * scaled_grad * scaled_grad;
+            vals[i] = clamp(vals[i] - lr * moms[i] / (sqrtf(vels[i]) + epsilon), min_val, max_val);
         }
     }
 }

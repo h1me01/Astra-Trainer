@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "../ops/include.h"
+#include "../optimizer/optimizer.h"
 
 namespace nn {
 
@@ -37,6 +38,13 @@ class Network {
 
         for (auto& indices : select_indices)
             indices->init(batch_size);
+    }
+
+    void clear_all_grads(Optimizer* optim) {
+        for (size_t i = 0; i < operations.size(); i++)
+            operations[i]->clear_grads();
+        if (optim)
+            optim->clear_grads();
     }
 
     void forward(const std::vector<TrainingDataEntry>& data_entries) {

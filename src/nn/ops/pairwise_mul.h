@@ -34,6 +34,11 @@ class PairwiseMul : public Operation {
         kernel::pairwise_mul_bwd(input->get_output(), real_output, out_offset * output_dim, act_type);
     }
 
+    void clear_grads() override {
+        if (!skip && concat.expired())
+            output.get_grads().clear_dev();
+    }
+
     void set_concat(Ptr<Concat> concat) {
         ASSERT(!skip && concat);
         this->concat = concat;
@@ -60,7 +65,7 @@ class PairwiseMul : public Operation {
         // multi-layer fusion where only the concat output is needed
         output.free(); // not needed anymore
     }
-    
+
     bool should_skip() const { return skip; }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }

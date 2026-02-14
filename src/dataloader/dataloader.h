@@ -27,7 +27,7 @@ class Dataloader {
             m_filenames.end()
         );
 
-        m_stream = std::make_unique<CompressedTrainingDataEntryParallelReader>(
+        m_stream = std::make_unique<binpack::CompressedTrainingDataEntryParallelReader>(
             std::max(1, concurrency / 2), filenames, std::ios::in | std::ios::binary, m_cyclic, skip_predicate
         );
 
@@ -125,7 +125,7 @@ class Dataloader {
     std::atomic_int m_num_workers;
 
     std::vector<std::thread> m_workers;
-    std::unique_ptr<CompressedTrainingDataEntryParallelReader> m_stream;
+    std::unique_ptr<binpack::CompressedTrainingDataEntryParallelReader> m_stream;
 };
 
 } // namespace dataloader

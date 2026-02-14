@@ -48,16 +48,20 @@ __device__ __forceinline__ float activate_fwd(float x) {
     }
 }
 
-template <Activation type>
+template <Activation type, bool fused = false>
 __device__ __forceinline__ float activate_bwd(float x) {
     if constexpr (type == Activation::ReLU) {
         return (x > 0.0f) ? 1.0f : 0.0f;
     } else if constexpr (type == Activation::ClampedReLU) {
         return (x > 0.0f && x < 1.0f) ? 1.0f : 0.0f;
     } else if constexpr (type == Activation::SquaredClampedReLU) {
-        return (x > 0.0f && x < 1.0f) ? 2.0f * x : 0.0f;
+        if (x > 0.0f && x < 1.0f)
+            return 2.0f * (fused ? sqrtf(x) : x);
+        else
+            return 0.0f;
     } else if constexpr (type == Activation::Sigmoid) {
-        x = activate_fwd<Activation::Sigmoid>(x);
+        if (!fused)
+            x = activate_fwd<Activation::Sigmoid>(x);
         return x * (1.0f - x);
     } else {
         return 1.0f;

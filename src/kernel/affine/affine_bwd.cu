@@ -21,25 +21,42 @@ __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int 
         float4 v = ((const float4*)out_d)[idx];
         float4 g = ((float4*)out_g)[idx];
 
-        g.x *= activate_bwd<act_type>(v.x);
-        g.y *= activate_bwd<act_type>(v.y);
-        g.z *= activate_bwd<act_type>(v.z);
-        g.w *= activate_bwd<act_type>(v.w);
+        g.x *= activate_bwd<act_type, true>(v.x);
+        g.y *= activate_bwd<act_type, true>(v.y);
+        g.z *= activate_bwd<act_type, true>(v.z);
+        g.w *= activate_bwd<act_type, true>(v.w);
 
         ((float4*)out_g)[idx] = g;
     } else {
         for (int i = vec_idx; i < vec_idx + remaining; i++)
-            out_g[i] *= activate_bwd<act_type>(out_d[i]);
+            out_g[i] *= activate_bwd<act_type, true>(out_d[i]);
     }
 }
 
-__global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int r, const int c) {
-    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= r * c)
+__global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int batch_size, const int size) {
+    __shared__ float shared[block_size];
+
+    const int neuron_idx = blockIdx.x;
+    const int tid = threadIdx.x;
+
+    if (neuron_idx >= size)
         return;
 
-    const int neuron_idx = idx % r;
-    atomicAdd(&biases_g[neuron_idx], out_g[idx]);
+    float sum = 0.0f;
+    for (int b = tid; b < batch_size; b += blockDim.x)
+        sum += out_g[b * size + neuron_idx];
+
+    shared[tid] = sum;
+    __syncthreads();
+
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride)
+            shared[tid] += shared[tid + stride];
+        __syncthreads();
+    }
+
+    if (tid == 0) 
+        biases_g[neuron_idx] = shared[0];
 }
 
 void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const Activation act_type) {
@@ -83,9 +100,9 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
 
     // update biases gradients
     {
-        const int blocks = get_num_blocks(out_g.size(), block_size);
+        const int blocks = get_num_blocks(out_g.rows(), block_size);
         biases_bwd_kernel<<<blocks, block_size>>>(
-            biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols()
+            biases_g.dev_address(), out_g.dev_address(), out_g.cols(), out_g.rows()
         );
     }
 

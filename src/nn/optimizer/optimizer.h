@@ -37,7 +37,7 @@ class Optimizer {
 
     void clear_grads() {
         for (auto* t : params)
-            t->get_grads().clear();
+            t->get_grads().clear_dev();
     }
 
     void clamp(float min, float max) {

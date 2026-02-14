@@ -171,7 +171,7 @@ class Array {
 
     void clear_dev() {
         if (dev_data)
-            CUDA_ASSERT(cudaMemset(dev_data.get(), 0, sizeof(T) * m_size));
+            CUDA_ASSERT(cudaMemsetAsync(dev_data.get(), 0, sizeof(T) * m_size, 0));
     }
 
     void host_to_dev() {
@@ -181,16 +181,14 @@ class Array {
         CUDA_ASSERT(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
     }
 
-    void host_to_dev_async(cudaStream_t stream) {
-        if (!stream) {
-            host_to_dev();
-            return;
-        }
-
+    void host_to_dev_async(cudaStream_t stream = 0) {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        CUDA_ASSERT(cudaMemcpyAsync(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice, stream));
+        if (use_pinned)
+            CUDA_ASSERT(cudaMemcpyAsync(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice, stream));
+        else
+            CUDA_ASSERT(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
     }
 
     void dev_to_host() {

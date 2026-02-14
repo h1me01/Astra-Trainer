@@ -149,22 +149,31 @@ inline OpHandle concat(std::vector<Ptr<nn::Operation>> inputs) {
 
     // special multi-layer specific fusion
     if (type == "pairwise_mul") {
-        bool all_have_sparse_affine = true;
+        Activation act_type = inputs[0]->get_activation();
+        
+        // check if all inputs have the same activation and sparse_affine structure
+        bool can_fuse = true;
         for (const auto& input : inputs) {
             auto pw_mul = helper::dpc<nn::PairwiseMul>(input);
-            if (!pw_mul || pw_mul->get_inputs()[0]->get_name() != "sparse_affine") {
-                all_have_sparse_affine = false;
+            if (!pw_mul || 
+                input->get_activation() != act_type ||
+                pw_mul->get_inputs()[0]->get_name() != "sparse_affine") {
+                can_fuse = false;
                 break;
             }
         }
 
-        if (all_have_sparse_affine) {
+        if (can_fuse) {
             for (auto& input : inputs) {
                 auto pw_mul = helper::dpc<nn::PairwiseMul>(input);
                 pw_mul->set_skip();
                 if (auto sparse_aff = helper::dpc<nn::SparseAffine>(pw_mul->get_inputs()[0]))
                     sparse_aff->set_concat(concat_op, true);
             }
+
+            if (act_type != Activation::Linear)
+                return OpHandle(helper::make<nn::Activate>(output.get(), act_type));
+
             return output;
         }
     }
