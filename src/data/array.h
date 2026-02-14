@@ -185,10 +185,11 @@ class Array {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        if (use_pinned)
+        if (use_pinned) {
             CUDA_ASSERT(cudaMemcpyAsync(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice, stream));
-        else
+        } else {
             CUDA_ASSERT(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+        }
     }
 
     void dev_to_host() {
