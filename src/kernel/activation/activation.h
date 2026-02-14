@@ -6,8 +6,8 @@
 enum class Activation {
     Linear,
     ReLU,
-    ClampedReLU,
-    SquaredClampedReLU,
+    ClippedReLU,
+    SqrClippedReLU,
     Sigmoid,
 };
 
@@ -21,11 +21,11 @@ namespace kernel {
     case Activation::ReLU:                                                                                             \
         KERNEL_NAME<Activation::ReLU> __VA_ARGS__;                                                                     \
         break;                                                                                                         \
-    case Activation::ClampedReLU:                                                                                      \
-        KERNEL_NAME<Activation::ClampedReLU> __VA_ARGS__;                                                              \
+    case Activation::ClippedReLU:                                                                                      \
+        KERNEL_NAME<Activation::ClippedReLU> __VA_ARGS__;                                                              \
         break;                                                                                                         \
-    case Activation::SquaredClampedReLU:                                                                               \
-        KERNEL_NAME<Activation::SquaredClampedReLU> __VA_ARGS__;                                                       \
+    case Activation::SqrClippedReLU:                                                                               \
+        KERNEL_NAME<Activation::SqrClippedReLU> __VA_ARGS__;                                                       \
         break;                                                                                                         \
     case Activation::Sigmoid:                                                                                          \
         KERNEL_NAME<Activation::Sigmoid> __VA_ARGS__;                                                                  \
@@ -36,9 +36,9 @@ template <Activation type>
 __device__ __forceinline__ float activate_fwd(float x) {
     if constexpr (type == Activation::ReLU) {
         return fmaxf(0.0f, x);
-    } else if constexpr (type == Activation::ClampedReLU) {
+    } else if constexpr (type == Activation::ClippedReLU) {
         return clamp(x, 0.0f, 1.0f);
-    } else if constexpr (type == Activation::SquaredClampedReLU) {
+    } else if constexpr (type == Activation::SqrClippedReLU) {
         x = clamp(x, 0.0f, 1.0f);
         return x * x;
     } else if constexpr (type == Activation::Sigmoid) {
@@ -52,9 +52,9 @@ template <Activation type, bool fused = false>
 __device__ __forceinline__ float activate_bwd(float x) {
     if constexpr (type == Activation::ReLU) {
         return (x > 0.0f) ? 1.0f : 0.0f;
-    } else if constexpr (type == Activation::ClampedReLU) {
+    } else if constexpr (type == Activation::ClippedReLU) {
         return (x > 0.0f && x < 1.0f) ? 1.0f : 0.0f;
-    } else if constexpr (type == Activation::SquaredClampedReLU) {
+    } else if constexpr (type == Activation::SqrClippedReLU) {
         if (x > 0.0f && x < 1.0f)
             return 2.0f * (fused ? sqrtf(x) : x);
         else

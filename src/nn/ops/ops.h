@@ -78,8 +78,6 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     DenseMatrix& get_grads() { return output.get_grads(); }
 
-    virtual Ptr<SelectIndices> get_select_indices() const { return nullptr; }
-
     virtual std::vector<Ptr<Operation>> get_inputs() const { return {}; }
 
     virtual Ptr<Param> get_param() { return nullptr; }

@@ -42,8 +42,7 @@ class Concat : public Operation {
     int fuse(Ptr<Operation> op, bool sparse_affine_pairwise_mul_fusion = false) {
         ASSERT(should_skip());
         ASSERT(
-            op->get_activation() == get_activation()      //
-            || get_activation() == Activation::Linear     //
+            get_activation() == Activation::Linear        //
             || op->get_activation() == Activation::Linear //
         );
 

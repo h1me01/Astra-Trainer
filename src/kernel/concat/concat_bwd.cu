@@ -6,13 +6,7 @@ constexpr int block_size = 256;
 
 template <Activation act_type>
 __global__ void concat_bwd_kernel(
-    const float* out_v,
-    const float* out_g,
-    float* in_g,
-    const int in_r,
-    const int out_r,
-    const int batch_size,
-    const int offset
+    const float* out_v, const float* out_g, float* in_g, const int in_r, const int out_r, const int batch_size
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= in_r * batch_size)
@@ -22,7 +16,7 @@ __global__ void concat_bwd_kernel(
     const int curr_in_r = idx % in_r;
 
     const int in_idx = curr_in_r + batch_idx * in_r;
-    const int out_idx = curr_in_r + batch_idx * out_r + offset;
+    const int out_idx = curr_in_r + batch_idx * out_r;
 
     in_g[in_idx] += out_g[out_idx] * activate_bwd<act_type, true>(out_v[out_idx]);
 }
@@ -39,13 +33,12 @@ void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Ac
         act_type,
         concat_bwd_kernel,
         <<<blocks, block_size>>>(
-            out_v.dev_address(),
-            out_g.dev_address(),
+            out_v.dev_address() + offset,
+            out_g.dev_address() + offset,
             in_g.dev_address(),
             in_g.rows(),
             out_g.rows(),
-            out_g.cols(),
-            offset
+            out_g.cols()
         )
     );
 }

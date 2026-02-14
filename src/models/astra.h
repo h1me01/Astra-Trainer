@@ -98,13 +98,13 @@ struct Astra : Model {
         l3.weights_format().transpose();
 
         // build network
-        auto ft_stm = ft(stm_in).clamped_relu().pairwise_mul();
-        auto ft_nstm = ft(nstm_in).clamped_relu().pairwise_mul();
+        auto ft_stm = ft(stm_in).clipped_relu().pairwise_mul();
+        auto ft_nstm = ft(nstm_in).clipped_relu().pairwise_mul();
 
         auto cat_ft = concat({ft_stm, ft_nstm});
 
-        auto l1_out = l1(cat_ft).select(bucket_index).clamped_relu();
-        auto l2_out = l2(l1_out).select(bucket_index).clamped_relu();
+        auto l1_out = l1(cat_ft).select(bucket_index).clipped_relu();
+        auto l2_out = l2(l1_out).select(bucket_index).clipped_relu();
         auto l3_out = l3(l2_out).select(bucket_index);
 
         return l3_out;

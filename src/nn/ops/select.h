@@ -27,7 +27,7 @@ class Select : public Operation {
         kernel::select_bwd(input->get_grads(), output, *indices, act_type);
     }
 
-    Ptr<SelectIndices> get_select_indices() const override { return indices; }
+    Ptr<SelectIndices> get_indices() const { return indices; }
 
     std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
 

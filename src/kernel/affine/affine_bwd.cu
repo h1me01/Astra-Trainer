@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr float alpha = 1.0f;
 constexpr float beta = 1.0f;
-constexpr float beta_zero = 0.0f;
 
 constexpr int block_size = 256;
 
@@ -55,7 +54,7 @@ __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int
         __syncthreads();
     }
 
-    if (tid == 0) 
+    if (tid == 0)
         biases_g[neuron_idx] = shared[0];
 }
 
@@ -137,7 +136,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
         weights_v.rows(),        // lda
         out_g.dev_address(),     // B
         out_g.rows(),            // ldb
-        &beta_zero,              // beta
+        &beta,                   // beta
         in_g.dev_address(),      // C
         in_g.rows()              // ldc
     );

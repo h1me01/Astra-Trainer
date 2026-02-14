@@ -43,9 +43,9 @@ class OpHandle {
     OpHandle(Ptr<nn::Operation> op)
         : op(op) {}
 
-    OpHandle relu() { return set_activation<Activation::SquaredClampedReLU>(); }
-    OpHandle clamped_relu() { return set_activation<Activation::ClampedReLU>(); }
-    OpHandle squared_clamped_relu() { return set_activation<Activation::SquaredClampedReLU>(); }
+    OpHandle relu() { return set_activation<Activation::ReLU>(); }
+    OpHandle clipped_relu() { return set_activation<Activation::ClippedReLU>(); }
+    OpHandle sqr_clipped_relu() { return set_activation<Activation::SqrClippedReLU>(); }
     OpHandle sigmoid() { return set_activation<Activation::Sigmoid>(); }
     OpHandle select(Ptr<nn::SelectIndices> indices) { return OpHandle(helper::make<nn::Select>(op, indices)); }
     OpHandle pairwise_mul() { return OpHandle(helper::make<nn::PairwiseMul>(op)); }
