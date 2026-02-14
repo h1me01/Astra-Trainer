@@ -2,7 +2,8 @@
 
 namespace kernel {
 
-constexpr dim3 block_size(256, 1);
+constexpr int num_threads = 256;
+constexpr dim3 block_size(num_threads, 1);
 
 template <Activation act_type>
 __global__ void sparse_affine_bwd_kernel(
@@ -17,34 +18,49 @@ __global__ void sparse_affine_bwd_kernel(
     const int max_entries
 ) {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
-    const int batch_idx = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (row >= weights_r || batch_idx >= batch_size)
+    if (row >= weights_r)
         return;
 
-    extern __shared__ int shared_features[];
+    const int batch = blockIdx.y * blockDim.y + threadIdx.y;
 
-    const int num_threads = blockDim.x * blockDim.y;
-    const int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
-
-    for (int i = thread_id; i < max_entries; i += num_threads)
-        shared_features[i] = features[batch_idx * max_entries + i];
+    extern __shared__ int s_features[];
+    for (int i = threadIdx.x; i < max_entries; i += blockDim.x)
+        if (batch < batch_size)
+            s_features[i] = features[batch * max_entries + i];
     __syncthreads();
 
-    const int out_idx = out_r * batch_idx + row;
-    const float grad = out_g[out_idx] * activate_bwd<act_type>(out_d[out_idx]);
+    float grad = 0.f;
+    if (batch < batch_size) {
+        int out_idx = batch * out_r + row;
+        float g = out_g[out_idx];
+        if (g != 0.f)
+            grad = g * activate_bwd<act_type, true>(out_d[out_idx]);
+    }
 
-    if (grad == 0.0f)
-        return;
+    __shared__ float block_grad[num_threads];
+    int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    block_grad[tid] = grad;
+    __syncthreads();
 
-    atomicAdd(&biases_g[row], grad);
+    for (int stride = blockDim.y / 2; stride > 0; stride = stride / 2) {
+        if (threadIdx.y < stride && batch + stride < batch_size)
+            block_grad[tid] += block_grad[tid + stride * blockDim.x];
+        __syncthreads();
+    }
+
+    if (threadIdx.y == 0) {
+        float gsum = block_grad[threadIdx.x];
+        if (gsum != 0.f) {
+            atomicAdd(&biases_g[row], gsum);
 
 #pragma unroll
-    for (int i = 0; i < max_entries; i++) {
-        const int feature_idx = shared_features[i];
-        if (feature_idx == -1)
-            break;
-        atomicAdd(&weights_g[weights_r * feature_idx + row], grad);
+            for (int i = 0; i < max_entries; i++) {
+                int f = s_features[i];
+                if (f == -1)
+                    break;
+                atomicAdd(&weights_g[f * weights_r + row], gsum);
+            }
+        }
     }
 }
 

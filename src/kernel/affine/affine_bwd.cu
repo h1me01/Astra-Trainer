@@ -16,8 +16,8 @@ __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int 
     if (vec_idx >= size)
         return;
 
-    const int remaining = min(4, size - vec_idx);
-    if (remaining == 4) {
+    const int rem = min(4, size - vec_idx);
+    if (rem == 4) {
         float4 v = ((const float4*)out_d)[idx];
         float4 g = ((float4*)out_g)[idx];
 
@@ -28,7 +28,7 @@ __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int 
 
         ((float4*)out_g)[idx] = g;
     } else {
-        for (int i = vec_idx; i < vec_idx + remaining; i++)
+        for (int i = vec_idx; i < vec_idx + rem; i++)
             out_g[i] *= activate_bwd<act_type, true>(out_d[i]);
     }
 }

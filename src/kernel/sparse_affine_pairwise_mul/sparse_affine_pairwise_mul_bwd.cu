@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr dim3 block_size(256, 1);
+constexpr dim3 block_size(512, 1);
 
 template <Activation act_type>
 __global__ void sparse_affine_pairwise_mul_bwd_kernel(
@@ -10,60 +10,56 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     float* biases_g,
     const float* weights_v,
     const float* biases_v,
-    const float* out_d,
     const float* out_g,
     const int* features,
     const int weights_r,
-    const int out_r,
     const int batch_size,
     const int max_entries
 ) {
-    const int row = blockIdx.x * blockDim.x + threadIdx.x;
-    const int batch_idx = blockIdx.y * blockDim.y + threadIdx.y;
+    const int neuron = blockIdx.x * blockDim.x + threadIdx.x;
+    const int batch = blockIdx.y;
 
-    const int half_size = weights_r / 2;
-    if (row >= weights_r || batch_idx >= batch_size)
+    const int half = weights_r / 2;
+    if (neuron >= half || batch >= batch_size)
         return;
 
-    extern __shared__ int shared_features[];
-
-    const int num_threads = blockDim.x * blockDim.y;
-    const int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
-
-    for (int i = thread_id; i < max_entries; i += num_threads)
-        shared_features[i] = features[batch_idx * max_entries + i];
+    extern __shared__ int s_features[];
+    for (int i = threadIdx.x; i < max_entries; i += blockDim.x)
+        s_features[i] = features[batch * max_entries + i];
     __syncthreads();
 
-    const bool is_first_half = row < half_size;
-    const int neuron_idx = is_first_half ? row : (row - half_size);
-    const int out_idx = out_r * batch_idx + neuron_idx;
-
-    float sum_a = biases_v[neuron_idx];
-    float sum_b = biases_v[neuron_idx + half_size];
+    float sum_a = biases_v[neuron];
+    float sum_b = biases_v[neuron + half];
 
 #pragma unroll
     for (int i = 0; i < max_entries; i++) {
-        const int feature_idx = shared_features[i];
-        if (feature_idx == -1)
+        int f = s_features[i];
+        if (f == -1)
             break;
-        sum_a += weights_v[weights_r * feature_idx + neuron_idx];
-        sum_b += weights_v[weights_r * feature_idx + neuron_idx + half_size];
+        int base = weights_r * f;
+        sum_a += weights_v[base + neuron];
+        sum_b += weights_v[base + neuron + half];
     }
 
-    const float grad = is_first_half ? (out_g[out_idx] * activate_bwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b))
-                                     : (out_g[out_idx] * activate_bwd<act_type>(sum_b) * activate_fwd<act_type>(sum_a));
+    const float g = out_g[batch * weights_r + neuron];
+    const float grad_a = g * activate_bwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
+    const float grad_b = g * activate_bwd<act_type>(sum_b) * activate_fwd<act_type>(sum_a);
 
-    if (grad == 0.0f)
-        return;
-
-    atomicAdd(&biases_g[row], grad);
+    if (grad_a != 0.f)
+        atomicAdd(&biases_g[neuron], grad_a);
+    if (grad_b != 0.f)
+        atomicAdd(&biases_g[neuron + half], grad_b);
 
 #pragma unroll
     for (int i = 0; i < max_entries; i++) {
-        const int feature_idx = shared_features[i];
-        if (feature_idx == -1)
+        int f = s_features[i];
+        if (f == -1)
             break;
-        atomicAdd(&weights_g[weights_r * feature_idx + row], grad);
+        int base = weights_r * f;
+        if (grad_a != 0.f)
+            atomicAdd(&weights_g[base + neuron], grad_a);
+        if (grad_b != 0.f)
+            atomicAdd(&weights_g[base + neuron + half], grad_b);
     }
 }
 
@@ -96,7 +92,10 @@ void sparse_affine_pairwise_mul_bwd(
         features.is_dev_allocated()
     );
 
-    dim3 grid((weights_g.rows() + block_size.x - 1) / block_size.x, (out_g.cols() + block_size.y - 1) / block_size.y);
+    dim3 grid(
+        (weights_g.rows() + block_size.x - 1) / block_size.x, //
+        (out_g.cols() + block_size.y - 1) / block_size.y
+    );
 
     const int shared_mem = max_entries * sizeof(int);
 
@@ -108,11 +107,9 @@ void sparse_affine_pairwise_mul_bwd(
             biases_g.dev_address(),
             weights_v.dev_address(),
             biases_v.dev_address(),
-            out_d.dev_address() + out_offset,
             out_g.dev_address() + out_offset,
             features.dev_address(),
             weights_g.rows(),
-            out_g.rows(),
             out_g.cols(),
             max_entries
         )

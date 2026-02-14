@@ -15,57 +15,49 @@ __global__ void sparse_affine_fwd_kernel(
     const int batch_size,
     const int max_entries
 ) {
-    const int batch_idx = blockIdx.x;
-    if (batch_idx >= batch_size)
+    const int batch = blockIdx.x;
+    if (batch >= batch_size)
         return;
 
-    extern __shared__ int shared_features[];
-    if (threadIdx.x < max_entries)
-        shared_features[threadIdx.x] = features[batch_idx * max_entries + threadIdx.x];
+    extern __shared__ int s_features[];
+    for (int i = threadIdx.x; i < max_entries; i += blockDim.x)
+        s_features[i] = features[batch * max_entries + i];
     __syncthreads();
 
-    const int iterations = weights_r / 4;
-    const int remainder = weights_r % 4;
+    const int vec = weights_r / 4;
+    const int rem = weights_r % 4;
 
-    const float4* weights_v4 = (const float4*)weights_v;
-    const float4* biases_v4 = (const float4*)biases_v;
-    float4* out_d4 = (float4*)out_d;
+    const float4* w4 = reinterpret_cast<const float4*>(weights_v);
+    const float4* b4 = reinterpret_cast<const float4*>(biases_v);
+    float4* o4 = reinterpret_cast<float4*>(out_d);
 
-    for (int k = threadIdx.x; k < iterations; k += blockDim.x) {
-        const int neuron_idx_base = k * 4;
-        float4 sum = biases_v4[k];
+    for (int k = threadIdx.x; k < vec; k += blockDim.x) {
+        float4 sum = b4[k];
 
 #pragma unroll
         for (int i = 0; i < max_entries; i++) {
-            const int feature_idx = shared_features[i];
-            if (feature_idx == -1)
+            int f = s_features[i];
+            if (f == -1)
                 break;
-            add_t4(sum, weights_v4[feature_idx * iterations + k]);
+            add_t4(sum, w4[f * vec + k]);
         }
 
-        sum.x = activate_fwd<act_type>(sum.x);
-        sum.y = activate_fwd<act_type>(sum.y);
-        sum.z = activate_fwd<act_type>(sum.z);
-        sum.w = activate_fwd<act_type>(sum.w);
-
-        const int out_idx = (out_r * batch_idx + neuron_idx_base) / 4;
-        out_d4[out_idx] = sum;
+        o4[(batch * out_r / 4) + k] = activate_fwd_f4<act_type>(sum);
     }
 
-    if (remainder > 0) {
-        for (int neuron_idx = iterations * 4 + threadIdx.x; neuron_idx < weights_r; neuron_idx += blockDim.x) {
-            float sum = biases_v[neuron_idx];
+    if (rem) {
+        for (int n = (vec * 4) + threadIdx.x; n < weights_r; n += blockDim.x) {
+            float sum = biases_v[n];
 
 #pragma unroll
             for (int i = 0; i < max_entries; i++) {
-                const int feature_idx = shared_features[i];
-                if (feature_idx == -1)
+                int f = s_features[i];
+                if (f == -1)
                     break;
-                sum += weights_v[weights_r * feature_idx + neuron_idx];
+                sum += weights_v[f * weights_r + n];
             }
 
-            const int out_idx = out_r * batch_idx + neuron_idx;
-            out_d[out_idx] = activate_fwd<act_type>(sum);
+            out_d[batch * out_r + n] = activate_fwd<act_type>(sum);
         }
     }
 }

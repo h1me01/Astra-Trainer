@@ -12,8 +12,8 @@ __global__ void activation_fwd_kernel(const float* in_d, float* out_d, const int
     if (vec_idx >= size)
         return;
 
-    const int remaining = min(size - vec_idx, 4);
-    if (remaining == 4) {
+    const int rem = min(size - vec_idx, 4);
+    if (rem == 4) {
         float4 input4 = ((const float4*)in_d)[idx];
         float4 output4 = ((float4*)out_d)[idx];
 
@@ -24,7 +24,7 @@ __global__ void activation_fwd_kernel(const float* in_d, float* out_d, const int
 
         ((float4*)out_d)[idx] = output4;
     } else {
-        for (int i = vec_idx; i < vec_idx + remaining; i++)
+        for (int i = vec_idx; i < vec_idx + rem; i++)
             out_d[i] = activate_fwd<type>(in_d[i]);
     }
 }

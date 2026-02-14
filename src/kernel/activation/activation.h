@@ -68,6 +68,15 @@ __device__ __forceinline__ float activate_bwd(float x) {
     }
 }
 
+template <Activation act_type>
+__device__ __forceinline__ float4& activate_fwd_f4(float4& a) {
+    a.x = activate_fwd<act_type>(a.x);
+    a.y = activate_fwd<act_type>(a.y);
+    a.z = activate_fwd<act_type>(a.z);
+    a.w = activate_fwd<act_type>(a.w);
+    return a;
+}
+
 void activation_fwd(const DenseMatrix& in_v, DenseMatrix& out_v, const Activation type);
 void activation_bwd(Tensor& in, const DenseMatrix& out_g, const Activation type);
 
