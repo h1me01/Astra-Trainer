@@ -8,8 +8,8 @@ template <Activation act_type>
 __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     float* weights_g,
     float* biases_g,
-    const float* weights_v,
-    const float* biases_v,
+    const float* weights_d,
+    const float* biases_d,
     const float* out_g,
     const int* features,
     const int weights_r,
@@ -28,8 +28,8 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
         s_features[i] = features[batch * max_entries + i];
     __syncthreads();
 
-    float sum_a = biases_v[neuron];
-    float sum_b = biases_v[neuron + half];
+    float sum_a = biases_d[neuron];
+    float sum_b = biases_d[neuron + half];
 
 #pragma unroll
     for (int i = 0; i < max_entries; i++) {
@@ -37,8 +37,8 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
         if (f == -1)
             break;
         int base = weights_r * f;
-        sum_a += weights_v[base + neuron];
-        sum_b += weights_v[base + neuron + half];
+        sum_a += weights_d[base + neuron];
+        sum_b += weights_d[base + neuron + half];
     }
 
     const float g = out_g[batch * weights_r + neuron];
@@ -72,21 +72,22 @@ void sparse_affine_pairwise_mul_bwd(
     const int out_offset,
     const Activation act_type
 ) {
-    const auto& weights_v = weights.get_data();
+    const auto& weights_d = weights.get_data();
     auto& weights_g = weights.get_grads();
-    const auto& biases_v = biases.get_data();
+    const auto& biases_d = biases.get_data();
     auto& biases_g = biases.get_grads();
 
     const auto& out_d = out.get_data();
     const auto& out_g = out.get_grads();
 
     ASSERT(weights_g.rows() == biases_g.rows());
+    ASSERT(out_g.rows() >= out_offset + weights_g.rows());
 
     ASSERT(
         weights_g.is_dev_allocated() && //
         biases_g.is_dev_allocated() &&  //
-        weights_v.is_dev_allocated() && //
-        biases_v.is_dev_allocated() &&  //
+        weights_d.is_dev_allocated() && //
+        biases_d.is_dev_allocated() &&  //
         out_g.is_dev_allocated() &&     //
         out_d.is_dev_allocated() &&     //
         features.is_dev_allocated()
@@ -105,8 +106,8 @@ void sparse_affine_pairwise_mul_bwd(
         <<<grid, block_size, shared_mem>>>(
             weights_g.dev_address(),
             biases_g.dev_address(),
-            weights_v.dev_address(),
-            biases_v.dev_address(),
+            weights_d.dev_address(),
+            biases_d.dev_address(),
             out_g.dev_address() + out_offset,
             features.dev_address(),
             weights_g.rows(),

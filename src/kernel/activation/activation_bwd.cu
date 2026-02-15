@@ -31,17 +31,17 @@ __global__ void activation_bwd_kernel(const float* in_d, float* in_g, const floa
 }
 
 void activation_bwd(Tensor& in, const DenseMatrix& out_g, const Activation type) {
-    const auto& in_v = in.get_data();
+    const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 
-    ASSERT(in_v.size() == out_g.size());
-    ASSERT(in_v.is_dev_allocated() && out_g.is_dev_allocated());
+    ASSERT(in_d.size() == out_g.size());
+    ASSERT(in_d.is_dev_allocated() && out_g.is_dev_allocated());
 
-    const int blocks = get_num_blocks(in_v.size(), block_size);
+    const int blocks = get_num_blocks(in_d.size(), block_size);
     DISPATCH_ACTIVATION(
         type,
         activation_bwd_kernel,
-        <<<blocks, block_size>>>(in_v.dev_address(), in_g.dev_address(), out_g.dev_address(), in_v.size())
+        <<<blocks, block_size>>>(in_d.dev_address(), in_g.dev_address(), out_g.dev_address(), in_d.size())
     );
 }
 

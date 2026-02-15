@@ -7,7 +7,7 @@ constexpr int block_size = 256;
 
 template <Activation act_type>
 __global__ void
-concat_fwd_kernel(const float* in_v, float* out_d, const int out_r, const int in_r, const int batch_size) {
+concat_fwd_kernel(const float* in_d, float* out_d, const int out_r, const int in_r, const int batch_size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= in_r * batch_size)
         return;
@@ -18,7 +18,7 @@ concat_fwd_kernel(const float* in_v, float* out_d, const int out_r, const int in
     const int in_idx = curr_in_r + batch_idx * in_r;
     const int out_idx = curr_in_r + batch_idx * out_r;
 
-    out_d[out_idx] = activate_fwd<act_type>(in_v[in_idx]);
+    out_d[out_idx] = activate_fwd<act_type>(in_d[in_idx]);
 }
 
 void concat_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int offset, const Activation act_type) {

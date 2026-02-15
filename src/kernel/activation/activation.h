@@ -24,8 +24,8 @@ namespace kernel {
     case Activation::ClippedReLU:                                                                                      \
         KERNEL_NAME<Activation::ClippedReLU> __VA_ARGS__;                                                              \
         break;                                                                                                         \
-    case Activation::SqrClippedReLU:                                                                               \
-        KERNEL_NAME<Activation::SqrClippedReLU> __VA_ARGS__;                                                       \
+    case Activation::SqrClippedReLU:                                                                                   \
+        KERNEL_NAME<Activation::SqrClippedReLU> __VA_ARGS__;                                                           \
         break;                                                                                                         \
     case Activation::Sigmoid:                                                                                          \
         KERNEL_NAME<Activation::Sigmoid> __VA_ARGS__;                                                                  \
@@ -77,7 +77,7 @@ __device__ __forceinline__ float4& activate_fwd_f4(float4& a) {
     return a;
 }
 
-void activation_fwd(const DenseMatrix& in_v, DenseMatrix& out_v, const Activation type);
+void activation_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Activation type);
 void activation_bwd(Tensor& in, const DenseMatrix& out_g, const Activation type);
 
 } // namespace kernel

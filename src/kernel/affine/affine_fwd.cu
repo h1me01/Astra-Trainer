@@ -8,32 +8,32 @@ constexpr float beta = 0.0f;
 constexpr int block_size = 256;
 
 template <Activation act_type>
-__global__ void biases_fwd_kernel(const float* biases_v, float* out_d, const int r, const int c) {
+__global__ void biases_fwd_kernel(const float* biases_d, float* out_d, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= r * c)
         return;
-    out_d[idx] = activate_fwd<act_type>(out_d[idx] + biases_v[idx % r]);
+    out_d[idx] = activate_fwd<act_type>(out_d[idx] + biases_d[idx % r]);
 }
 
 void affine_fwd(
-    DenseMatrix& weights_v,
-    DenseMatrix& biases_v,
-    const DenseMatrix& inputs_v,
+    DenseMatrix& weights_d,
+    DenseMatrix& biases_d,
+    const DenseMatrix& inputs_d,
     DenseMatrix& out_d,
     const Activation act_type
 ) {
     ASSERT(
-        biases_v.cols() == 1 &&             //
-        out_d.rows() == biases_v.rows() &&  //
-        inputs_v.cols() == out_d.cols() &&  //
-        weights_v.rows() == out_d.rows() && //
-        weights_v.cols() == inputs_v.rows()
+        biases_d.cols() == 1 &&             //
+        out_d.rows() == biases_d.rows() &&  //
+        inputs_d.cols() == out_d.cols() &&  //
+        weights_d.rows() == out_d.rows() && //
+        weights_d.cols() == inputs_d.rows()
     );
 
     ASSERT(
-        weights_v.is_dev_allocated() && //
-        biases_v.is_dev_allocated() &&  //
-        inputs_v.is_dev_allocated() &&  //
+        weights_d.is_dev_allocated() && //
+        biases_d.is_dev_allocated() &&  //
+        inputs_d.is_dev_allocated() &&  //
         out_d.is_dev_allocated()
     );
 
@@ -44,12 +44,12 @@ void affine_fwd(
         CUBLAS_OP_N,             // transb
         out_d.rows(),            // m
         out_d.cols(),            // n
-        inputs_v.rows(),         // k
+        inputs_d.rows(),         // k
         &alpha,                  // alpha
-        weights_v.dev_address(), // A
-        weights_v.rows(),        // lda
-        inputs_v.dev_address(),  // B
-        inputs_v.rows(),         // ldb
+        weights_d.dev_address(), // A
+        weights_d.rows(),        // lda
+        inputs_d.dev_address(),  // B
+        inputs_d.rows(),         // ldb
         &beta,                   // beta
         out_d.dev_address(),     // C
         out_d.rows()             // ldc
@@ -60,7 +60,7 @@ void affine_fwd(
     DISPATCH_ACTIVATION(
         act_type,
         biases_fwd_kernel,
-        <<<blocks, block_size>>>(biases_v.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols())
+        <<<blocks, block_size>>>(biases_d.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols())
     );
 }
 

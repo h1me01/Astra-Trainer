@@ -6,8 +6,8 @@ constexpr int block_size = 256;
 
 template <Activation act_type>
 __global__ void sparse_affine_fwd_kernel(
-    const float* weights_v,
-    const float* biases_v,
+    const float* weights_d,
+    const float* biases_d,
     float* out_d,
     const int* features,
     const int weights_r,
@@ -27,8 +27,8 @@ __global__ void sparse_affine_fwd_kernel(
     const int vec = weights_r / 4;
     const int rem = weights_r % 4;
 
-    const float4* w4 = reinterpret_cast<const float4*>(weights_v);
-    const float4* b4 = reinterpret_cast<const float4*>(biases_v);
+    const float4* w4 = reinterpret_cast<const float4*>(weights_d);
+    const float4* b4 = reinterpret_cast<const float4*>(biases_d);
     float4* o4 = reinterpret_cast<float4*>(out_d);
 
     for (int k = threadIdx.x; k < vec; k += blockDim.x) {
@@ -47,14 +47,14 @@ __global__ void sparse_affine_fwd_kernel(
 
     if (rem) {
         for (int n = (vec * 4) + threadIdx.x; n < weights_r; n += blockDim.x) {
-            float sum = biases_v[n];
+            float sum = biases_d[n];
 
 #pragma unroll
             for (int i = 0; i < max_entries; i++) {
                 int f = s_features[i];
                 if (f == -1)
                     break;
-                sum += weights_v[f * weights_r + n];
+                sum += weights_d[f * weights_r + n];
             }
 
             out_d[batch * out_r + n] = activate_fwd<act_type>(sum);
@@ -63,22 +63,20 @@ __global__ void sparse_affine_fwd_kernel(
 }
 
 void sparse_affine_fwd(
-    const DenseMatrix& weights_v,
-    const DenseMatrix& biases_v,
+    const DenseMatrix& weights_d,
+    const DenseMatrix& biases_d,
     DenseMatrix& out_d,
     const Array<int>& features,
     const int max_entries,
     const int out_offset,
     const Activation act_type
 ) {
-    const bool is_double = out_d.rows() / 2 == weights_v.rows();
-
-    ASSERT(weights_v.rows() == biases_v.rows());
-    ASSERT(weights_v.rows() == out_d.rows() / (is_double ? 2 : 1));
+    ASSERT(weights_d.rows() == biases_d.rows());
+    ASSERT(out_d.rows() >= out_offset + weights_d.rows());
 
     ASSERT(
-        weights_v.is_dev_allocated() && //
-        biases_v.is_dev_allocated() &&  //
+        weights_d.is_dev_allocated() && //
+        biases_d.is_dev_allocated() &&  //
         out_d.is_dev_allocated() &&     //
         features.is_dev_allocated()
     );
@@ -88,11 +86,11 @@ void sparse_affine_fwd(
         act_type,
         sparse_affine_fwd_kernel,
         <<<out_d.cols(), block_size, shared_mem_size>>>(
-            weights_v.dev_address(),
-            biases_v.dev_address(),
+            weights_d.dev_address(),
+            biases_d.dev_address(),
             out_d.dev_address() + out_offset,
             features.dev_address(),
-            weights_v.rows(),
+            weights_d.rows(),
             out_d.rows(),
             out_d.cols(),
             max_entries

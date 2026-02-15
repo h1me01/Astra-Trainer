@@ -59,13 +59,13 @@ __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int
 }
 
 void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const Activation act_type) {
-    const auto& in_v = in.get_data();
+    const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 
     const auto& out_d = out.get_data();
     const auto& out_g = out.get_grads();
 
-    const auto& weights_v = weights.get_data();
+    const auto& weights_d = weights.get_data();
     auto& weights_g = weights.get_grads();
 
     auto& biases_g = biases.get_grads();
@@ -79,10 +79,10 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
     );
 
     ASSERT(
-        weights_v.is_dev_allocated() && //
+        weights_d.is_dev_allocated() && //
         weights_g.is_dev_allocated() && //
         biases_g.is_dev_allocated() &&  //
-        in_v.is_dev_allocated() &&      //
+        in_d.is_dev_allocated() &&      //
         in_g.is_dev_allocated() &&      //
         out_g.is_dev_allocated()
     );
@@ -116,8 +116,8 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
         &alpha,                  // alpha
         out_g.dev_address(),     // A
         out_g.rows(),            // lda
-        in_v.dev_address(),      // B
-        in_v.rows(),             // ldb
+        in_d.dev_address(),      // B
+        in_d.rows(),             // ldb
         &beta,                   // beta
         weights_g.dev_address(), // C
         weights_g.rows()         // ldc
@@ -130,10 +130,10 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
         CUBLAS_OP_N,             // transb
         in_g.rows(),             // m
         in_g.cols(),             // n
-        weights_v.rows(),        // k
+        weights_d.rows(),        // k
         &alpha,                  // alpha
-        weights_v.dev_address(), // A
-        weights_v.rows(),        // lda
+        weights_d.dev_address(), // A
+        weights_d.rows(),        // lda
         out_g.dev_address(),     // B
         out_g.rows(),            // ldb
         &beta,                   // beta

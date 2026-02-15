@@ -7,8 +7,8 @@
 namespace kernel {
 
 void sparse_affine_fwd(
-    const DenseMatrix& weights_v,
-    const DenseMatrix& biases_v,
+    const DenseMatrix& weights_d,
+    const DenseMatrix& biases_d,
     DenseMatrix& out_d,
     const Array<int>& features,
     const int max_entries,

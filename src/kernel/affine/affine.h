@@ -12,9 +12,9 @@ void create_cublas();
 void destroy_cublas();
 
 void affine_fwd(
-    DenseMatrix& weights_v,
-    DenseMatrix& biases_v,
-    const DenseMatrix& inputs_v,
+    DenseMatrix& weights_d,
+    DenseMatrix& biases_d,
+    const DenseMatrix& inputs_d,
     DenseMatrix& out_d,
     const Activation act_type
 );

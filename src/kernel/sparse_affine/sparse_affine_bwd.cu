@@ -75,10 +75,9 @@ void sparse_affine_bwd(
 ) {
     const auto& out_d = out.get_data();
     const auto& out_g = out.get_grads();
-    const bool is_double = out_g.rows() / 2 == weights_g.rows();
 
     ASSERT(weights_g.rows() == biases_g.rows());
-    ASSERT(weights_g.rows() == out_g.rows() / (is_double ? 2 : 1));
+    ASSERT(out_g.rows() >= out_offset + weights_g.rows());
 
     ASSERT(
         weights_g.is_dev_allocated() && //
