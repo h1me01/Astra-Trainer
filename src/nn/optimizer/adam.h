@@ -2,7 +2,7 @@
 
 #include "optimizer.h"
 
-namespace nn {
+namespace nn::optim {
 
 class Adam : public Optimizer {
   public:
@@ -21,4 +21,4 @@ class Adam : public Optimizer {
     float beta1, beta2, decay;
 };
 
-} // namespace nn
+} // namespace nn::optim

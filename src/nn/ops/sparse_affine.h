@@ -3,7 +3,7 @@
 #include "concat.h"
 #include "ops.h"
 
-namespace nn {
+namespace nn::op {
 
 class SparseAffine : public Operation {
   public:
@@ -113,4 +113,4 @@ class SparseAffine : public Operation {
     SPtr<Input> input;
 };
 
-} // namespace nn
+} // namespace nn::op

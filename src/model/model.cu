@@ -39,6 +39,7 @@ void Model::init() {
     loss = get_loss();
     optim = get_optim();
     lr_sched = get_lr_scheduler();
+    wdl_sched = get_wdl_scheduler();
 
     if (!loss || !optim || !lr_sched)
         error("All components (loss, optimizer, scheduler) must be initialized!");
@@ -69,10 +70,9 @@ void Model::print_info(int epoch, const std::string& output_path) const {
     std::cout << "Batches/Epoch:     " << config.batches_per_epoch << std::endl;
     std::cout << "Save Rate:         " << config.save_rate << std::endl;
     std::cout << "Thread Count:      " << config.thread_count << std::endl;
-    std::cout << "Learning Rate:     " << lr_sched->get_lr() << std::endl;
     std::cout << "Eval Div:          " << config.eval_div << std::endl;
-    std::cout << "Lambda Start:      " << config.lambda_start << std::endl;
-    std::cout << "Lambda End:        " << config.lambda_end << std::endl;
+    std::cout << "LR Scheduler:      " << lr_sched->get_info() << std::endl;
+    std::cout << "WDL Scheduler:     " << wdl_sched->get_info() << std::endl;
     std::cout << "Output Path:       " << output_path << std::endl;
 
     if (!loaded_checkpoint.empty())
@@ -81,10 +81,10 @@ void Model::print_info(int epoch, const std::string& output_path) const {
         std::cout << "Loaded Model:      " << loaded_model << std::endl;
 
     if (epoch > 0)
-        std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get_lr() << std::endl;
+        std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get() << std::endl;
 }
 
-void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
+void Model::fill_inputs(std::vector<TrainingDataEntry>& ds) {
     auto& stm_features = stm_input->get_output();
     auto& nstm_features = nstm_input->get_output();
 
@@ -123,7 +123,7 @@ void Model::fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda) {
         float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / config.eval_div));
         float wdl_target = (ds[i].result + 1) / 2.0f;
 
-        targets(i) = lambda * score_target + (1.0f - lambda) * wdl_target;
+        targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;
     }
 
     stm_features.host_to_dev_async();
@@ -137,7 +137,7 @@ float Model::predict(const std::string& fen) {
 
     std::vector<TrainingDataEntry> ds{{pos}};
 
-    fill_inputs(ds, 0.0f);
+    fill_inputs(ds);
     network->forward(ds);
 
     auto& output = network->get_output().get_data();
@@ -177,17 +177,17 @@ void Model::train(const std::string& output_path) {
         Timer timer;
         loss->reset();
 
-        float lambda = config.lambda_start + (config.lambda_end - config.lambda_start) * (epoch / float(config.epochs));
+        wdl_sched->step(epoch);
 
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
             auto data_entries = dataloader->next();
-            fill_inputs(data_entries, lambda);
+            fill_inputs(data_entries);
 
             network->clear_all_grads(optim.get());
             network->forward(data_entries);
             loss->compute(targets, network->get_output());
             network->backward();
-            optim->step(lr_sched->get_lr(), data_entries.size());
+            optim->step(lr_sched->get(), data_entries.size());
 
             if (batch == config.batches_per_epoch || !(batch % 100)) {
                 auto elapsed = timer.elapsed_time();

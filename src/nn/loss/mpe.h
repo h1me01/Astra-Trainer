@@ -2,7 +2,7 @@
 
 #include "loss.h"
 
-namespace nn {
+namespace nn::loss {
 
 class MPE : public Loss {
   public:
@@ -18,4 +18,4 @@ class MPE : public Loss {
     float power;
 };
 
-} // namespace nn
+} // namespace nn::loss

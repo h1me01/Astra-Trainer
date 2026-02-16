@@ -7,6 +7,9 @@
 
 namespace nn {
 
+using namespace op;
+using namespace optim;
+
 class Network {
   public:
     Network() { kernel::create_cublas(); }

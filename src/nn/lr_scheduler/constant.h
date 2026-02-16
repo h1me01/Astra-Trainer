@@ -2,14 +2,16 @@
 
 #include "lr_scheduler.h"
 
-namespace nn {
+namespace nn::lr_sched {
 
 class Constant : public LRScheduler {
   public:
     Constant(float lr)
         : LRScheduler(lr) {}
 
-    void step(int epoch) override {}
+    void step([[maybe_unused]] int epoch) override {}
+
+    std::string get_info() const override { return "Constant(lr=" + format_number(lr) + ")"; }
 };
 
-} // namespace nn
+} // namespace nn::lr_sched

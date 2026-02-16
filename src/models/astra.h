@@ -25,8 +25,6 @@ struct Astra : Model {
         config.save_rate = 20;
         config.thread_count = 2;
         config.eval_div = 400.0;
-        config.lambda_start = 0.5;
-        config.lambda_end = 0.5;
 
         // load_params("/home/h1me/Downloads/model.bin");
 
@@ -116,8 +114,10 @@ struct Astra : Model {
 
     LRScheduler get_lr_scheduler() override {
         float lr = 0.001;
-        return lr_sched::cosine_annealing(config.epochs, lr, lr * 0.3 * 0.3 * 0.3);
+        return lr_sched::cosine_annealing(lr, lr * 0.3 * 0.3 * 0.3, config.epochs);
     }
+
+    WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.5); }
 
     std::vector<std::string> get_training_files() override {
         return {

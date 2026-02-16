@@ -2,7 +2,7 @@
 
 #include "ops.h"
 
-namespace nn {
+namespace nn::op {
 
 class Select : public Operation {
   public:
@@ -36,4 +36,4 @@ class Select : public Operation {
     SPtr<SelectIndices> indices;
 };
 
-} // namespace nn
+} // namespace nn::op

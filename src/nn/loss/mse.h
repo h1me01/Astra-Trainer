@@ -2,7 +2,7 @@
 
 #include "loss.h"
 
-namespace nn {
+namespace nn::loss {
 
 struct MSE : public Loss {
     MSE(Activation act_type)
@@ -11,4 +11,4 @@ struct MSE : public Loss {
     void compute(const Array<float>& targets, Tensor& output) { kernel::mse_loss(targets, loss, output, act_type); }
 };
 
-} // namespace nn
+} // namespace nn::loss

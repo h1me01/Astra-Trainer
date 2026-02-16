@@ -3,7 +3,7 @@
 #include "concat.h"
 #include "ops.h"
 
-namespace nn {
+namespace nn::op {
 
 class PairwiseMul : public Operation {
   public:

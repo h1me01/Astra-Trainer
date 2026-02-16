@@ -2,7 +2,7 @@
 
 #include "ops.h"
 
-namespace nn {
+namespace nn::op {
 
 class Affine : public Operation {
   public:
@@ -39,4 +39,4 @@ class Affine : public Operation {
     SPtr<Operation> input;
 };
 
-} // namespace nn
+} // namespace nn::op

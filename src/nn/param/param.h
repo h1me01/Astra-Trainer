@@ -2,7 +2,7 @@
 
 #include "../../data/include.h"
 
-namespace nn {
+namespace nn::param {
 
 class SaveFormat {
   public:
@@ -140,4 +140,4 @@ class Param {
     }
 };
 
-} // namespace nn
+} // namespace nn::param

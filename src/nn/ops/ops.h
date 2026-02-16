@@ -6,7 +6,9 @@
 #include "../../training_data_format/include.h"
 #include "../param/param.h"
 
-namespace nn {
+namespace nn::op {
+
+using namespace param;
 
 class Input {
   public:
@@ -98,4 +100,4 @@ class Operation : public std::enable_shared_from_this<Operation> {
     Tensor output;
 };
 
-}; // namespace nn
+}; // namespace nn::op

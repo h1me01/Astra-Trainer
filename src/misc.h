@@ -56,6 +56,12 @@ auto dpc(U&& ptr) {
     return std::dynamic_pointer_cast<T>(std::forward<U>(ptr));
 }
 
+inline std::string format_number(float num, int precision = 6) {
+    std::ostringstream oss;
+    oss << std::setprecision(precision) << num;
+    return oss.str();
+}
+
 inline void error(const std::string& message) {
     std::cerr << "Error: " << message << std::endl;
     std::abort();

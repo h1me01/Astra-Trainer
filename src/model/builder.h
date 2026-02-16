@@ -182,18 +182,30 @@ inline OpHandle concat(std::vector<Operation> inputs) {
 namespace lr_sched {
 
 inline LRScheduler constant(float lr) {
-    return std::make_shared<nn::Constant>(lr);
+    return std::make_shared<nn::lr_sched::Constant>(lr);
 }
 
-inline LRScheduler step_decay(int step_size, float decay_factor) {
-    return std::make_shared<nn::StepDecay>(step_size, decay_factor);
+inline LRScheduler step_decay(float lr, float gamma, int step_size) {
+    return std::make_shared<nn::lr_sched::StepDecay>(lr, gamma, step_size);
 }
 
-inline LRScheduler cosine_annealing(int total_epochs, float initial_lr, float final_lr) {
-    return std::make_shared<nn::CosineAnnealing>(total_epochs, initial_lr, final_lr);
+inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epochs) {
+    return std::make_shared<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
 }
 
 } // namespace lr_sched
+
+namespace wdl_sched {
+
+inline WDLScheduler constant(float val) {
+    return std::make_shared<nn::wdl_sched::Constant>(val);
+}
+
+inline WDLScheduler linear(float start_val, float final_val, int max_epochs) {
+    return std::make_shared<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
+}
+
+} // namespace wdl_sched
 
 namespace optim {
 
@@ -228,11 +240,11 @@ inline OptimHandle adamw(float beta1, float beta2, float decay) {
 namespace loss {
 
 inline Loss mse(Activation act = Activation::Linear) {
-    return std::make_shared<nn::MSE>(act);
+    return std::make_shared<nn::loss::MSE>(act);
 }
 
 inline Loss mpe(float power, Activation act = Activation::Linear) {
-    return std::make_shared<nn::MPE>(power, act);
+    return std::make_shared<nn::loss::MPE>(power, act);
 }
 
 } // namespace loss

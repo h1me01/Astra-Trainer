@@ -2,7 +2,7 @@
 
 #include "ops.h"
 
-namespace nn {
+namespace nn::op {
 
 class Concat : public Operation {
   public:
@@ -69,4 +69,4 @@ class Concat : public Operation {
     std::vector<SPtr<Operation>> inputs;
 };
 
-} // namespace nn
+} // namespace nn::op

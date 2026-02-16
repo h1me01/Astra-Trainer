@@ -2,7 +2,7 @@
 
 #include "../ops/include.h"
 
-namespace nn {
+namespace nn::loss {
 
 class Loss {
   public:
@@ -25,4 +25,4 @@ class Loss {
     Array<float> loss{1};
 };
 
-} // namespace nn
+} // namespace nn::loss

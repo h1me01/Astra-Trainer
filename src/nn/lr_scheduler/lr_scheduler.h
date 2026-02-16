@@ -2,7 +2,7 @@
 
 #include "../../misc.h"
 
-namespace nn {
+namespace nn::lr_sched {
 
 class LRScheduler {
   public:
@@ -18,10 +18,12 @@ class LRScheduler {
             step(i);
     }
 
-    float get_lr() const { return lr; }
+    float get() const { return lr; }
+
+    virtual std::string get_info() const = 0;
 
   protected:
     float lr;
 };
 
-} // namespace nn
+} // namespace nn::lr_sched

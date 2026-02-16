@@ -17,8 +17,6 @@ struct TrainingConfig {
     int save_rate = 20;
     int thread_count = 2;
     float eval_div = 400.0f;
-    float lambda_start = 0.5f;
-    float lambda_end = 0.5f;
 };
 
 class Model {
@@ -96,6 +94,7 @@ class Model {
     virtual Loss get_loss() = 0;
     virtual Optimizer get_optim() = 0;
     virtual LRScheduler get_lr_scheduler() = 0;
+    virtual WDLScheduler get_wdl_scheduler() = 0;
     virtual std::vector<std::string> get_training_files() = 0;
 
   private:
@@ -106,6 +105,7 @@ class Model {
     Loss loss;
     Optimizer optim;
     LRScheduler lr_sched;
+    WDLScheduler wdl_sched;
     Input stm_input, nstm_input;
 
     Ptr<nn::Network> network;
@@ -116,7 +116,7 @@ class Model {
 
     void init();
     void print_info(int epoch, const std::string& output_path) const;
-    void fill_inputs(std::vector<TrainingDataEntry>& ds, float lambda);
+    void fill_inputs(std::vector<TrainingDataEntry>& ds);
 
     float predict(const std::string& fen);
 

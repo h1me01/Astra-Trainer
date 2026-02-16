@@ -9,7 +9,9 @@
 #include "../../kernel/include.h"
 #include "../param/param.h"
 
-namespace nn {
+namespace nn::optim {
+
+using namespace param;
 
 class Optimizer {
   public:
@@ -153,4 +155,4 @@ inline void Optimizer::save(const std::string& path) const {
     }
 }
 
-} // namespace nn
+} // namespace nn::optim
