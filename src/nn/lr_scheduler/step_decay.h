@@ -9,7 +9,15 @@ class StepDecay : public LRScheduler {
     StepDecay(float lr, float gamma, int step_size)
         : LRScheduler(lr),
           gamma(gamma),
-          step_size(step_size) {}
+          step_size(step_size) {
+
+        if (lr <= 0.0f)
+            error("Step Decay LR Scheduler: initial lr must be positive!");
+        if (gamma <= 0.0f)
+            error("Step Decay LR Scheduler: gamma must be positive!");
+        if (step_size <= 0)
+            error("Step Decay LR Scheduler: step_size must be positive!");
+    }
 
     void step(int epoch) override {
         if (epoch % step_size == 0)

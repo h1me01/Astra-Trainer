@@ -68,11 +68,11 @@ class SparseAffineBuilder {
 
     OpHandle operator()(Input a) { return OpHandle(std::make_shared<nn::SparseAffine>(params, a)); }
 
+    Tensor& get_weights() { return params->get_weights(); }
+    Tensor& get_biases() { return params->get_biases(); }
+
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
-
-    const nn::SaveFormat& weights_format() const { return params->weights_format(); }
-    const nn::SaveFormat& biases_format() const { return params->biases_format(); }
 
     SPtr<nn::Param> get_param() { return params; }
 
@@ -85,17 +85,13 @@ class AffineBuilder {
     AffineBuilder(int input_dim, int output_dim)
         : params(std::make_shared<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Operation a) {
-        if (a->get_output_dim() != params->get_input_dim())
-            error("Affine input dimension does not match parameter input dimension!");
-        return OpHandle(std::make_shared<nn::Affine>(params, a));
-    }
+    OpHandle operator()(Operation a) { return OpHandle(std::make_shared<nn::Affine>(params, a)); }
+
+    Tensor& get_weights() { return params->get_weights(); }
+    Tensor& get_biases() { return params->get_biases(); }
 
     nn::SaveFormat& weights_format() { return params->weights_format(); }
     nn::SaveFormat& biases_format() { return params->biases_format(); }
-
-    const nn::SaveFormat& weights_format() const { return params->weights_format(); }
-    const nn::SaveFormat& biases_format() const { return params->biases_format(); }
 
     SPtr<nn::Param> get_param() { return params; }
 
@@ -118,9 +114,6 @@ inline SelectIndices select_indices(int count, Fn&& fn) {
 
 inline OpHandle concat(std::vector<Operation> inputs) {
     auto output = OpHandle(std::make_shared<nn::Concat>(inputs));
-
-    if (inputs.empty())
-        return output;
 
     const auto& type = inputs[0]->get_name();
     for (const auto& input : inputs)

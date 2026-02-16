@@ -16,7 +16,7 @@ class Select : public Operation {
         output_dim = input_dim / indices->partitions_size();
 
         if (input_dim % indices->partitions_size() != 0)
-            error("Select input dimension must be a multiple of select size!");
+            error("Select: input dimension must be a multiple of select size!");
     }
 
     void init(int batch_size) override { Operation::init(batch_size); }

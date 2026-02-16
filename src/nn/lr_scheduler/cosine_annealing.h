@@ -10,7 +10,17 @@ class CosineAnnealing : public LRScheduler {
         : LRScheduler(start),
           start(start),
           final(final),
-          max_epochs(max_epochs) {}
+          max_epochs(max_epochs) {
+
+        if (start <= 0)
+            error("Cosine Annealing LR Scheduler: start lr must be positive!");
+        if (final <= 0)
+            error("Cosine Annealing LR Scheduler: final lr must be positive!");
+        if (final > start)
+            error("Cosine Annealing LR Scheduler: final lr cannot be greater than start lr rate!");
+        if (max_epochs <= 0)
+            error("Cosine Annealing LR Scheduler: max_epochs must be positive!");
+    }
 
     void step(int epoch) override {
         if (epoch >= max_epochs)

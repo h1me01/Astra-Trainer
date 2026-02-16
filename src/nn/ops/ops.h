@@ -13,7 +13,10 @@ using namespace param;
 class Input {
   public:
     Input(int size)
-        : size(size) {}
+        : size(size) {
+        if (size <= 0)
+            error("Size of Input operation must be positive!");
+    }
 
     void init(int batch_size) { output = Array<int>(size * batch_size, true); }
 
@@ -33,7 +36,10 @@ class SelectIndices {
     template <typename Fn>
     SelectIndices(const int num_partitions, Fn&& fn)
         : num_partitions(num_partitions),
-          fn(std::forward<Fn>(fn)) {}
+          fn(std::forward<Fn>(fn)) {
+        if (num_partitions <= 0)
+            error("Number of partitions in SelectIndices must be positive!");
+    }
 
     void init(int batch_size) { indices = Array<int>(batch_size, true); }
 

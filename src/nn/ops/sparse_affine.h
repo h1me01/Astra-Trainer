@@ -16,10 +16,8 @@ class SparseAffine : public Operation {
         input_dim = params->get_input_dim();
         output_dim = params->get_output_dim();
 
-        params->get_weights().he_init(input->get_size());
-
         if (input_dim % 768 != 0)
-            error("SparseAffine input dimension must be a multiple of 768!");
+            error("SparseAffine: input dimension must be a multiple of 768!");
     }
 
     void forward() override {

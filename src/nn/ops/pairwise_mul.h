@@ -12,7 +12,7 @@ class PairwiseMul : public Operation {
         name = "pairwise_mul";
 
         if (input->get_output_dim() % 2 != 0)
-            error("Input dimension for pairwise multiplication must be even!");
+            error("PairwiseMul: Input dimension must be even!");
 
         input_dim = input->get_output_dim();
         output_dim = input_dim / 2;

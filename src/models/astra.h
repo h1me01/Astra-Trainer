@@ -25,18 +25,6 @@ struct Astra : Model {
         config.save_rate = 20;
         config.thread_count = 2;
         config.eval_div = 400.0;
-
-        // load_params("/home/h1me/Downloads/model.bin");
-
-        train("/home/h1me/Documents/Coding/Astra-Data/nn_output");
-
-        evaluate_positions({
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-            "rn1qk2r/ppp1bppp/5n2/3p1bB1/3P4/2N1P3/PP3PPP/R2QKBNR w KQkq - 1 7",
-            "5B2/5ppk/p6p/P7/4b2P/3p1qP1/4rP2/2Q2RK1 w - - 10 33",
-            "8/8/pp3p2/3p4/PP1PkPK1/8/8/8 b - - 4 52",
-            "rnbqkbnr/p3pppp/8/1p6/2pP4/4P3/1P3PPP/RNBQKBNR w KQkq - 0 6",
-        });
     }
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
@@ -79,6 +67,8 @@ struct Astra : Model {
 
         // create layers
         auto ft = sparse_affine(num_buckets(input_bucket) * 768, 1024);
+        ft.get_weights().he_init(32);
+
         auto l1 = affine(1024, 16 * bucket_count);
         auto l2 = affine(16, 32 * bucket_count);
         auto l3 = affine(32, bucket_count);

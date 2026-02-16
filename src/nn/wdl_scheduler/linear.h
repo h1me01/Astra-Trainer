@@ -10,7 +10,15 @@ class Linear : public WDLScheduler {
         : WDLScheduler(start),
           start(start),
           final(final),
-          max_epochs(max_epochs) {}
+          max_epochs(max_epochs) {
+
+        if (start < 0 || start > 1 || final < 0 || final > 1)
+            error("Linear WDL Scheduler: start value must be between 0 and 1!");
+        if (final < 0 || final > 1)
+            error("Linear WDL Scheduler: final value must be between 0 and 1!");
+        if (max_epochs <= 0)
+            error("Linear WDL Scheduler: max_epochs must be positive!");
+    }
 
     void step(int epoch) override { val = start + (final - start) * (epoch / float(max_epochs)); }
 

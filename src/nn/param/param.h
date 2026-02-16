@@ -39,6 +39,9 @@ class Param {
         : weights(output_dim, input_dim),
           biases(output_dim, 1) {
 
+        if (input_dim <= 0 || output_dim <= 0)
+            error("Param: Input and output dimensions must be positive!");
+
         weights.he_init(input_dim);
         biases.zero_init();
     }

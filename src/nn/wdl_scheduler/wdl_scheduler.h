@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../misc.h"
+
 namespace nn::wdl_sched {
 
 class WDLScheduler {

@@ -9,6 +9,9 @@ class Concat : public Operation {
     Concat(std::vector<SPtr<Operation>> inputs)
         : inputs(inputs) {
 
+        if (inputs.size() < 2)
+            error("Concat: requires at least 2 inputs!");
+
         name = "concat";
 
         for (const auto& input : inputs)
