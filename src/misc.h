@@ -128,7 +128,7 @@ class Timer {
     }
 
   private:
-    using format = std::chrono::seconds;
+    using format = std::chrono::milliseconds;
     using steady_clock = std::chrono::steady_clock;
     steady_clock::time_point start_point;
 };

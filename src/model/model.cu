@@ -2,17 +2,19 @@
 
 namespace model {
 
-void print_progress(int epoch, int batch, float loss, int pos_per_sec, int time_sec, bool newline = false) {
+void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms, bool newline = false) {
     if (newline)
         printf("\r\033[K");
+
+    float time_sec = time_ms / 1000.0f;
 
     printf(
         "\repoch/batch = %3d/%4d | loss = %1.6f | pos/sec = %7d | time = %3ds%s",
         epoch,
         batch,
         loss,
-        pos_per_sec,
-        time_sec,
+        (int)round(pos_count / time_sec),
+        (int)round(time_sec),
         newline ? "\n" : ""
     );
 
@@ -193,11 +195,7 @@ void Model::train(const std::string& output_path) {
                 auto elapsed = timer.elapsed_time();
 
                 print_progress(
-                    epoch,
-                    batch,
-                    loss->get_loss() / (config.batch_size * batch),
-                    round(config.batch_size * batch / (float)std::max(elapsed, 1LL)),
-                    elapsed
+                    epoch, batch, loss->get_loss() / (config.batch_size * batch), config.batch_size * batch, elapsed
                 );
             }
         }
@@ -205,15 +203,7 @@ void Model::train(const std::string& output_path) {
         float epoch_loss = loss->get_loss() / positions_per_epoch;
 
         auto elapsed = timer.elapsed_time();
-
-        print_progress(
-            epoch,
-            config.batches_per_epoch,
-            epoch_loss,
-            round(positions_per_epoch / (float)std::max(elapsed, 1LL)),
-            elapsed,
-            true
-        );
+        print_progress(epoch, config.batches_per_epoch, epoch_loss, positions_per_epoch, elapsed, true);
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
 
