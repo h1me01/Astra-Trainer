@@ -177,7 +177,7 @@ void Model::train(const std::string& output_path) {
 
     for (epoch = epoch + 1; epoch <= config.epochs; epoch++) {
         Timer timer;
-        loss->reset();
+        loss->clear();
 
         wdl_sched->step(epoch);
 

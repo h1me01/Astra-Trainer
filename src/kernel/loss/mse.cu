@@ -7,20 +7,14 @@ constexpr int block_size = 1024;
 template <Activation act_type>
 __global__ void mse_kernel(const float* targets, const float* out_d, float* out_g, float* loss, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    float val = 0.0f;
+    if (idx >= size)
+        return;
 
-    if (idx < size) {
-        const float act = activate_fwd<act_type>(out_d[idx]);
-        const float diff = act - targets[idx];
-        out_g[idx] = 2.0f * diff * activate_bwd<act_type, true>(act);
-        val = diff * diff;
-    }
+    const float act = activate_fwd<act_type>(out_d[idx]);
+    const float diff = act - targets[idx];
+    out_g[idx] = 2.0f * diff * activate_bwd<act_type, true>(act);
 
-    for (int offset = 16; offset > 0; offset /= 2)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-
-    if ((threadIdx.x % 32) == 0 && val != 0.0f)
-        atomicAdd(loss, val);
+    atomicAdd(loss, diff * diff);
 }
 
 void mse_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, const Activation act_type) {

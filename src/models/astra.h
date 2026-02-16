@@ -100,7 +100,7 @@ struct Astra : Model {
 
     Loss get_loss() override { return loss::mse(Activation::Sigmoid); }
 
-    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-1.98, 1.98); }
+    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
         float lr = 0.001;
