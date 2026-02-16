@@ -18,15 +18,15 @@ __global__ void activation_bwd_kernel(const float* in_d, float* in_g, const floa
         float4 in_g4 = ((float4*)in_g)[idx];
         float4 out_g4 = ((const float4*)out_g)[idx];
 
-        in_g4.x = activate_bwd<type>(in_d4.x) * out_g4.x;
-        in_g4.y = activate_bwd<type>(in_d4.y) * out_g4.y;
-        in_g4.z = activate_bwd<type>(in_d4.z) * out_g4.z;
-        in_g4.w = activate_bwd<type>(in_d4.w) * out_g4.w;
+        in_g4.x += activate_bwd<type>(in_d4.x) * out_g4.x;
+        in_g4.y += activate_bwd<type>(in_d4.y) * out_g4.y;
+        in_g4.z += activate_bwd<type>(in_d4.z) * out_g4.z;
+        in_g4.w += activate_bwd<type>(in_d4.w) * out_g4.w;
 
         ((float4*)in_g)[idx] = in_g4;
     } else {
         for (int i = vec_idx; i < vec_idx + rem; i++)
-            in_g[i] = activate_bwd<type>(in_d[i]) * out_g[i];
+            in_g[i] += activate_bwd<type>(in_d[i]) * out_g[i];
     }
 }
 
