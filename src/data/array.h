@@ -221,7 +221,7 @@ class Array {
   protected:
     int m_size = 0;
     bool use_pinned = false;
-    std::unique_ptr<T[]> host_data;
+    Ptr<T[]> host_data;
     CudaHostPtr<T> pinned_host_data;
     CudaDevicePtr<T> dev_data;
 };

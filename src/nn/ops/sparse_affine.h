@@ -7,7 +7,7 @@ namespace nn {
 
 class SparseAffine : public Operation {
   public:
-    SparseAffine(Ptr<Param> params, Ptr<Input> input)
+    SparseAffine(SPtr<Param> params, SPtr<Input> input)
         : params(params),
           input(input) {
 
@@ -15,6 +15,8 @@ class SparseAffine : public Operation {
 
         input_dim = params->get_input_dim();
         output_dim = params->get_output_dim();
+
+        params->get_weights().he_init(input->get_size());
 
         if (input_dim % 768 != 0)
             error("SparseAffine input dimension must be a multiple of 768!");
@@ -79,7 +81,7 @@ class SparseAffine : public Operation {
             output.get_grads().clear_dev();
     }
 
-    void set_concat(Ptr<Concat> concat, bool pairwise_fused = false) {
+    void set_concat(SPtr<Concat> concat, bool pairwise_fused = false) {
         this->concat = concat;
         this->pairwise_fused = pairwise_fused;
         out_offset = concat->fuse(shared_from_this(), pairwise_fused);
@@ -98,17 +100,17 @@ class SparseAffine : public Operation {
         return output;
     }
 
-    Ptr<Param> get_param() override { return params; }
+    SPtr<Param> get_param() override { return params; }
 
-    Ptr<Input> get_input() const { return input; }
+    SPtr<Input> get_input() const { return input; }
 
   private:
     int out_offset = 0;
     bool pairwise_fused = false;
 
-    Ptr<Param> params;
-    WeakPtr<Concat> concat;
-    Ptr<Input> input;
+    SPtr<Param> params;
+    WPtr<Concat> concat;
+    SPtr<Input> input;
 };
 
 } // namespace nn

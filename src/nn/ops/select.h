@@ -6,7 +6,7 @@ namespace nn {
 
 class Select : public Operation {
   public:
-    Select(Ptr<Operation> input, Ptr<SelectIndices> indices)
+    Select(SPtr<Operation> input, SPtr<SelectIndices> indices)
         : input(input),
           indices(indices) {
 
@@ -23,19 +23,17 @@ class Select : public Operation {
 
     void forward() override { kernel::select_fwd(input->get_data(), output.get_data(), *indices, act_type); }
 
-    void backward() override {
-        kernel::select_bwd(input->get_grads(), output, *indices, act_type);
-    }
+    void backward() override { kernel::select_bwd(input->get_grads(), output, *indices, act_type); }
 
-    Ptr<SelectIndices> get_indices() const { return indices; }
+    SPtr<SelectIndices> get_indices() const { return indices; }
 
-    std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
+    std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
 
   private:
     int max_indices;
 
-    Ptr<Operation> input;
-    Ptr<SelectIndices> indices;
+    SPtr<Operation> input;
+    SPtr<SelectIndices> indices;
 };
 
 } // namespace nn

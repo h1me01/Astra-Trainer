@@ -81,7 +81,7 @@ void sparse_affine_pairwise_mul_bwd(
     const auto& out_g = out.get_grads();
 
     ASSERT(weights_g.rows() == biases_g.rows());
-    ASSERT(out_g.rows() >= out_offset + weights_g.rows());
+    ASSERT(out_d.rows() == weights_d.rows());
 
     ASSERT(
         weights_g.is_dev_allocated() && //

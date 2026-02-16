@@ -6,7 +6,7 @@ namespace nn {
 
 class Concat : public Operation {
   public:
-    Concat(std::vector<Ptr<Operation>> inputs)
+    Concat(std::vector<SPtr<Operation>> inputs)
         : inputs(inputs) {
 
         name = "concat";
@@ -37,9 +37,9 @@ class Concat : public Operation {
         }
     }
 
-    std::vector<Ptr<Operation>> get_inputs() const override { return inputs; }
+    std::vector<SPtr<Operation>> get_inputs() const override { return inputs; }
 
-    int fuse(Ptr<Operation> op, bool sparse_affine_pairwise_mul_fusion = false) {
+    int fuse(SPtr<Operation> op, bool sparse_affine_pairwise_mul_fusion = false) {
         ASSERT(should_skip());
         ASSERT(
             get_activation() == Activation::Linear        //
@@ -66,7 +66,7 @@ class Concat : public Operation {
 
   private:
     bool skip = false;
-    std::vector<Ptr<Operation>> inputs;
+    std::vector<SPtr<Operation>> inputs;
 };
 
 } // namespace nn

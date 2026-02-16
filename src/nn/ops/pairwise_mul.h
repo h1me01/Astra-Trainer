@@ -7,7 +7,7 @@ namespace nn {
 
 class PairwiseMul : public Operation {
   public:
-    PairwiseMul(Ptr<Operation> input)
+    PairwiseMul(SPtr<Operation> input)
         : input(input) {
         name = "pairwise_mul";
 
@@ -39,7 +39,7 @@ class PairwiseMul : public Operation {
             output.get_grads().clear_dev();
     }
 
-    void set_concat(Ptr<Concat> concat) {
+    void set_concat(SPtr<Concat> concat) {
         ASSERT(!skip && concat);
         this->concat = concat;
         out_offset = concat->fuse(shared_from_this());
@@ -68,13 +68,13 @@ class PairwiseMul : public Operation {
 
     bool should_skip() const { return skip; }
 
-    std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
+    std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
 
   private:
     bool skip = false;
     int out_offset = 0;
-    WeakPtr<Concat> concat;
-    Ptr<Operation> input;
+    WPtr<Concat> concat;
+    SPtr<Operation> input;
 };
 
 } // namespace nn

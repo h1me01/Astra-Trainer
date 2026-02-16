@@ -21,7 +21,7 @@ class Optimizer {
     Optimizer(Optimizer&&) = default;
     Optimizer& operator=(Optimizer&&) = default;
 
-    void init(const std::vector<Ptr<Param>>& params) {
+    void init(const std::vector<SPtr<Param>>& params) {
         for (const auto& l : params) {
             for (auto& t : l->get()) {
                 if (min_val.has_value())

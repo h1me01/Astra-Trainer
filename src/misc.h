@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,7 +19,7 @@
 
 using namespace std::filesystem;
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 #define ASSERT(expr) ((void)0)
 #else
 #define ASSERT(expr)                                                                                                   \
@@ -42,10 +43,18 @@ using namespace std::filesystem;
     }
 
 template <typename T>
-using Ptr = std::shared_ptr<T>;
+using SPtr = std::shared_ptr<T>;
 
 template <typename T>
-using WeakPtr = std::weak_ptr<T>;
+using WPtr = std::weak_ptr<T>;
+
+template <typename T>
+using Ptr = std::unique_ptr<T>;
+
+template <typename T, typename U>
+auto dpc(U&& ptr) {
+    return std::dynamic_pointer_cast<T>(std::forward<U>(ptr));
+}
 
 inline void error(const std::string& message) {
     std::cerr << "Error: " << message << std::endl;
@@ -106,21 +115,14 @@ class Logger {
 
 class Timer {
   public:
-    void start() {
-        start_point = steady_clock::now();
-        end_point = steady_clock::time_point();
-        prev_duration = 0;
+    Timer() { start_point = steady_clock::now(); }
+
+    long long elapsed_time() const {
+        return std::chrono::duration_cast<format>(steady_clock::now() - start_point).count();
     }
 
-    void stop() { end_point = steady_clock::now(); }
-
-    long long elapsed_time() const { return std::chrono::duration_cast<ms>(end_point - start_point).count(); }
-
   private:
-    using ms = std::chrono::milliseconds;
+    using format = std::chrono::seconds;
     using steady_clock = std::chrono::steady_clock;
-
-    steady_clock::time_point start_point, end_point;
-
-    long long prev_duration = 0;
+    steady_clock::time_point start_point;
 };

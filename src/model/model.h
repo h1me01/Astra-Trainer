@@ -4,17 +4,11 @@
 #include <vector>
 
 #include "../dataloader/dataloader.h"
-#include "../nn/include.h"
+#include "common.h"
 
 using namespace dataloader;
 
 namespace model {
-
-using Loss = Ptr<nn::Loss>;
-using Optimizer = Ptr<nn::Optimizer>;
-using LRScheduler = Ptr<nn::LRScheduler>;
-using Operation = Ptr<nn::Operation>;
-using Input = Ptr<nn::Input>;
 
 struct TrainingConfig {
     int epochs = 100;
@@ -114,8 +108,8 @@ class Model {
     LRScheduler lr_sched;
     Input stm_input, nstm_input;
 
-    std::unique_ptr<nn::Network> network;
-    std::unique_ptr<Dataloader> dataloader;
+    Ptr<nn::Network> network;
+    Ptr<Dataloader> dataloader;
 
     std::string loaded_model;
     std::string loaded_checkpoint;

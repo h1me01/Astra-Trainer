@@ -7,7 +7,7 @@ void print_progress(int epoch, int batch, float loss, int pos_per_sec, int time_
         printf("\r\033[K");
 
     printf(
-        "\repoch/batch = %3d/%4d | loss = %1.8f | pos/sec = %7d | time = %3ds%s",
+        "\repoch/batch = %3d/%4d | loss = %1.6f | pos/sec = %7d | time = %3ds%s",
         epoch,
         batch,
         loss,
@@ -173,9 +173,8 @@ void Model::train(const std::string& output_path) {
 
     const int positions_per_epoch = config.batch_size * config.batches_per_epoch;
 
-    Timer timer;
     for (epoch = epoch + 1; epoch <= config.epochs; epoch++) {
-        timer.start();
+        Timer timer;
         loss->reset();
 
         float lambda = config.lambda_start + (config.lambda_end - config.lambda_start) * (epoch / float(config.epochs));
@@ -191,30 +190,28 @@ void Model::train(const std::string& output_path) {
             optim->step(lr_sched->get_lr(), data_entries.size());
 
             if (batch == config.batches_per_epoch || !(batch % 100)) {
-                timer.stop();
                 auto elapsed = timer.elapsed_time();
 
                 print_progress(
                     epoch,
                     batch,
                     loss->get_loss() / (config.batch_size * batch),
-                    (int)round(1000.0f * config.batch_size * batch / elapsed),
-                    (int)elapsed / 1000
+                    round(config.batch_size * batch / (float)std::max(elapsed, 1LL)),
+                    elapsed
                 );
             }
         }
 
         float epoch_loss = loss->get_loss() / positions_per_epoch;
 
-        timer.stop();
         auto elapsed = timer.elapsed_time();
 
         print_progress(
             epoch,
             config.batches_per_epoch,
             epoch_loss,
-            (int)round(1000.0f * positions_per_epoch / elapsed),
-            (int)elapsed / 1000,
+            round(positions_per_epoch / (float)std::max(elapsed, 1LL)),
+            elapsed,
             true
         );
 

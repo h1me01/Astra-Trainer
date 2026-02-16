@@ -12,7 +12,7 @@ class Network {
     Network() { kernel::create_cublas(); }
     ~Network() { kernel::destroy_cublas(); }
 
-    void set_output(Ptr<Operation> op) {
+    void set_output(SPtr<Operation> op) {
         if (!op)
             error("Output operation cannot be null!");
 
@@ -31,9 +31,7 @@ class Network {
         std::unordered_set<SelectIndices*> seen;
         for (auto& op : operations) {
             op->init(batch_size);
-            if (op->get_name() != "select")
-                continue;
-            if (auto select_op = std::dynamic_pointer_cast<Select>(op)) {
+            if (auto select_op = dpc<Select>(op)) {
                 auto indices = select_op->get_indices();
                 if (seen.insert(indices.get()).second)
                     select_indices.push_back(indices);
@@ -67,8 +65,8 @@ class Network {
     Tensor& get_output() { return operations.back()->get_output(); }
     const Tensor& get_output() const { return operations.back()->get_output(); }
 
-    std::vector<Ptr<Param>> get_params() {
-        std::vector<Ptr<Param>> main_params;
+    std::vector<SPtr<Param>> get_params() {
+        std::vector<SPtr<Param>> main_params;
         std::unordered_set<Param*> seen;
 
         for (auto& l : operations) {
@@ -81,10 +79,10 @@ class Network {
     }
 
   private:
-    std::vector<Ptr<SelectIndices>> select_indices;
-    std::vector<Ptr<Operation>> operations;
+    std::vector<SPtr<SelectIndices>> select_indices;
+    std::vector<SPtr<Operation>> operations;
 
-    void init_operations(const std::vector<Ptr<Operation>>& ops) {
+    void init_operations(const std::vector<SPtr<Operation>>& ops) {
         if (ops.empty())
             return;
 

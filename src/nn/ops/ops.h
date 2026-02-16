@@ -78,9 +78,9 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     DenseMatrix& get_grads() { return output.get_grads(); }
 
-    virtual std::vector<Ptr<Operation>> get_inputs() const { return {}; }
+    virtual std::vector<SPtr<Operation>> get_inputs() const { return {}; }
 
-    virtual Ptr<Param> get_param() { return nullptr; }
+    virtual SPtr<Param> get_param() { return nullptr; }
 
     std::string get_name() const { return name; }
 

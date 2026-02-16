@@ -6,11 +6,29 @@ namespace nn {
 
 class Activate : public Operation {
   public:
-    Activate(Ptr<Operation> input, Activation type)
+    Activate(SPtr<Operation> input, Activation type)
         : input(input),
           type(type) {
 
-        name = "activate";
+        name = "activate_";
+
+        switch (type) {
+        case Activation::ReLU:
+            name += "relu";
+            break;
+        case Activation::ClippedReLU:
+            name += "clipped_relu";
+            break;
+        case Activation::SqrClippedReLU:
+            name += "sqr_clipped_relu";
+            break;
+        case Activation::Sigmoid:
+            name += "sigmoid";
+            break;
+        default:
+            name += "linear";
+            break;
+        }
 
         input_dim = input->get_output_dim();
         output_dim = input->get_output_dim();
@@ -20,12 +38,11 @@ class Activate : public Operation {
 
     void backward() override { kernel::activation_bwd(input->get_output(), output.get_grads(), type); }
 
-    std::vector<Ptr<Operation>> get_inputs() const override { return {input}; }
+    std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
 
   private:
     Activation type;
-    Ptr<Param> param;
-    Ptr<Operation> input;
+    SPtr<Operation> input;
 };
 
 } // namespace nn
