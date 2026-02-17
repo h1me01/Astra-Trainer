@@ -179,8 +179,6 @@ void Model::train(const std::string& output_path) {
         Timer timer;
         loss->clear();
 
-        wdl_sched->step(epoch);
-
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
             auto data_entries = dataloader->next();
             fill_inputs(data_entries);
@@ -192,25 +190,25 @@ void Model::train(const std::string& output_path) {
             optim->step(lr_sched->get(), data_entries.size());
 
             if (batch == config.batches_per_epoch || !(batch % 100)) {
-                auto elapsed = timer.elapsed_time();
-
                 print_progress(
-                    epoch, batch, loss->get_loss() / (config.batch_size * batch), config.batch_size * batch, elapsed
+                    epoch,
+                    batch,
+                    loss->get_loss() / (config.batch_size * batch),
+                    config.batch_size * batch,
+                    timer.elapsed_time()
                 );
             }
         }
 
         float epoch_loss = loss->get_loss() / positions_per_epoch;
-
-        auto elapsed = timer.elapsed_time();
-        print_progress(epoch, config.batches_per_epoch, epoch_loss, positions_per_epoch, elapsed, true);
+        print_progress(epoch, config.batches_per_epoch, epoch_loss, positions_per_epoch, timer.elapsed_time(), true);
 
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
-
         if (epoch % std::max(config.save_rate, 1) == 0 || epoch == config.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(epoch));
 
         lr_sched->step(epoch);
+        wdl_sched->step(epoch);
     }
 }
 

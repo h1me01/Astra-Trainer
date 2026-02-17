@@ -10,6 +10,4 @@ void mpe_loss(
     const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, const Activation act_type
 );
 
-void mse_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, const Activation act_type);
-
 } // namespace kernel

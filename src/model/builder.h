@@ -233,7 +233,7 @@ inline OptimHandle adamw(float beta1, float beta2, float decay) {
 namespace loss {
 
 inline Loss mse(Activation act = Activation::Linear) {
-    return std::make_shared<nn::loss::MSE>(act);
+    return std::make_shared<nn::loss::MPE>(2.0, act);
 }
 
 inline Loss mpe(float power, Activation act = Activation::Linear) {
