@@ -12,19 +12,18 @@ __global__ void activation_fwd_kernel(const float* in_d, float* out_d, const int
     if (vec_idx >= size)
         return;
 
-    const int rem = min(size - vec_idx, 4);
-    if (rem == 4) {
-        float4 input4 = ((const float4*)in_d)[idx];
-        float4 output4 = ((float4*)out_d)[idx];
+    if (vec_idx + 4 <= size) {
+        float4 in4 = as_vec<const float4>(in_d)[idx];
+        float4 out4 = as_vec<float4>(out_d)[idx];
 
-        output4.x = activate_fwd<type>(input4.x);
-        output4.y = activate_fwd<type>(input4.y);
-        output4.z = activate_fwd<type>(input4.z);
-        output4.w = activate_fwd<type>(input4.w);
+        out4.x = activate_fwd<type>(in4.x);
+        out4.y = activate_fwd<type>(in4.y);
+        out4.z = activate_fwd<type>(in4.z);
+        out4.w = activate_fwd<type>(in4.w);
 
-        ((float4*)out_d)[idx] = output4;
+        as_vec<float4>(out_d)[idx] = out4;
     } else {
-        for (int i = vec_idx; i < vec_idx + rem; i++)
+        for (int i = vec_idx; i < size; i++)
             out_d[i] = activate_fwd<type>(in_d[i]);
     }
 }

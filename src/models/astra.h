@@ -67,8 +67,6 @@ struct Astra : Model {
 
         // create layers
         auto ft = sparse_affine(num_buckets(input_bucket) * 768, 1024);
-        ft.get_weights().he_init(32);
-
         auto l1 = affine(1024, 16 * bucket_count);
         auto l2 = affine(16, 32 * bucket_count);
         auto l3 = affine(32, bucket_count);

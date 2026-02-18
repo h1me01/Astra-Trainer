@@ -27,9 +27,9 @@ __global__ void sparse_affine_fwd_kernel(
     const int vec = weights_r / 4;
     const int rem = weights_r % 4;
 
-    const float4* w4 = reinterpret_cast<const float4*>(weights_d);
-    const float4* b4 = reinterpret_cast<const float4*>(biases_d);
-    float4* o4 = reinterpret_cast<float4*>(out_d);
+    const float4* w4 = as_vec<const float4>(weights_d);
+    const float4* b4 = as_vec<const float4>(biases_d);
+    float4* o4 = as_vec<float4>(out_d);
 
     for (int k = threadIdx.x; k < vec; k += blockDim.x) {
         float4 sum = b4[k];

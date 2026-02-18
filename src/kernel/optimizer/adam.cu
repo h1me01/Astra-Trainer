@@ -58,16 +58,16 @@ __global__ void adam_kernel(
         return;
 
     if (vec_idx + 4 <= size) {
-        float4 val = ((float4*)vals)[idx];
-        float4 mom = ((float4*)moms)[idx];
-        float4 vel = ((float4*)vels)[idx];
-        const float4 grad = ((const float4*)grads)[idx];
+        float4 val = as_vec<float4>(vals)[idx];
+        float4 mom = as_vec<float4>(moms)[idx];
+        float4 vel = as_vec<float4>(vels)[idx];
+        const float4 grad = as_vec<const float4>(grads)[idx];
 
         adam_update_f4(val, mom, vel, grad, lr, beta1, beta2, decay, min_val, max_val, grad_scale);
 
-        ((float4*)vals)[idx] = val;
-        ((float4*)moms)[idx] = mom;
-        ((float4*)vels)[idx] = vel;
+        as_vec<float4>(vals)[idx] = val;
+        as_vec<float4>(moms)[idx] = mom;
+        as_vec<float4>(vels)[idx] = vel;
     } else {
         const float one_minus_beta1 = 1.0f - beta1;
         const float one_minus_beta2 = 1.0f - beta2;
@@ -107,7 +107,7 @@ void adam_optim(
         vels.is_dev_allocated()
     );
 
-    const int blocks = (vals.size() + block_size * 4 - 1) / (block_size * 4);
+    const int blocks = get_num_blocks(vals.size(), 4 * block_size);
     adam_kernel<<<blocks, block_size>>>(
         vals.dev_address(),
         grads.dev_address(),

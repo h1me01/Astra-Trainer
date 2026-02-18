@@ -15,19 +15,18 @@ __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int 
     if (vec_idx >= size)
         return;
 
-    const int rem = min(4, size - vec_idx);
-    if (rem == 4) {
-        float4 v = ((const float4*)out_d)[idx];
-        float4 g = ((float4*)out_g)[idx];
+    if (vec_idx + 4 <= size) {
+        float4 v = as_vec<const float4>(out_d)[idx];
+        float4 g = as_vec<float4>(out_g)[idx];
 
         g.x *= activate_bwd<act_type, true>(v.x);
         g.y *= activate_bwd<act_type, true>(v.y);
         g.z *= activate_bwd<act_type, true>(v.z);
         g.w *= activate_bwd<act_type, true>(v.w);
 
-        ((float4*)out_g)[idx] = g;
+        as_vec<float4>(out_g)[idx] = g;
     } else {
-        for (int i = vec_idx; i < vec_idx + rem; i++)
+        for (int i = vec_idx; i < size; i++)
             out_g[i] *= activate_bwd<act_type, true>(out_d[i]);
     }
 }
@@ -89,7 +88,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
 
     // update gradients if activation was used
     if (act_type != Activation::Linear) {
-        const int blocks = get_num_blocks((out_g.size() + 3) / 4, block_size);
+        const int blocks = get_num_blocks(out_g.size(), 4 * block_size);
         DISPATCH_ACTIVATION(
             act_type,
             activate_bwd_kernel,
