@@ -62,10 +62,9 @@ class Tensor {
     DenseMatrix& get_grads() { return grads; }
     const DenseMatrix& get_grads() const { return grads; }
 
-    void free() {
-        data.free();
-        grads.free();
-    }
+    int rows() const { return data.rows(); }
+    int cols() const { return data.cols(); }
+    int size() const { return data.size(); }
 
   private:
     DenseMatrix data;

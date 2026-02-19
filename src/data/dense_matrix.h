@@ -51,8 +51,6 @@ class DenseMatrix {
         return data.get(m_rows * c + r);
     }
 
-    void free() { data.free(); }
-
   private:
     int m_rows, m_cols;
     Array<float> data;

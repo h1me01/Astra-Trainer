@@ -46,18 +46,24 @@ class Param {
         biases.zero_init();
     }
 
+    void create_factorizer() { factorizer_weights = Tensor(weights.get_data().rows(), 768); }
+
     void save(FILE* f) {
+        if (factorizer_weights.size() > 0)
+            write_tensor(f, factorizer_weights);
         write_tensor(f, weights);
         write_tensor(f, biases);
     }
 
     void load(FILE* f) {
+        if (factorizer_weights.size() > 0)
+            load_tensor(f, factorizer_weights);
         load_tensor(f, weights);
         load_tensor(f, biases);
     }
 
     void save_quantized(FILE* f) {
-        save_tensor_quantized(f, weights, weights_save_format);
+        save_tensor_quantized(f, weights, weights_save_format, factorizer_weights.size() > 0);
         save_tensor_quantized(f, biases, biases_save_format);
     }
 
@@ -72,15 +78,22 @@ class Param {
 
     Tensor& get_weights() { return weights; }
     Tensor& get_biases() { return biases; }
+    Tensor& get_factorizer_weights() { return factorizer_weights; }
 
     const Tensor& get_weights() const { return weights; }
     const Tensor& get_biases() const { return biases; }
+    const Tensor& get_factorizer_weights() const { return factorizer_weights; }
 
-    std::vector<Tensor*> get() { return {&weights, &biases}; }
+    std::vector<Tensor*> get() {
+        if (factorizer_weights.size() > 0)
+            return {&factorizer_weights, &weights, &biases};
+        return {&weights, &biases};
+    }
 
   private:
     Tensor weights;
     Tensor biases;
+    Tensor factorizer_weights; // currently a very ugly solution so TODO refactor
     SaveFormat weights_save_format;
     SaveFormat biases_save_format;
 
@@ -100,8 +113,25 @@ class Param {
     }
 
     template <typename T>
-    void write_quantized(FILE* f, Tensor& tensor, const SaveFormat& format) {
+    void write_quantized(FILE* f, Tensor& tensor, const SaveFormat& format, bool add_factorizer = false) {
         auto& data = tensor.get_data();
+
+        DenseMatrix facto;
+        if (add_factorizer) {
+            factorizer_weights.get_data().dev_to_host();
+
+            // repeat to match weights dimensions
+            auto& facto_data = factorizer_weights.get_data();
+            const int num_repeats = data.cols() / facto_data.cols();
+
+            facto = DenseMatrix(data.rows(), data.cols());
+
+            for (int r = 0; r < data.rows(); r++)
+                for (int rep = 0; rep < num_repeats; rep++)
+                    for (int c = 0; c < facto_data.cols(); c++)
+                        facto(r, rep * facto_data.cols() + c) = facto_data(r, c);
+        }
+
         Array<T> quantized(data.size());
 
         auto quantize = [&](float v) -> T {
@@ -117,27 +147,27 @@ class Param {
         if (format.is_transposed()) {
             for (int r = 0; r < data.rows(); r++)
                 for (int c = 0; c < data.cols(); c++)
-                    quantized(data.cols() * r + c) = quantize(data(r, c));
+                    quantized(data.cols() * r + c) = quantize(data(r, c) + (add_factorizer ? facto(r, c) : 0.0f));
         } else {
             for (int i = 0; i < data.size(); i++)
-                quantized(i) = quantize(data(i));
+                quantized(i) = quantize(data(i) + (add_factorizer ? facto(i) : 0.0f));
         }
 
         if ((int)fwrite(quantized.host_address(), sizeof(T), quantized.size(), f) != quantized.size())
             error("Failed writing quantized data to file!");
     }
 
-    void save_tensor_quantized(FILE* f, Tensor& tensor, const SaveFormat& format) {
+    void save_tensor_quantized(FILE* f, Tensor& tensor, const SaveFormat& format, bool add_factorizer = false) {
         tensor.get_data().dev_to_host();
         switch (format.get_type()) {
         case SaveFormat::Type::int8:
-            write_quantized<int8_t>(f, tensor, format);
+            write_quantized<int8_t>(f, tensor, format, add_factorizer);
             break;
         case SaveFormat::Type::int16:
-            write_quantized<int16_t>(f, tensor, format);
+            write_quantized<int16_t>(f, tensor, format, add_factorizer);
             break;
         case SaveFormat::Type::float32:
-            write_quantized<float>(f, tensor, format);
+            write_quantized<float>(f, tensor, format, add_factorizer);
             break;
         }
     }

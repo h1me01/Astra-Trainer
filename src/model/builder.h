@@ -77,39 +77,47 @@ class OpHandle {
 class SparseAffineBuilder {
   public:
     SparseAffineBuilder(int input_dim, int output_dim)
-        : params(std::make_shared<nn::Param>(input_dim, output_dim)) {}
+        : param(std::make_shared<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Input a) { return OpHandle(std::make_shared<nn::SparseAffine>(params, a)); }
+    SparseAffineBuilder& factorized() {
+        if (param->get_input_dim() == 768)
+            error("SparseAffine: Factorization has no benefit for input dimension of 768!");
+        param->create_factorizer();
+        return *this;
+    }
 
-    Tensor& get_weights() { return params->get_weights(); }
-    Tensor& get_biases() { return params->get_biases(); }
+    OpHandle operator()(Input a) { return OpHandle(std::make_shared<nn::SparseAffine>(param, a)); }
 
-    nn::SaveFormat& weights_format() { return params->weights_format(); }
-    nn::SaveFormat& biases_format() { return params->biases_format(); }
+    Tensor& get_weights() { return param->get_weights(); }
+    Tensor& get_biases() { return param->get_biases(); }
 
-    SPtr<nn::Param> get_param() { return params; }
+    nn::SaveFormat& weights_format() { return param->weights_format(); }
+    nn::SaveFormat& biases_format() { return param->biases_format(); }
+
+    SPtr<nn::Param> get_param() { return param; }
 
   private:
-    SPtr<nn::Param> params;
+    SPtr<nn::Param> param;
+    SPtr<nn::Param> factorizer_weights;
 };
 
 class AffineBuilder {
   public:
     AffineBuilder(int input_dim, int output_dim)
-        : params(std::make_shared<nn::Param>(input_dim, output_dim)) {}
+        : param(std::make_shared<nn::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Operation a) { return OpHandle(std::make_shared<nn::Affine>(params, a)); }
+    OpHandle operator()(Operation a) { return OpHandle(std::make_shared<nn::Affine>(param, a)); }
 
-    Tensor& get_weights() { return params->get_weights(); }
-    Tensor& get_biases() { return params->get_biases(); }
+    Tensor& get_weights() { return param->get_weights(); }
+    Tensor& get_biases() { return param->get_biases(); }
 
-    nn::SaveFormat& weights_format() { return params->weights_format(); }
-    nn::SaveFormat& biases_format() { return params->biases_format(); }
+    nn::SaveFormat& weights_format() { return param->weights_format(); }
+    nn::SaveFormat& biases_format() { return param->biases_format(); }
 
-    SPtr<nn::Param> get_param() { return params; }
+    SPtr<nn::Param> get_param() { return param; }
 
   private:
-    SPtr<nn::Param> params;
+    SPtr<nn::Param> param;
 };
 
 inline SparseAffineBuilder sparse_affine(int input_dim, int output_dim) {
