@@ -73,7 +73,7 @@ class Operation : public std::enable_shared_from_this<Operation> {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
-    virtual void clear_grads() { output.get_grads().clear_dev(); }
+    void clear_grads() { output.get_grads().clear_dev(); }
 
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }
@@ -98,7 +98,6 @@ class Operation : public std::enable_shared_from_this<Operation> {
   protected:
     std::string name = "";
 
-    bool skip = false;
     int input_dim = 0;
     int output_dim = 0;
     Activation act_type = Activation::Linear;

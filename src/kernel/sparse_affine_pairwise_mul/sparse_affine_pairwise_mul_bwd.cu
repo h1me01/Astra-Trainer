@@ -13,6 +13,7 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     const float* out_g,
     const int* features,
     const int weights_r,
+    const int out_r,
     const int batch_size,
     const int max_entries
 ) {
@@ -41,7 +42,7 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
         sum_b += weights_d[base + neuron + half];
     }
 
-    const float g = out_g[batch * weights_r + neuron];
+    const float g = out_g[batch * out_r + neuron];
     const float grad_a = g * activate_bwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
     const float grad_b = g * activate_bwd<act_type>(sum_b) * activate_fwd<act_type>(sum_a);
 
@@ -64,7 +65,8 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
 }
 
 void sparse_affine_pairwise_mul_bwd(
-    Tensor& weights,
+    const DenseMatrix& weights_d,
+    DenseMatrix& weights_g,
     Tensor& biases,
     const Tensor& out,
     const Array<int>& features,
@@ -72,8 +74,6 @@ void sparse_affine_pairwise_mul_bwd(
     const int out_offset,
     const Activation act_type
 ) {
-    const auto& weights_d = weights.get_data();
-    auto& weights_g = weights.get_grads();
     const auto& biases_d = biases.get_data();
     auto& biases_g = biases.get_grads();
 
@@ -81,7 +81,6 @@ void sparse_affine_pairwise_mul_bwd(
     const auto& out_g = out.get_grads();
 
     ASSERT(weights_g.rows() == biases_g.rows());
-    ASSERT(out_d.rows() == weights_d.rows());
 
     ASSERT(
         weights_g.is_dev_allocated() && //
@@ -111,6 +110,7 @@ void sparse_affine_pairwise_mul_bwd(
             out_g.dev_address() + out_offset,
             features.dev_address(),
             weights_g.rows(),
+            out_g.rows(),
             out_g.cols(),
             max_entries
         )

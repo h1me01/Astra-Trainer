@@ -34,7 +34,16 @@ class OpHandle {
     OpHandle sqr_clipped_relu() { return set_activation<Activation::SqrClippedReLU>(); }
     OpHandle sigmoid() { return set_activation<Activation::Sigmoid>(); }
     OpHandle select(SelectIndices indices) { return OpHandle(std::make_shared<nn::Select>(op, indices)); }
-    OpHandle pairwise_mul() { return OpHandle(std::make_shared<nn::PairwiseMul>(op)); }
+
+    OpHandle pairwise_mul() {
+        if (auto sparse_aff = dpc<nn::SparseAffine>(op)) {
+            if (!sparse_aff->is_pairwise_fused()) {
+                sparse_aff->set_pairwise_fused();
+                return OpHandle(sparse_aff);
+            }
+        }
+        return OpHandle(std::make_shared<nn::PairwiseMul>(op));
+    }
 
     operator Operation() const { return op; }
 
@@ -45,15 +54,19 @@ class OpHandle {
 
     template <Activation act_type>
     OpHandle set_activation() {
-        if (op->get_name() == "concat") {
-            auto concat_op = dpc<nn::Concat>(op);
-            // for concats who are fused we want them to not have an activation
-            // since it would mess up the fusion, so seperate it
-            if (concat_op->should_skip())
-                return OpHandle(std::make_shared<nn::Activate>(op, act_type));
+        // if activation already exists, separate
+        bool needs_separate = (op->get_activation() != Activation::Linear);
+
+        if (!needs_separate) {
+            // for fused concats we separate the activation
+            if (auto concat = dpc<nn::Concat>(op))
+                needs_separate = concat->should_skip();
+            // for sparse affine with pairwise fusion we seperate the activation
+            else if (auto sparse = dpc<nn::SparseAffine>(op))
+                needs_separate = sparse->is_pairwise_fused();
         }
 
-        if (op->get_activation() != Activation::Linear)
+        if (needs_separate)
             return OpHandle(std::make_shared<nn::Activate>(op, act_type));
 
         op->set_activation(act_type);
@@ -115,50 +128,18 @@ inline SelectIndices select_indices(int count, Fn&& fn) {
 inline OpHandle concat(std::vector<Operation> inputs) {
     auto output = OpHandle(std::make_shared<nn::Concat>(inputs));
 
-    const auto& type = inputs[0]->get_name();
     for (const auto& input : inputs)
-        if (input->get_name() != type)
+        if (input->get_name() != "sparse_affine" && input->get_name() != "pairwise_mul")
             return output;
-
-    if (type != "pairwise_mul" && type != "sparse_affine")
-        return output;
 
     auto concat_op = dpc<nn::Concat>(output.get());
     concat_op->set_skip();
 
-    // special multi-layer specific fusion
-    if (type == "pairwise_mul") {
-        Activation act_type = inputs[0]->get_activation();
+    // currently only sparse affine and pairwise mul fusion is supported
+    // when needed, adding future fusions should be trivial
 
-        // check if all inputs have the same activation and sparse_affine structure
-        bool can_fuse = true;
-        for (const auto& input : inputs) {
-            auto pw_mul = dpc<nn::PairwiseMul>(input);
-            if (!pw_mul || input->get_activation() != act_type ||
-                pw_mul->get_inputs()[0]->get_name() != "sparse_affine") {
-                can_fuse = false;
-                break;
-            }
-        }
-
-        if (can_fuse) {
-            for (auto& input : inputs) {
-                auto pw_mul = dpc<nn::PairwiseMul>(input);
-                pw_mul->set_skip();
-                if (auto sparse_aff = dpc<nn::SparseAffine>(pw_mul->get_inputs()[0]))
-                    sparse_aff->set_concat(concat_op, true);
-            }
-
-            if (act_type != Activation::Linear)
-                return OpHandle(std::make_shared<nn::Activate>(output.get(), act_type));
-
-            return output;
-        }
-    }
-
-    // standard fusion
     for (auto& input : inputs) {
-        if (type == "sparse_affine") {
+        if (input->get_name() == "sparse_affine") {
             if (auto op = dpc<nn::SparseAffine>(input))
                 op->set_concat(concat_op);
         } else { // pairwise_mul

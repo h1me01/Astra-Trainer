@@ -20,6 +20,11 @@ class SparseAffine : public Operation {
             error("SparseAffine: input dimension must be a multiple of 768!");
     }
 
+    void init(int batch_size) override {
+        if (concat.expired())
+            Operation::init(batch_size);
+    }
+
     void forward() override {
         auto concat_ptr = concat.lock();
         auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
@@ -31,7 +36,7 @@ class SparseAffine : public Operation {
                 real_output.get_data(),
                 input->get_output(),
                 input->get_size(),
-                out_offset * output_dim / 2,
+                out_offset,
                 act_type
             );
         } else {
@@ -41,7 +46,7 @@ class SparseAffine : public Operation {
                 real_output.get_data(),
                 input->get_output(),
                 input->get_size(),
-                out_offset * output_dim,
+                out_offset,
                 act_type
             );
         }
@@ -53,12 +58,13 @@ class SparseAffine : public Operation {
 
         if (pairwise_fused) {
             kernel::sparse_affine_pairwise_mul_bwd(
-                params->get_weights(),
+                params->get_weights().get_data(),
+                params->get_weights().get_grads(),
                 params->get_biases(),
                 real_output,
                 input->get_output(),
                 input->get_size(),
-                out_offset * output_dim / 2,
+                out_offset,
                 act_type
             );
         } else {
@@ -68,35 +74,24 @@ class SparseAffine : public Operation {
                 real_output,
                 input->get_output(),
                 input->get_size(),
-                out_offset * output_dim,
+                out_offset,
                 act_type
             );
         }
     }
 
-    void clear_grads() override {
-        if (concat.expired())
-            output.get_grads().clear_dev();
-    }
-
-    void set_concat(SPtr<Concat> concat, bool pairwise_fused = false) {
+    void set_concat(SPtr<Concat> concat) {
         this->concat = concat;
-        this->pairwise_fused = pairwise_fused;
-        out_offset = concat->fuse(shared_from_this(), pairwise_fused);
+        out_offset = concat->fuse(shared_from_this());
         output.free(); // not needed anymore
     }
 
-    Tensor& get_output() override {
-        if (!concat.expired())
-            error("Cannot use non existing output! (This should never happen)");
-        return output;
+    void set_pairwise_fused() {
+        output_dim /= 2;
+        pairwise_fused = true;
     }
 
-    const Tensor& get_output() const override {
-        if (!concat.expired())
-            error("Cannot use non existing output! (This should never happen)");
-        return output;
-    }
+    bool is_pairwise_fused() const { return pairwise_fused; }
 
     SPtr<Param> get_param() override { return params; }
 

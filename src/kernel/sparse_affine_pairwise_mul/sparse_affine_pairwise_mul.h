@@ -19,7 +19,8 @@ void sparse_affine_pairwise_mul_fwd(
 );
 
 void sparse_affine_pairwise_mul_bwd(
-    Tensor& weights,
+    const DenseMatrix& weights_d,
+    DenseMatrix& weights_g,
     Tensor& biases,
     const Tensor& out,
     const Array<int>& features,

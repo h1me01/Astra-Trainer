@@ -42,21 +42,18 @@ class Concat : public Operation {
 
     std::vector<SPtr<Operation>> get_inputs() const override { return inputs; }
 
-    int fuse(SPtr<Operation> op, bool sparse_affine_pairwise_mul_fusion = false) {
+    int fuse(SPtr<Operation> op) {
         ASSERT(should_skip());
         ASSERT(
             get_activation() == Activation::Linear        //
             || op->get_activation() == Activation::Linear //
         );
 
+        int offset = 0;
         for (int i = 0; i < get_inputs().size(); i++) {
-            if (sparse_affine_pairwise_mul_fusion) {
-                if (get_inputs()[i]->get_inputs()[0].get() == op.get())
-                    return i;
-            } else {
-                if (get_inputs()[i].get() == op.get())
-                    return i;
-            }
+            if (get_inputs()[i].get() == op.get())
+                return offset;
+            offset += get_inputs()[i]->get_output_dim();
         }
 
         error("Concat fusion failed! (this should never happen)");

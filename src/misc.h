@@ -19,7 +19,7 @@
 
 using namespace std::filesystem;
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 #define ASSERT(expr) ((void)0)
 #else
 #define ASSERT(expr)                                                                                                   \
