@@ -98,7 +98,6 @@ class SparseAffineBuilder {
 
   private:
     SPtr<nn::Param> param;
-    SPtr<nn::Param> factorizer_weights;
 };
 
 class AffineBuilder {

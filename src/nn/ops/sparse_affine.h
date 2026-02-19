@@ -16,7 +16,7 @@ class SparseAffine : public Operation {
         input_dim = params->get_input_dim();
         output_dim = params->get_output_dim();
 
-        if (has_factorizer())
+        if (param->has_factorizer())
             factorized_output = DenseMatrix(output_dim, input_dim);
 
         if (input_dim % 768 != 0)
@@ -32,17 +32,18 @@ class SparseAffine : public Operation {
         auto concat_ptr = concat.lock();
         auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
 
-        if (has_factorizer()) {
+        if (param->has_factorizer()) {
+            const int factorizer_cols = param->get_factorizer().cols();
             int offset = 0;
-            for (int i = 0; i < input_dim / 768; i++) {
+            for (int i = 0; i < input_dim / factorizer_cols; i++) {
                 kernel::factorizer_fwd(
-                    get_factorizer_weights().get_data(), param->get_weights().get_data(), factorized_output, offset
+                    param->get_factorizer().get_data(), param->get_weights().get_data(), factorized_output, offset
                 );
-                offset += 768 * param->get_output_dim();
+                offset += factorizer_cols * param->get_output_dim();
             }
         }
 
-        auto& real_weights = has_factorizer() ? factorized_output : param->get_weights().get_data();
+        auto& real_weights = param->has_factorizer() ? factorized_output : param->get_weights().get_data();
         if (pairwise_fused) {
             kernel::sparse_affine_pairwise_mul_fwd(
                 real_weights,
@@ -71,7 +72,7 @@ class SparseAffine : public Operation {
         auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
 
         if (pairwise_fused) {
-            auto& real_weights = has_factorizer() ? factorized_output : param->get_weights().get_data();
+            auto& real_weights = param->has_factorizer() ? factorized_output : param->get_weights().get_data();
 
             kernel::sparse_affine_pairwise_mul_bwd(
                 real_weights,
@@ -95,11 +96,12 @@ class SparseAffine : public Operation {
             );
         }
 
-        if (has_factorizer()) {
+        if (param->has_factorizer()) {
+            const int factorizer_cols = param->get_factorizer().cols();
             int offset = 0;
-            for (int i = 0; i < input_dim / 768; i++) {
-                kernel::factorizer_bwd(get_factorizer_weights().get_grads(), param->get_weights().get_grads(), offset);
-                offset += 768 * param->get_output_dim();
+            for (int i = 0; i < input_dim / factorizer_cols; i++) {
+                kernel::factorizer_bwd(param->get_factorizer().get_grads(), param->get_weights().get_grads(), offset);
+                offset += factorizer_cols * param->get_output_dim();
             }
         }
     }
@@ -128,9 +130,6 @@ class SparseAffine : public Operation {
     WPtr<Concat> concat;
     SPtr<Input> input;
     DenseMatrix factorized_output;
-
-    Tensor& get_factorizer_weights() { return param->get_factorizer_weights(); }
-    bool has_factorizer() const { return param->get_factorizer_weights().size() > 0; }
 };
 
 } // namespace nn::op
