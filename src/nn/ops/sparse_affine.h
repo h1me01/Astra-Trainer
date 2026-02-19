@@ -83,7 +83,6 @@ class SparseAffine : public Operation {
     void set_concat(SPtr<Concat> concat) {
         this->concat = concat;
         out_offset = concat->fuse(shared_from_this());
-        output.free(); // not needed anymore
     }
 
     void set_pairwise_fused() {

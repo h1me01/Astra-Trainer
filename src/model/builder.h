@@ -137,15 +137,13 @@ inline OpHandle concat(std::vector<Operation> inputs) {
 
     // currently only sparse affine and pairwise mul fusion is supported
     // when needed, adding future fusions should be trivial
-
     for (auto& input : inputs) {
-        if (input->get_name() == "sparse_affine") {
-            if (auto op = dpc<nn::SparseAffine>(input))
-                op->set_concat(concat_op);
-        } else { // pairwise_mul
-            if (auto op = dpc<nn::PairwiseMul>(input))
-                op->set_concat(concat_op);
-        }
+        if (auto op = dpc<nn::SparseAffine>(input))
+            op->set_concat(concat_op);
+        else if (auto op = dpc<nn::PairwiseMul>(input))
+            op->set_concat(concat_op);
+        else
+            ASSERT(false);
     }
 
     return output;

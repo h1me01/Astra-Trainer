@@ -78,8 +78,8 @@ class Operation : public std::enable_shared_from_this<Operation> {
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }
 
-    virtual Tensor& get_output() { return output; }
-    virtual const Tensor& get_output() const { return output; }
+    Tensor& get_output() { return output; }
+    const Tensor& get_output() const { return output; }
 
     DenseMatrix& get_data() { return output.get_data(); }
     const DenseMatrix& get_data() const { return output.get_data(); }
