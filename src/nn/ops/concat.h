@@ -43,8 +43,8 @@ class Concat : public Operation {
     std::vector<SPtr<Operation>> get_inputs() const override { return inputs; }
 
     int fuse(SPtr<Operation> op) {
-        ASSERT(should_skip());
-        ASSERT(
+        CHECK(should_skip());
+        CHECK(
             get_activation() == Activation::Linear        //
             || op->get_activation() == Activation::Linear //
         );

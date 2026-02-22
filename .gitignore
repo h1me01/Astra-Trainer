@@ -2,11 +2,5 @@
 .vscode/
 
 build/
-build-debug/
-build-release/
 
 notes.md
-
-makefile
-
-astra-trainer

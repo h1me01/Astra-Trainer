@@ -5,8 +5,6 @@ using namespace model;
 int main() {
     Astra model;
 
-    // model.load_params("/home/h1me/Downloads/model.bin");
-
     model.train("/home/h1me/Documents/Coding/Astra-Data/nn_output");
 
     model.evaluate_positions({

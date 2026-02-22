@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 256;
+constexpr int num_threads = 256;
 
 template <Activation act_type>
 __global__ void select_bwd_kernel(
@@ -32,20 +32,20 @@ void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices,
     auto& out_d = out.get_data();
     auto& out_g = out.get_grads();
 
-    ASSERT(in_g.cols() == out_g.cols() && out_g.cols() == indices.size());
+    CHECK(in_g.cols() == out_g.cols() && out_g.cols() == indices.size());
 
-    ASSERT(
+    CHECK(
         in_g.is_dev_allocated() &&  //
         out_d.is_dev_allocated() && //
         out_g.is_dev_allocated()    //
         && indices.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(out_g.size(), block_size);
+    const int blocks = cuda::ceil_div(out_g.size(), num_threads);
     DISPATCH_ACTIVATION(
         act_type,
         select_bwd_kernel,
-        <<<blocks, block_size>>>(
+        <<<blocks, num_threads>>>(
             in_g.dev_address(),
             out_d.dev_address(),
             out_g.dev_address(),

@@ -34,16 +34,7 @@ class OpHandle {
     OpHandle sqr_clipped_relu() { return set_activation<Activation::SqrClippedReLU>(); }
     OpHandle sigmoid() { return set_activation<Activation::Sigmoid>(); }
     OpHandle select(SelectIndices indices) { return OpHandle(std::make_shared<nn::Select>(op, indices)); }
-
-    OpHandle pairwise_mul() {
-        if (auto sparse_aff = dpc<nn::SparseAffine>(op)) {
-            if (!sparse_aff->is_pairwise_fused()) {
-                sparse_aff->set_pairwise_fused();
-                return OpHandle(sparse_aff);
-            }
-        }
-        return OpHandle(std::make_shared<nn::PairwiseMul>(op));
-    }
+    OpHandle pairwise_mul() { return OpHandle(std::make_shared<nn::PairwiseMul>(op)); }
 
     operator Operation() const { return op; }
 
@@ -61,9 +52,6 @@ class OpHandle {
             // for fused concats we separate the activation
             if (auto concat = dpc<nn::Concat>(op))
                 needs_separate = concat->should_skip();
-            // for sparse affine with pairwise fusion we seperate the activation
-            else if (auto sparse = dpc<nn::SparseAffine>(op))
-                needs_separate = sparse->is_pairwise_fused();
         }
 
         if (needs_separate)
@@ -134,7 +122,6 @@ inline SelectIndices select_indices(int count, Fn&& fn) {
 
 inline OpHandle concat(std::vector<Operation> inputs) {
     auto output = OpHandle(std::make_shared<nn::Concat>(inputs));
-
     for (const auto& input : inputs)
         if (input->get_name() != "sparse_affine" && input->get_name() != "pairwise_mul")
             return output;
@@ -150,7 +137,7 @@ inline OpHandle concat(std::vector<Operation> inputs) {
         else if (auto op = dpc<nn::PairwiseMul>(input))
             op->set_concat(concat_op);
         else
-            ASSERT(false);
+            CHECK(false);
     }
 
     return output;
@@ -207,11 +194,11 @@ class OptimHandle {
 };
 
 inline OptimHandle adam(float beta1, float beta2) {
-    return OptimHandle(std::make_shared<nn::Adam>(beta1, beta2));
+    return OptimHandle(std::make_shared<nn::optim::Adam>(beta1, beta2));
 }
 
 inline OptimHandle adamw(float beta1, float beta2, float decay) {
-    return OptimHandle(std::make_shared<nn::Adam>(beta1, beta2, decay));
+    return OptimHandle(std::make_shared<nn::optim::Adam>(beta1, beta2, decay));
 }
 
 } // namespace optim

@@ -3,7 +3,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 256;
+constexpr int num_threads = 256;
 
 template <Activation act_type>
 __global__ void
@@ -22,14 +22,14 @@ concat_fwd_kernel(const float* in_d, float* out_d, const int out_r, const int in
 }
 
 void concat_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int offset, const Activation act_type) {
-    ASSERT(in_d.cols() == out_d.cols());
-    ASSERT(in_d.is_dev_allocated() && out_d.is_dev_allocated());
+    CHECK(in_d.cols() == out_d.cols());
+    CHECK(in_d.is_dev_allocated() && out_d.is_dev_allocated());
 
-    const int blocks = get_num_blocks(in_d.size(), block_size);
+    const int blocks = cuda::ceil_div(in_d.size(), num_threads);
     DISPATCH_ACTIVATION(
         act_type,
         concat_fwd_kernel,
-        <<<blocks, block_size>>>(
+        <<<blocks, num_threads>>>(
             in_d.dev_address(), out_d.dev_address() + offset, out_d.rows(), in_d.rows(), out_d.cols()
         )
     );

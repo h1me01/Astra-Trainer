@@ -42,12 +42,12 @@ class DenseMatrix {
     float* dev_address() const { return data.dev_address(); }
 
     float operator()(int r, int c) const {
-        ASSERT(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
+        CHECK(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
         return data.get(m_rows * c + r);
     }
 
     float& operator()(int r, int c) {
-        ASSERT(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
+        CHECK(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
         return data.get(m_rows * c + r);
     }
 

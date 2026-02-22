@@ -36,7 +36,7 @@ class PairwiseMul : public Operation {
     }
 
     void set_concat(SPtr<Concat> concat) {
-        ASSERT(concat);
+        CHECK(concat);
         this->concat = concat;
         out_offset = concat->fuse(shared_from_this());
     }

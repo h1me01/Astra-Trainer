@@ -4,24 +4,13 @@
 
 namespace model {
 
-constexpr std::array<int, 64> input_bucket = {
-    0, 1, 2, 3, 3, 2, 1, 0, //
-    4, 5, 6, 7, 7, 6, 5, 4, //
-    8, 8, 8, 8, 8, 8, 8, 8, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-};
+struct Test : Model {
+    Test() {
+        name = "test_model";
 
-struct Astra : Model {
-    Astra() {
-        name = "astra_model";
-
-        config.epochs = 100;
-        config.batch_size = 16384;
-        config.batches_per_epoch = 6104;
+        config.epochs = 3;
+        config.batch_size = 64;
+        config.batches_per_epoch = 512;
         config.save_rate = 20;
         config.thread_count = 2;
         config.eval_div = 400.0;
@@ -38,7 +27,7 @@ struct Astra : Model {
             ksq.flipVertically();
         }
 
-        return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6 + input_bucket[int(ksq)] * 768;
+        return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6;
     }
 
     bool filter_entry(const TrainingDataEntry& e) override {
@@ -63,39 +52,17 @@ struct Astra : Model {
     Operation build(const Input stm_in, const Input nstm_in) {
         using namespace op;
 
-        const int bucket_count = 8;
-
-        const int l1_size = 1024;
-
         // create layers
-        auto ft = sparse_affine(num_buckets(input_bucket) * 768, l1_size).factorized();
-        auto l1 = affine(l1_size, 16 * bucket_count);
-        auto l2 = affine(16, 32 * bucket_count);
-        auto l3 = affine(32, bucket_count);
-
-        auto bucket_index = select_indices(bucket_count, [&](const Position& pos) { //
-            return (pos.pieceCount() - 2) / 4;
-        });
-
-        // save format
-        ft.weights_format().type(save_format::int16).scale(255);
-        ft.biases_format().type(save_format::int16).scale(255);
-
-        l1.weights_format().type(save_format::int8).scale(64).transpose();
-        l2.weights_format().transpose();
-        l3.weights_format().transpose();
+        auto ft = sparse_affine(768, 16);
+        auto l1 = affine(2 * 16, 1);
 
         // build network
-        auto ft_stm = ft(stm_in).clipped_relu().pairwise_mul();
-        auto ft_nstm = ft(nstm_in).clipped_relu().pairwise_mul();
+        auto ft_stm = ft(stm_in).sqr_clipped_relu();
+        auto ft_nstm = ft(nstm_in).sqr_clipped_relu();
 
         auto cat_ft = concat({ft_stm, ft_nstm});
 
-        auto l1_out = l1(cat_ft).select(bucket_index).clipped_relu();
-        auto l2_out = l2(l1_out).select(bucket_index).clipped_relu();
-        auto l3_out = l3(l2_out).select(bucket_index);
-
-        return l3_out;
+        return l1(cat_ft);
     }
 
     Loss get_loss() override { return loss::mse(Activation::Sigmoid); }

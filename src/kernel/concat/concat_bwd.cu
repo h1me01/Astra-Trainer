@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 256;
+constexpr int num_threads = 256;
 
 template <Activation act_type>
 __global__ void concat_bwd_kernel(
@@ -25,14 +25,14 @@ void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Ac
     auto& out_g = out.get_grads();
     auto& out_d = out.get_data();
 
-    ASSERT(in_g.cols() == out_g.cols());
-    ASSERT(in_g.is_dev_allocated() && out_d.is_dev_allocated() && out_g.is_dev_allocated());
+    CHECK(in_g.cols() == out_g.cols());
+    CHECK(in_g.is_dev_allocated() && out_d.is_dev_allocated() && out_g.is_dev_allocated());
 
-    const int blocks = get_num_blocks(in_g.size(), block_size);
+    const int blocks = cuda::ceil_div(in_g.size(), num_threads);
     DISPATCH_ACTIVATION(
         act_type,
         concat_bwd_kernel,
-        <<<blocks, block_size>>>(
+        <<<blocks, num_threads>>>(
             out_d.dev_address() + offset,
             out_g.dev_address() + offset,
             in_g.dev_address(),

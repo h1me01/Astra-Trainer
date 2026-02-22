@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 256;
+constexpr int num_threads = 256;
 
 template <Activation act_type>
 __global__ void pairwise_mul_bwd_kernel(
@@ -40,24 +40,24 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
 
     const int feature_size = in_d.rows() / 2;
 
-    ASSERT(
+    CHECK(
         in_d.rows() % 2 == 0 &&        //
         in_d.cols() == out_g.cols() && //
         out_g.rows() >= out_offset + feature_size
     );
 
-    ASSERT(
+    CHECK(
         in_d.is_dev_allocated() &&  //
         in_g.is_dev_allocated() &&  //
         out_g.is_dev_allocated() && //
         out_d.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(feature_size * in_d.cols(), block_size);
+    const int blocks = cuda::ceil_div(feature_size * in_d.cols(), num_threads);
     DISPATCH_ACTIVATION(
         act_type,
         pairwise_mul_bwd_kernel,
-        <<<blocks, block_size>>>(
+        <<<blocks, num_threads>>>(
             in_d.dev_address(),
             in_g.dev_address(),
             out_d.dev_address() + out_offset,

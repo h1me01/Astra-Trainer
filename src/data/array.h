@@ -11,7 +11,7 @@ class CudaDevicePtr {
 
     explicit CudaDevicePtr(size_t count) {
         if (count > 0)
-            CUDA_ASSERT(cudaMalloc(&ptr, count * sizeof(T)));
+            CUDA_CHECK(cudaMalloc(&ptr, count * sizeof(T)));
     }
 
     ~CudaDevicePtr() {
@@ -53,7 +53,7 @@ class CudaHostPtr {
 
     explicit CudaHostPtr(size_t count) {
         if (count > 0)
-            CUDA_ASSERT(cudaMallocHost(&ptr, count * sizeof(T)));
+            CUDA_CHECK(cudaMallocHost(&ptr, count * sizeof(T)));
     }
 
     ~CudaHostPtr() {
@@ -121,7 +121,7 @@ class Array {
 
         if (other.dev_data) {
             dev_data = CudaDevicePtr<T>(m_size);
-            CUDA_ASSERT(cudaMemcpy(dev_data.get(), other.dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToDevice));
+            CUDA_CHECK(cudaMemcpy(dev_data.get(), other.dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToDevice));
         }
     }
 
@@ -171,14 +171,14 @@ class Array {
 
     void clear_dev() {
         if (dev_data)
-            CUDA_ASSERT(cudaMemsetAsync(dev_data.get(), 0, sizeof(T) * m_size, 0));
+            CUDA_CHECK(cudaMemsetAsync(dev_data.get(), 0, sizeof(T) * m_size, 0));
     }
 
     void host_to_dev() {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        CUDA_ASSERT(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
     }
 
     void host_to_dev_async(cudaStream_t stream = 0) {
@@ -186,9 +186,9 @@ class Array {
             return;
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
         if (use_pinned) {
-            CUDA_ASSERT(cudaMemcpyAsync(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice, stream));
+            CUDA_CHECK(cudaMemcpyAsync(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice, stream));
         } else {
-            CUDA_ASSERT(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
         }
     }
 
@@ -196,19 +196,19 @@ class Array {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        CUDA_ASSERT(cudaMemcpy(h_ptr, dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToHost));
     }
 
     T get(int idx) const {
-        ASSERT(is_host_allocated());
-        ASSERT(idx >= 0 && idx < m_size);
+        CHECK(is_host_allocated());
+        CHECK(idx >= 0 && idx < m_size);
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
         return h_ptr[idx];
     }
 
     T& get(int idx) {
-        ASSERT(is_host_allocated());
-        ASSERT(idx >= 0 && idx < m_size);
+        CHECK(is_host_allocated());
+        CHECK(idx >= 0 && idx < m_size);
         T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
         return h_ptr[idx];
     }

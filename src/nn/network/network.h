@@ -1,14 +1,15 @@
 #pragma once
 
+#include <functional>
+#include <queue>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "../ops/include.h"
-#include "../optimizer/optimizer.h"
 
 namespace nn {
 
 using namespace op;
-using namespace optim;
 
 class Network {
   public:
@@ -18,18 +19,48 @@ class Network {
     void set_output(SPtr<Operation> op) {
         if (!op)
             error("Output operation cannot be null!");
-
         operations.clear();
-        operations.push_back(op);
-        init_operations(op->get_inputs());
+
+        std::unordered_map<Operation*, SPtr<Operation>> all_ops;
+        std::unordered_map<Operation*, int> in_degree;
+
+        std::function<void(SPtr<Operation>)> collect = [&](SPtr<Operation> node) {
+            if (all_ops.count(node.get()))
+                return;
+            all_ops[node.get()] = node;
+            in_degree[node.get()] = node->get_inputs().size();
+            for (auto& input : node->get_inputs())
+                collect(input);
+        };
+        collect(op);
+
+        std::unordered_map<Operation*, std::vector<Operation*>> dependents;
+        for (auto& [ptr, node] : all_ops)
+            for (auto& input : node->get_inputs())
+                dependents[input.get()].push_back(ptr);
+
+        std::queue<Operation*> ready;
+        for (auto& [ptr, degree] : in_degree)
+            if (degree == 0)
+                ready.push(ptr);
+
+        while (!ready.empty()) {
+            auto* node = ready.front();
+            ready.pop();
+            operations.push_back(all_ops[node]);
+            for (auto* dependent : dependents[node]) {
+                if (--in_degree[dependent] == 0)
+                    ready.push(dependent);
+            }
+        }
+
+        if (operations.size() != all_ops.size())
+            error("Cycle detected in the network!");
     }
 
     void init(int batch_size) {
         if (operations.size() == 0)
             error("Network has no operations!");
-
-        // set output will initialize operations in reverse order, so reverse it
-        std::reverse(operations.begin(), operations.end());
 
         std::unordered_set<SelectIndices*> seen;
         for (auto& op : operations) {
@@ -45,17 +76,11 @@ class Network {
             indices->init(batch_size);
     }
 
-    void clear_all_grads(Optimizer* optim) {
+    void forward(const std::vector<TrainingDataEntry>& data_entries) {
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->clear_grads();
-        if (optim)
-            optim->clear_grads();
-    }
-
-    void forward(const std::vector<TrainingDataEntry>& data_entries) {
         for (auto& indices : select_indices)
             indices->step(data_entries);
-
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->forward();
     }
@@ -84,16 +109,6 @@ class Network {
   private:
     std::vector<SPtr<SelectIndices>> select_indices;
     std::vector<SPtr<Operation>> operations;
-
-    void init_operations(const std::vector<SPtr<Operation>>& ops) {
-        if (ops.empty())
-            return;
-
-        for (const auto& l : ops) {
-            operations.push_back(l);
-            init_operations(l->get_inputs());
-        }
-    }
 };
 
 } // namespace nn

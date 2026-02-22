@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 256;
+constexpr int num_threads = 256;
 
 template <Activation act_type>
 __global__ void select_fwd_kernel(
@@ -25,20 +25,20 @@ __global__ void select_fwd_kernel(
 }
 
 void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& indices, const Activation act_type) {
-    ASSERT(in_d.cols() == out_d.cols());
-    ASSERT(out_d.cols() == indices.size());
+    CHECK(in_d.cols() == out_d.cols());
+    CHECK(out_d.cols() == indices.size());
 
-    ASSERT(
+    CHECK(
         in_d.is_dev_allocated() &&  //
         out_d.is_dev_allocated() && //
         indices.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(out_d.size(), block_size);
+    const int blocks = cuda::ceil_div(out_d.size(), num_threads);
     DISPATCH_ACTIVATION(
         act_type,
         select_fwd_kernel,
-        <<<blocks, block_size>>>(
+        <<<blocks, num_threads>>>(
             in_d.dev_address(), out_d.dev_address(), indices.dev_address(), in_d.rows(), out_d.rows(), out_d.cols()
         )
     );

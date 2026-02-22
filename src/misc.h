@@ -20,27 +20,31 @@
 using namespace std::filesystem;
 
 #ifdef NDEBUG
-#define ASSERT(expr) ((void)0)
+#define CHECK(expr) ((void)0)
 #else
-#define ASSERT(expr)                                                                                                   \
-    {                                                                                                                  \
+#define CHECK(expr)                                                                                                    \
+    do {                                                                                                               \
         if (!static_cast<bool>(expr)) {                                                                                \
-            printf("ASSERT: %s\n", #expr);                                                                             \
+            printf("CHECK failed: %s\n", #expr);                                                                       \
             printf("    file: %s\n", __FILE__);                                                                        \
             printf("    line: %d\n", __LINE__);                                                                        \
             printf("    func: %s\n", __FUNCTION__);                                                                    \
             std::exit(1);                                                                                              \
         }                                                                                                              \
-    }
+    } while (0)
 #endif
 
-#define CUDA_ASSERT(ans)                                                                                               \
-    {                                                                                                                  \
-        if (ans != cudaSuccess) {                                                                                      \
-            fprintf(stderr, "CUDA_ASSERT: %s %s %d\n", cudaGetErrorString(ans), __FILE__, __LINE__);                   \
-            exit(ans);                                                                                                 \
+#define CUDA_CHECK(expr_to_check)                                                                                      \
+    do {                                                                                                               \
+        cudaError_t result = (expr_to_check);                                                                          \
+        if (result != cudaSuccess) {                                                                                   \
+            printf("CUDA_CHECK: %s\n", #expr_to_check);                                                                \
+            printf("    file: %s\n", __FILE__);                                                                        \
+            printf("    line: %d\n", __LINE__);                                                                        \
+            printf("    error: %s\n", cudaGetErrorString(result));                                                     \
+            std::exit(1);                                                                                              \
         }                                                                                                              \
-    }
+    } while (0)
 
 template <typename T>
 using SPtr = std::shared_ptr<T>;
@@ -63,7 +67,7 @@ inline std::string format_number(float num, int precision = 6) {
 }
 
 inline void error(const std::string& message) {
-    std::cerr << "Error: " << message << std::endl;
+    std::cerr << "Error | " << message << std::endl;
     std::abort();
 }
 

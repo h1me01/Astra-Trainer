@@ -22,8 +22,8 @@ cd Astra-Trainer
 
 ### Build Release
 ```bash
-cmake -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release --parallel
-./build-release/astra-trainer
+cmake -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release -j$(nproc)
+./build/release/astra_trainer
 ```
 

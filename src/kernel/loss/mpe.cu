@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 1024;
+constexpr int num_threads = 1024;
 
 template <Activation act_type>
 __global__ void
@@ -26,18 +26,18 @@ void mpe_loss(
     const auto& out_d = out.get_data();
     auto& out_g = out.get_grads();
 
-    ASSERT(
+    CHECK(
         out_d.is_dev_allocated() &&   //
         out_g.is_dev_allocated() &&   //
         targets.is_dev_allocated() && //
         loss.is_dev_allocated()
     );
 
-    const int blocks = get_num_blocks(out_d.size(), block_size);
+    const int blocks = cuda::ceil_div(out_d.size(), num_threads);
     DISPATCH_ACTIVATION(
         act_type,
         mpe_kernel,
-        <<<blocks, block_size>>>(
+        <<<blocks, num_threads>>>(
             targets.dev_address(), out_d.dev_address(), out_g.dev_address(), loss.dev_address(), power, out_d.size()
         )
     );

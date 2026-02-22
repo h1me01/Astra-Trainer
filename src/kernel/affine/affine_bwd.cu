@@ -5,7 +5,7 @@ namespace kernel {
 constexpr float alpha = 1.0f;
 constexpr float beta = 1.0f;
 
-constexpr int block_size = 256;
+constexpr int num_threads = 256;
 
 template <Activation act_type>
 __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int size) {
@@ -31,18 +31,15 @@ __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int 
     }
 }
 
-__global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int batch_size, const int size) {
-    __shared__ float shared[block_size];
+__global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int r, const int c) {
+    __shared__ float shared[num_threads];
 
     const int neuron_idx = blockIdx.x;
     const int tid = threadIdx.x;
 
-    if (neuron_idx >= size)
-        return;
-
     float sum = 0.0f;
-    for (int b = tid; b < batch_size; b += blockDim.x)
-        sum += out_g[b * size + neuron_idx];
+    for (int b = tid; b < c; b += blockDim.x)
+        sum += out_g[neuron_idx * c + b];
 
     shared[tid] = sum;
     __syncthreads();
@@ -69,7 +66,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
 
     auto& biases_g = biases.get_grads();
 
-    ASSERT(
+    CHECK(
         biases_g.cols() == 1 &&             //
         out_g.rows() == biases_g.rows() &&  //
         in_g.cols() == out_g.cols() &&      //
@@ -77,7 +74,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
         weights_g.cols() == in_g.rows()
     );
 
-    ASSERT(
+    CHECK(
         weights_d.is_dev_allocated() && //
         weights_g.is_dev_allocated() && //
         biases_g.is_dev_allocated() &&  //
@@ -88,18 +85,18 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
 
     // update gradients if activation was used
     if (act_type != Activation::Linear) {
-        const int blocks = get_num_blocks(out_g.size(), 4 * block_size);
+        const int blocks = cuda::ceil_div(out_g.size(), 4 * num_threads);
         DISPATCH_ACTIVATION(
             act_type,
             activate_bwd_kernel,
-            <<<blocks, block_size>>>(out_d.dev_address(), out_g.dev_address(), out_g.size())
+            <<<blocks, num_threads>>>(out_d.dev_address(), out_g.dev_address(), out_g.size())
         );
     }
 
     // update biases gradients
     {
-        const int blocks = get_num_blocks(out_g.rows(), block_size);
-        biases_bwd_kernel<<<blocks, block_size>>>(
+        const int blocks = cuda::ceil_div(out_g.rows(), num_threads);
+        biases_bwd_kernel<<<blocks, num_threads>>>(
             biases_g.dev_address(), out_g.dev_address(), out_g.cols(), out_g.rows()
         );
     }

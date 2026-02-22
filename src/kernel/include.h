@@ -9,4 +9,3 @@
 #include "pairwise_mul/pairwise_mul.h"
 #include "select/select.h"
 #include "sparse_affine/sparse_affine.h"
-#include "sparse_affine_pairwise_mul/sparse_affine_pairwise_mul.h"

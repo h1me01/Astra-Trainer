@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int block_size = 1024;
+constexpr int num_threads = 1024;
 
 template <Activation type>
 __global__ void activation_bwd_kernel(const float* in_d, float* in_g, const float* out_g, const int size) {
@@ -33,14 +33,14 @@ void activation_bwd(Tensor& in, const DenseMatrix& out_g, const Activation type)
     const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 
-    ASSERT(in_d.size() == out_g.size());
-    ASSERT(in_d.is_dev_allocated() && out_g.is_dev_allocated());
+    CHECK(in_d.size() == out_g.size());
+    CHECK(in_d.is_dev_allocated() && out_g.is_dev_allocated());
 
-    const int blocks = get_num_blocks(in_d.size(), block_size);
+    const int blocks = cuda::ceil_div(in_d.size(), num_threads);
     DISPATCH_ACTIVATION(
         type,
         activation_bwd_kernel,
-        <<<blocks, block_size>>>(in_d.dev_address(), in_g.dev_address(), out_g.dev_address(), in_d.size())
+        <<<blocks, num_threads>>>(in_d.dev_address(), in_g.dev_address(), out_g.dev_address(), in_d.size())
     );
 }
 
