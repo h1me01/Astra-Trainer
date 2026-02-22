@@ -32,26 +32,13 @@ __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int 
 }
 
 __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int r, const int c) {
-    __shared__ float shared[num_threads];
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= r * c)
+        return;
 
-    const int neuron_idx = blockIdx.x;
-    const int tid = threadIdx.x;
-
-    float sum = 0.0f;
-    for (int b = tid; b < c; b += blockDim.x)
-        sum += out_g[neuron_idx * c + b];
-
-    shared[tid] = sum;
-    __syncthreads();
-
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride)
-            shared[tid] += shared[tid + stride];
-        __syncthreads();
-    }
-
-    if (tid == 0)
-        biases_g[neuron_idx] = shared[0];
+    const float grad = out_g[idx];
+    if (grad != 0)
+        atomicAdd(&biases_g[idx % r], grad);
 }
 
 void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const Activation act_type) {

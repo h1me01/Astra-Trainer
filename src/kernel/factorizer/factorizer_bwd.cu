@@ -12,7 +12,6 @@ __global__ void factorizer_fwd_kernel(
     if (vec_idx >= total_size)
         return;
 
-    // Map output position back to factorizer position (it tiles/repeats)
     const int f_idx = idx % (factorizer_size / 4);
 
     if (vec_idx + 4 <= total_size) {
