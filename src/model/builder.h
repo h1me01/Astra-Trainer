@@ -34,7 +34,16 @@ class OpHandle {
     OpHandle sqr_clipped_relu() { return set_activation<Activation::SqrClippedReLU>(); }
     OpHandle sigmoid() { return set_activation<Activation::Sigmoid>(); }
     OpHandle select(SelectIndices indices) { return OpHandle(std::make_shared<nn::Select>(op, indices)); }
-    OpHandle pairwise_mul() { return OpHandle(std::make_shared<nn::PairwiseMul>(op)); }
+
+    OpHandle pairwise_mul() {
+        if (auto sparse_aff = dpc<nn::SparseAffine>(op)) {
+            if (!sparse_aff->is_pairwise_fused()) {
+                sparse_aff->set_pairwise_fused();
+                return OpHandle(sparse_aff);
+            }
+        }
+        return OpHandle(std::make_shared<nn::PairwiseMul>(op));
+    }
 
     operator Operation() const { return op; }
 
@@ -52,6 +61,9 @@ class OpHandle {
             // for fused concats we separate the activation
             if (auto concat = dpc<nn::Concat>(op))
                 needs_separate = concat->should_skip();
+            // for sparse affine with pairwise fusion we seperate the activation
+            else if (auto sparse = dpc<nn::SparseAffine>(op))
+                needs_separate = sparse->is_pairwise_fused();
         }
 
         if (needs_separate)

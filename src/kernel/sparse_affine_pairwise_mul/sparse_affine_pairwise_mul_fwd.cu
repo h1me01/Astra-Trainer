@@ -1,16 +1,17 @@
-#include "sparse_affine.h"
+#include "sparse_affine_pairwise_mul.h"
 
 namespace kernel {
 
 constexpr int num_threads = 256;
 
 template <Activation act_type>
-__global__ void sparse_affine_fwd_vec_kernel(
+__global__ void sparse_affine_pairwise_mul_fwd_vec_kernel(
     const float* weights_d,
     const float* biases_d,
     const int* indices,
     float* out_d,
-    const int weights_r,
+    const int weights_r4,
+    const int out_r4,
     const int batch_size,
     const int max_entries
 ) {
@@ -18,9 +19,10 @@ __global__ void sparse_affine_fwd_vec_kernel(
 
     const int row4 = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.y;
-    const int weights_r4 = weights_r / 4;
 
-    if (row4 >= weights_r4 || batch_idx >= batch_size)
+    const int half4 = weights_r4 / 2;
+
+    if (row4 >= half4 || batch_idx >= batch_size)
         return;
 
     const int* sample_indices = indices + batch_idx * max_entries;
@@ -28,49 +30,72 @@ __global__ void sparse_affine_fwd_vec_kernel(
         shared_indices[i] = sample_indices[i];
     __syncthreads();
 
-    float4 val = as_vec<const float4>(biases_d)[row4];
+    const float4* w4 = as_vec<const float4>(weights_d);
+    const float4* b4 = as_vec<const float4>(biases_d);
+
+    float4 sum_a = b4[row4];
+    float4 sum_b = b4[row4 + half4];
 
     for (int i = 0; i < max_entries; i++) {
-        const int feat = shared_indices[i];
-        if (feat == -1)
+        const int f_idx = shared_indices[i];
+        if (f_idx == -1)
             break;
-        const float4 w = as_vec<const float4>(weights_d)[feat * weights_r4 + row4];
-        add_t4(val, w);
+
+        const int base = f_idx * weights_r4 + row4;
+        add_t4(sum_a, w4[base]);
+        add_t4(sum_b, w4[base + half4]);
     }
 
-    as_vec<float4>(out_d)[weights_r4 * batch_idx + row4] = activate_fwd_f4<act_type>(val);
+    activate_fwd_f4<act_type>(sum_a);
+    activate_fwd_f4<act_type>(sum_b);
+
+    float4 r;
+    r.x = sum_a.x * sum_b.x;
+    r.y = sum_a.y * sum_b.y;
+    r.z = sum_a.z * sum_b.z;
+    r.w = sum_a.w * sum_b.w;
+
+    as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = r;
 }
 
 template <Activation act_type>
-__global__ void sparse_affine_fwd_kernel(
+__global__ void sparse_affine_pairwise_mul_fwd_kernel(
     const float* weights_d,
     const float* biases_d,
     const int* indices,
     float* out_d,
     const int weights_r,
+    const int out_r,
     const int batch_size,
     const int max_entries
 ) {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.y;
 
-    if (row >= weights_r || batch_idx >= batch_size)
+    const int half = weights_r / 2;
+
+    if (row >= half || batch_idx >= batch_size)
         return;
 
     const int* sample_indices = indices + batch_idx * max_entries;
 
-    float sum = biases_d[row];
+    float sum_a = biases_d[row];
+    float sum_b = biases_d[row + half];
+
     for (int i = 0; i < max_entries; i++) {
         const int f_idx = sample_indices[i];
         if (f_idx == -1)
             break;
-        sum += weights_d[f_idx * weights_r + row];
+
+        const int base = f_idx * weights_r + row;
+        sum_a += weights_d[base];
+        sum_b += weights_d[base + half];
     }
 
-    out_d[weights_r * batch_idx + row] = activate_fwd<act_type>(sum);
+    out_d[out_r * batch_idx + row] = activate_fwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
 }
 
-void sparse_affine_fwd(
+void sparse_affine_pairwise_mul_fwd(
     const DenseMatrix& weights_d,
     const DenseMatrix& biases_d,
     DenseMatrix& out_d,
@@ -82,16 +107,16 @@ void sparse_affine_fwd(
     CHECK(
         weights_d.is_dev_allocated() && //
         biases_d.is_dev_allocated() &&  //
-        out_d.is_dev_allocated() &&   //
+        out_d.is_dev_allocated() &&     //
         indices.is_dev_allocated()
     );
 
     const int weights_r = weights_d.rows();
     const int batch_size = out_d.cols();
-    CHECK(batch_size <= 65535 && weights_r + out_offset <= out_d.rows());
+    CHECK(batch_size <= 65535 && weights_r + out_offset <= 2 * out_d.rows());
 
-    const bool use_vec = (weights_r % 4 == 0);
-    const int effective_rows = use_vec ? weights_r / 4 : weights_r;
+    const bool use_vec = (weights_r % 8 == 0);
+    const int effective_rows = use_vec ? weights_r / 4 / 2 : weights_r / 2;
     const int threads = min(effective_rows, num_threads);
     const int row_blocks = cuda::ceil_div(effective_rows, threads);
 
@@ -102,13 +127,14 @@ void sparse_affine_fwd(
 
         DISPATCH_ACTIVATION(
             act_type,
-            sparse_affine_fwd_vec_kernel,
+            sparse_affine_pairwise_mul_fwd_vec_kernel,
             <<<grid, dim3(threads), shared_mem_size>>>(
                 weights_d.dev_address(),
                 biases_d.dev_address(),
                 indices.dev_address(),
                 out_d.dev_address() + out_offset,
-                weights_r,
+                weights_r / 4,
+                out_d.rows() / 4,
                 batch_size,
                 max_entries
             )
@@ -116,13 +142,14 @@ void sparse_affine_fwd(
     } else {
         DISPATCH_ACTIVATION(
             act_type,
-            sparse_affine_fwd_kernel,
+            sparse_affine_pairwise_mul_fwd_kernel,
             <<<grid, dim3(threads)>>>(
                 weights_d.dev_address(),
                 biases_d.dev_address(),
                 indices.dev_address(),
                 out_d.dev_address() + out_offset,
                 weights_r,
+                out_d.rows(),
                 batch_size,
                 max_entries
             )
