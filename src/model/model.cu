@@ -67,6 +67,7 @@ void Model::print_info(int epoch, const std::string& output_path) const {
 
     std::cout << "\n=============================== Trainer Info ===============================\n\n";
     std::cout << "Model name:        " << name << std::endl;
+    std::cout << "Device:            " << get_device_Info() << std::endl;
     std::cout << "Epochs:            " << config.epochs << std::endl;
     std::cout << "Batch Size:        " << config.batch_size << std::endl;
     std::cout << "Batches/Epoch:     " << config.batches_per_epoch << std::endl;

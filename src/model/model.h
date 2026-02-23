@@ -75,6 +75,8 @@ class Model {
         }
     }
 
+    void set_device(int id) { CUDA_CHECK(cudaSetDevice(id)); }
+
   protected:
     std::string name = "Model";
     TrainingConfig config;
@@ -174,6 +176,16 @@ class Model {
             fclose(f);
             throw;
         }
+    }
+
+    std::string get_device_Info() const {
+        int device;
+        cudaGetDevice(&device);
+
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, device);
+
+        return "device " + std::to_string(device) + " (" + std::string(prop.name) + ")";
     }
 };
 
