@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 1024;
 
-template <Activation type>
+template <ActivationType type>
 __global__ void activation_bwd_kernel(const float* in_d, float* in_g, const float* out_g, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
@@ -29,7 +29,7 @@ __global__ void activation_bwd_kernel(const float* in_d, float* in_g, const floa
     }
 }
 
-void activation_bwd(Tensor& in, const DenseMatrix& out_g, const Activation type) {
+void activation_bwd(Tensor& in, const DenseMatrix& out_g, const ActivationType type) {
     const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 

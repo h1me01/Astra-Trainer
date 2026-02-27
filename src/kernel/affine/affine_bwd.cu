@@ -7,7 +7,7 @@ constexpr float beta = 1.0f;
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void activate_bwd_kernel(const float* out_d, float* out_g, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
@@ -41,7 +41,7 @@ __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int
         atomicAdd(&biases_g[idx % r], grad);
 }
 
-void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const Activation act_type) {
+void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const ActivationType act_type) {
     const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 
@@ -71,7 +71,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
     );
 
     // update gradients if activation was used
-    if (act_type != Activation::Linear) {
+    if (act_type != ActivationType::Linear) {
         const int blocks = cuda::ceil_div(out_g.size(), 4 * num_threads);
         DISPATCH_ACTIVATION(
             act_type,
@@ -84,7 +84,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
     {
         const int blocks = cuda::ceil_div(out_g.rows(), num_threads);
         biases_bwd_kernel<<<blocks, num_threads>>>(
-            biases_g.dev_address(), out_g.dev_address(), out_g.cols(), out_g.rows()
+            biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols()
         );
     }
 

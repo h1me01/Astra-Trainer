@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void sparse_affine_fwd_vec_kernel(
     const float* weights_d,
     const float* biases_d,
@@ -41,7 +41,7 @@ __global__ void sparse_affine_fwd_vec_kernel(
     as_vec<float4>(out_d)[weights_r4 * batch_idx + row4] = activate_fwd_f4<act_type>(val);
 }
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void sparse_affine_fwd_kernel(
     const float* weights_d,
     const float* biases_d,
@@ -77,12 +77,12 @@ void sparse_affine_fwd(
     const Array<int>& indices,
     const int max_entries,
     const int out_offset,
-    const Activation act_type
+    const ActivationType act_type
 ) {
     CHECK(
         weights_d.is_dev_allocated() && //
         biases_d.is_dev_allocated() &&  //
-        out_d.is_dev_allocated() &&   //
+        out_d.is_dev_allocated() &&     //
         indices.is_dev_allocated()
     );
 

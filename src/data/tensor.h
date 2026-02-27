@@ -48,7 +48,7 @@ class Tensor {
 
     void clamp(float min_val, float max_val) {
         if (min_val > max_val)
-            error("Min in Tensor cannot be greater than max!");
+            error("Tensor: Min in Tensor cannot be greater than max!");
         m_lower_bound = min_val;
         m_upper_bound = max_val;
     }

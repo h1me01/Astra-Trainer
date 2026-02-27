@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void concat_bwd_kernel(
     const float* out_d, const float* out_g, float* in_g, const int in_r, const int out_r, const int batch_size
 ) {
@@ -21,7 +21,7 @@ __global__ void concat_bwd_kernel(
     in_g[in_idx] += out_g[out_idx] * activate_bwd<act_type, true>(out_d[out_idx]);
 }
 
-void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Activation act_type) {
+void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const ActivationType act_type) {
     auto& out_g = out.get_grads();
     auto& out_d = out.get_data();
 

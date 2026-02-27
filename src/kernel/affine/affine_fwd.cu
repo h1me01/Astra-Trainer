@@ -7,7 +7,7 @@ constexpr float beta = 0.0f;
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void biases_fwd_kernel(const float* biases_d, float* out_d, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= r * c)
@@ -20,7 +20,7 @@ void affine_fwd(
     DenseMatrix& biases_d,
     const DenseMatrix& inputs_d,
     DenseMatrix& out_d,
-    const Activation act_type
+    const ActivationType act_type
 ) {
     CHECK(
         biases_d.cols() == 1 &&             //

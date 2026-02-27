@@ -4,6 +4,9 @@
 
 namespace model {
 
+namespace ng = nn::graph;
+namespace np = nn::param;
+
 namespace save_format {
 
 using Type = nn::SaveFormat::Type;
@@ -14,70 +17,36 @@ constexpr auto float32 = Type::float32;
 
 } // namespace save_format
 
-namespace param {
-
-inline SPtr<nn::Param> create(int input_dim, int output_dim) {
-    return std::make_shared<nn::Param>(input_dim, output_dim);
-}
-
-} // namespace param
-
-namespace op {
-
-class OpHandle {
+class NodeHandle {
   public:
-    OpHandle(Operation op)
-        : op(op) {}
+    NodeHandle(SPtr<ng::Node> node)
+        : node(node) {}
 
-    OpHandle relu() { return set_activation<Activation::ReLU>(); }
-    OpHandle clipped_relu() { return set_activation<Activation::ClippedReLU>(); }
-    OpHandle sqr_clipped_relu() { return set_activation<Activation::SqrClippedReLU>(); }
-    OpHandle sigmoid() { return set_activation<Activation::Sigmoid>(); }
-    OpHandle select(SelectIndices indices) { return OpHandle(std::make_shared<nn::Select>(op, indices)); }
+    NodeHandle relu() { return make_activation(ng::OpType::ReLU); }
+    NodeHandle clipped_relu() { return make_activation(ng::OpType::ClippedReLU); }
+    NodeHandle sqr_clipped_relu() { return make_activation(ng::OpType::SqrClippedReLU); }
+    NodeHandle sigmoid() { return make_activation(ng::OpType::Sigmoid); }
 
-    OpHandle pairwise_mul() {
-        if (auto sparse_aff = dpc<nn::SparseAffine>(op)) {
-            if (!sparse_aff->is_pairwise_fused()) {
-                sparse_aff->set_pairwise_fused();
-                return OpHandle(sparse_aff);
-            }
-        }
-        return OpHandle(std::make_shared<nn::PairwiseMul>(op));
-    }
+    NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node, indices)); }
 
-    operator Operation() const { return op; }
+    NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node)); }
 
-    Operation get() const { return op; }
+    operator SPtr<ng::Node>() const { return node; }
+
+    SPtr<ng::Node> get() const { return node; }
 
   private:
-    Operation op;
+    SPtr<ng::Node> node;
 
-    template <Activation act_type>
-    OpHandle set_activation() {
-        // if activation already exists, separate
-        bool needs_separate = (op->get_activation() != Activation::Linear);
-
-        if (!needs_separate) {
-            // for fused concats we separate the activation
-            if (auto concat = dpc<nn::Concat>(op))
-                needs_separate = concat->should_skip();
-            // for sparse affine with pairwise fusion we seperate the activation
-            else if (auto sparse = dpc<nn::SparseAffine>(op))
-                needs_separate = sparse->is_pairwise_fused();
-        }
-
-        if (needs_separate)
-            return OpHandle(std::make_shared<nn::Activate>(op, act_type));
-
-        op->set_activation(act_type);
-        return *this;
+    NodeHandle make_activation(ng::OpType op_type) {
+        return NodeHandle(std::make_shared<ng::ActivationNode>(op_type, node));
     }
 };
 
 class SparseAffineBuilder {
   public:
     SparseAffineBuilder(int input_dim, int output_dim)
-        : param(std::make_shared<nn::Param>(input_dim, output_dim)) {}
+        : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
     SparseAffineBuilder& factorized() {
         if (param->get_input_dim() == 768)
@@ -86,38 +55,42 @@ class SparseAffineBuilder {
         return *this;
     }
 
-    OpHandle operator()(Input a) { return OpHandle(std::make_shared<nn::SparseAffine>(param, a)); }
+    NodeHandle operator()(SPtr<ng::InputNode> a) {
+        return NodeHandle(std::make_shared<ng::SparseAffineNode>(param, a));
+    }
 
     Tensor& get_weights() { return param->get_weights(); }
     Tensor& get_biases() { return param->get_biases(); }
 
-    nn::SaveFormat& weights_format() { return param->weights_format(); }
-    nn::SaveFormat& biases_format() { return param->biases_format(); }
-
-    SPtr<nn::Param> get_param() { return param; }
+    np::SaveFormat& weights_format() { return param->weights_format(); }
+    np::SaveFormat& biases_format() { return param->biases_format(); }
 
   private:
-    SPtr<nn::Param> param;
+    SPtr<np::Param> param;
 };
 
 class AffineBuilder {
   public:
     AffineBuilder(int input_dim, int output_dim)
-        : param(std::make_shared<nn::Param>(input_dim, output_dim)) {}
+        : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
-    OpHandle operator()(Operation a) { return OpHandle(std::make_shared<nn::Affine>(param, a)); }
+    NodeHandle operator()(SPtr<ng::Node> a) { return NodeHandle(std::make_shared<ng::AffineNode>(param, a)); }
 
     Tensor& get_weights() { return param->get_weights(); }
     Tensor& get_biases() { return param->get_biases(); }
 
-    nn::SaveFormat& weights_format() { return param->weights_format(); }
-    nn::SaveFormat& biases_format() { return param->biases_format(); }
-
-    SPtr<nn::Param> get_param() { return param; }
+    np::SaveFormat& weights_format() { return param->weights_format(); }
+    np::SaveFormat& biases_format() { return param->biases_format(); }
 
   private:
-    SPtr<nn::Param> param;
+    SPtr<np::Param> param;
 };
+
+namespace graph {
+
+inline SPtr<ng::InputNode> create_input(int size) {
+    return std::make_shared<ng::InputNode>(size);
+}
 
 inline SparseAffineBuilder sparse_affine(int input_dim, int output_dim) {
     return SparseAffineBuilder(input_dim, output_dim);
@@ -132,43 +105,28 @@ inline SelectIndices select_indices(int count, Fn&& fn) {
     return std::make_shared<nn::SelectIndices>(count, std::forward<Fn>(fn));
 }
 
-inline OpHandle concat(std::vector<Operation> inputs) {
-    auto output = OpHandle(std::make_shared<nn::Concat>(inputs));
-    for (const auto& input : inputs)
-        if (input->get_name() != "sparse_affine" && input->get_name() != "pairwise_mul")
-            return output;
-
-    auto concat_op = dpc<nn::Concat>(output.get());
-    concat_op->set_skip();
-
-    // currently only sparse affine and pairwise mul fusion is supported
-    // when needed, adding future fusions should be trivial
-    for (auto& input : inputs) {
-        if (auto op = dpc<nn::SparseAffine>(input))
-            op->set_concat(concat_op);
-        else if (auto op = dpc<nn::PairwiseMul>(input))
-            op->set_concat(concat_op);
-        else
-            CHECK(false);
-    }
-
-    return output;
+inline NodeHandle concat(std::vector<NodeHandle> inputs) {
+    std::vector<SPtr<ng::Node>> nodes;
+    nodes.reserve(inputs.size());
+    for (auto& h : inputs)
+        nodes.push_back(h.get());
+    return NodeHandle(std::make_shared<ng::ConcatNode>(nodes));
 }
 
-} // namespace op
+} // namespace graph
 
 namespace lr_sched {
 
 inline LRScheduler constant(float lr) {
-    return std::make_shared<nn::lr_sched::Constant>(lr);
+    return std::make_unique<nn::lr_sched::Constant>(lr);
 }
 
 inline LRScheduler step_decay(float lr, float gamma, int step_size) {
-    return std::make_shared<nn::lr_sched::StepDecay>(lr, gamma, step_size);
+    return std::make_unique<nn::lr_sched::StepDecay>(lr, gamma, step_size);
 }
 
 inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epochs) {
-    return std::make_shared<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
+    return std::make_unique<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
 }
 
 } // namespace lr_sched
@@ -176,34 +134,32 @@ inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epoc
 namespace wdl_sched {
 
 inline WDLScheduler constant(float val) {
-    return std::make_shared<nn::wdl_sched::Constant>(val);
+    return std::make_unique<nn::wdl_sched::Constant>(val);
 }
 
 inline WDLScheduler linear(float start_val, float final_val, int max_epochs) {
-    return std::make_shared<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
+    return std::make_unique<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
 }
 
 } // namespace wdl_sched
 
-namespace optim {
-
 class OptimHandle {
   public:
-    OptimHandle(Optimizer optim)
-        : optim(optim) {}
+    explicit OptimHandle(Optimizer optim)
+        : optim(std::move(optim)) {}
 
-    OptimHandle clamp(float min, float max) {
+    OptimHandle& clamp(float min, float max) {
         optim->clamp(min, max);
         return *this;
     }
 
-    operator Optimizer() const { return optim; }
-
-    Optimizer get() const { return optim; }
+    Optimizer take() { return std::move(optim); }
 
   private:
     Optimizer optim;
 };
+
+namespace optim {
 
 inline OptimHandle adam(float beta1, float beta2) {
     return OptimHandle(std::make_shared<nn::optim::Adam>(beta1, beta2));
@@ -217,12 +173,12 @@ inline OptimHandle adamw(float beta1, float beta2, float decay) {
 
 namespace loss {
 
-inline Loss mse(Activation act = Activation::Linear) {
-    return std::make_shared<nn::loss::MPE>(2.0, act);
+inline Loss mse(ActivationType act = ActivationType::Linear) {
+    return std::make_unique<nn::loss::MPE>(2.0, act);
 }
 
-inline Loss mpe(float power, Activation act = Activation::Linear) {
-    return std::make_shared<nn::loss::MPE>(power, act);
+inline Loss mpe(float power, ActivationType act = ActivationType::Linear) {
+    return std::make_unique<nn::loss::MPE>(power, act);
 }
 
 } // namespace loss

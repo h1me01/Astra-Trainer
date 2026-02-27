@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void pairwise_mul_bwd_kernel(
     const float* in_d,
     float* in_g,
@@ -31,7 +31,7 @@ __global__ void pairwise_mul_bwd_kernel(
     in_g[in_offset_b] += grad * in_d[in_offset_a];
 }
 
-void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const Activation act_type) {
+void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const ActivationType act_type) {
     const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 

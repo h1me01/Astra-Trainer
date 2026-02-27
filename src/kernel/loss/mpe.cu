@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 1024;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void
 mpe_kernel(const float* targets, const float* out_d, float* out_g, float* loss, const float power, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -21,7 +21,7 @@ mpe_kernel(const float* targets, const float* out_d, float* out_g, float* loss, 
 }
 
 void mpe_loss(
-    const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, const Activation act_type
+    const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, const ActivationType act_type
 ) {
     const auto& out_d = out.get_data();
     auto& out_g = out.get_grads();

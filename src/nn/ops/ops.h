@@ -10,27 +10,6 @@ namespace nn::op {
 
 using namespace param;
 
-class Input {
-  public:
-    Input(int size)
-        : size(size) {
-        if (size <= 0)
-            error("Size of Input operation must be positive!");
-    }
-
-    void init(int batch_size) { output = Array<int>(size * batch_size, true); }
-
-    Array<int>& get_output() { return output; }
-
-    const Array<int>& get_output() const { return output; }
-
-    int get_size() const { return size; }
-
-  private:
-    int size;
-    Array<int> output;
-};
-
 class SelectIndices {
   public:
     template <typename Fn>
@@ -38,7 +17,7 @@ class SelectIndices {
         : num_partitions(num_partitions),
           fn(std::forward<Fn>(fn)) {
         if (num_partitions <= 0)
-            error("Number of partitions in SelectIndices must be positive!");
+            error("SelectIndices: Number of partitions in SelectIndices must be positive!");
     }
 
     void init(int batch_size) { indices = Array<int>(batch_size, true); }
@@ -47,7 +26,7 @@ class SelectIndices {
         for (int i = 0; i < (int)data_entries.size(); i++) {
             int idx = fn(data_entries[i].pos);
             if (idx < 0)
-                error("Index function of Select returned negative index!");
+                error("SelectIndices: Index function of Select returned negative index!");
             indices(i) = idx;
         }
         indices.host_to_dev_async();
@@ -92,15 +71,15 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     std::string get_name() const { return name; }
 
-    void set_activation(Activation act_type) { this->act_type = act_type; }
-    Activation get_activation() const { return act_type; }
+    void set_activation(ActivationType act_type) { this->act_type = act_type; }
+    ActivationType get_activation() const { return act_type; }
 
   protected:
     std::string name = "";
 
     int input_dim = 0;
     int output_dim = 0;
-    Activation act_type = Activation::Linear;
+    ActivationType act_type = ActivationType::Linear;
 
     Tensor output;
 };

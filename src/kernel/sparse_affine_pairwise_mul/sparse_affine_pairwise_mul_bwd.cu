@@ -5,7 +5,7 @@ namespace kernel {
 constexpr int num_threads = 512;
 constexpr dim3 block_size(num_threads, 1);
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     float* weights_g,
     float* biases_g,
@@ -72,7 +72,7 @@ void sparse_affine_pairwise_mul_bwd(
     const Array<int>& features,
     const int max_entries,
     const int out_offset,
-    const Activation act_type
+    const ActivationType act_type
 ) {
     const auto& biases_d = biases.get_data();
     auto& biases_g = biases.get_grads();

@@ -5,7 +5,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void
 concat_fwd_kernel(const float* in_d, float* out_d, const int out_r, const int in_r, const int batch_size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -21,7 +21,7 @@ concat_fwd_kernel(const float* in_d, float* out_d, const int out_r, const int in
     out_d[out_idx] = activate_fwd<act_type>(in_d[in_idx]);
 }
 
-void concat_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int offset, const Activation act_type) {
+void concat_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int offset, const ActivationType act_type) {
     CHECK(in_d.cols() == out_d.cols());
     CHECK(in_d.is_dev_allocated() && out_d.is_dev_allocated());
 

@@ -4,6 +4,20 @@
 
 namespace model {
 
+using namespace graph;
+
+constexpr int MAX_ACTIVE_FEATURES = 32;
+
+constexpr int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
+    // relative squares
+    if (view == Color::Black) {
+        psq.flipVertically();
+        ksq.flipVertically();
+    }
+
+    return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6;
+}
+
 struct Test : Model {
     Test() {
         name = "test_model";
@@ -49,14 +63,54 @@ struct Test : Model {
         return false;
     }
 
-    Operation build(const Input stm_in, const Input nstm_in) {
-        using namespace op;
+    void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
+        auto& stm_features = get_inputs()[0]->get_indices();
+        auto& nstm_features = get_inputs()[1]->get_indices();
 
-        // create layers
+        for (size_t i = 0; i < ds.size(); i++) {
+            const Position& pos = ds[i].pos;
+
+            const Color stm = pos.sideToMove();
+            const Square ksq_stm = pos.kingSquare(stm);
+            const Square ksq_nstm = pos.kingSquare(!stm);
+
+            const int offset = i * MAX_ACTIVE_FEATURES;
+
+            Bitboard pieces = pos.piecesBB();
+
+            int count = 0;
+            for (auto sq : pieces) {
+                Piece p = pos.pieceAt(sq);
+
+                int idx = offset + count;
+                stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
+                nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
+
+                count++;
+            }
+
+            if (count < MAX_ACTIVE_FEATURES) {
+                for (int i = count; i < MAX_ACTIVE_FEATURES; i++) {
+                    int idx = offset + i;
+                    stm_features(idx) = -1;
+                    nstm_features(idx) = -1;
+                }
+            }
+
+            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / config.eval_div));
+            float wdl_target = (ds[i].result + 1) / 2.0f;
+
+            targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;
+        }
+    }
+
+    Node build() {
         auto ft = sparse_affine(768, 16);
         auto l1 = affine(2 * 16, 1);
 
-        // build network
+        auto stm_in = create_input(32);
+        auto nstm_in = create_input(32);
+
         auto ft_stm = ft(stm_in).sqr_clipped_relu();
         auto ft_nstm = ft(nstm_in).sqr_clipped_relu();
 
@@ -65,9 +119,9 @@ struct Test : Model {
         return l1(cat_ft);
     }
 
-    Loss get_loss() override { return loss::mse(Activation::Sigmoid); }
+    Loss get_loss() override { return loss::mse(ActivationType::Sigmoid); }
 
-    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
+    OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
         float lr = 0.001;

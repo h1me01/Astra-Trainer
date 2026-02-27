@@ -6,7 +6,7 @@ namespace nn::loss {
 
 class MPE : public Loss {
   public:
-    MPE(float power, Activation act_type)
+    MPE(float power, ActivationType act_type)
         : Loss(act_type),
           power(power) {}
 

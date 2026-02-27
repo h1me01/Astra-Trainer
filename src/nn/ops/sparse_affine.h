@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concat.h"
+#include "input.h"
 #include "ops.h"
 
 namespace nn::op {
@@ -10,6 +11,8 @@ class SparseAffine : public Operation {
     SparseAffine(SPtr<Param> params, SPtr<Input> input)
         : param(params),
           input(input) {
+
+        CHECK(param && input);
 
         name = "sparse_affine";
 
@@ -44,8 +47,8 @@ class SparseAffine : public Operation {
                 real_weights,
                 param->get_biases().get_data(),
                 real_output.get_data(),
-                input->get_output(),
-                input->get_size(),
+                input->get_indices(),
+                input->size(),
                 out_offset,
                 act_type
             );
@@ -54,8 +57,8 @@ class SparseAffine : public Operation {
                 real_weights,
                 param->get_biases().get_data(),
                 real_output.get_data(),
-                input->get_output(),
-                input->get_size(),
+                input->get_indices(),
+                input->size(),
                 out_offset,
                 act_type
             );
@@ -74,8 +77,8 @@ class SparseAffine : public Operation {
                 param->get_weights().get_grads(),
                 param->get_biases(),
                 real_output,
-                input->get_output(),
-                input->get_size(),
+                input->get_indices(),
+                input->size(),
                 out_offset,
                 act_type
             );
@@ -84,8 +87,8 @@ class SparseAffine : public Operation {
                 param->get_weights().get_grads(),
                 param->get_biases().get_grads(),
                 real_output,
-                input->get_output(),
-                input->get_size(),
+                input->get_indices(),
+                input->size(),
                 out_offset,
                 act_type
             );

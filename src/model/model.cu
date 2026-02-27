@@ -2,6 +2,8 @@
 
 namespace model {
 
+// helper
+
 void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms, bool newline = false) {
     if (newline)
         printf("\r\033[K");
@@ -22,15 +24,42 @@ void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms
         fflush(stdout);
 }
 
+int epoch_from_checkpoint(const std::string& checkpoint_name) {
+    size_t dash_pos = checkpoint_name.find_last_of('_');
+    if (dash_pos == std::string::npos) {
+        std::cout << "Could not parse epoch from checkpoint name, starting from epoch 0\n";
+        return 0;
+    }
+
+    std::string epoch_str = checkpoint_name.substr(dash_pos + 1);
+    if (epoch_str == "final") {
+        std::cout << "Loading from final checkpoint, starting new training cycle\n";
+        return 0;
+    }
+
+    try {
+        return std::stoi(epoch_str);
+    } catch (...) {
+        std::cout << "Model: Could not parse epoch from checkpoint name, starting from epoch 0\n";
+        return 0;
+    }
+}
+
+// Model
+
 void Model::init() {
     if (is_initialized)
         return;
 
-    targets = Array<float>(config.batch_size, true);
+    loss = get_loss();
+    optim = get_optim().take();
+    lr_sched = get_lr_scheduler();
+    wdl_sched = get_wdl_scheduler();
 
-    network = std::make_unique<nn::Network>();
-    stm_input = std::make_shared<nn::Input>(32);
-    nstm_input = std::make_shared<nn::Input>(32);
+    if (!loss || !optim || !lr_sched || !wdl_sched)
+        error("Model: All components (loss, optimizer, scheduler) must be initialized!");
+
+    targets = Array<float>(config.batch_size, true);
 
     dataloader = std::make_unique<Dataloader>(
         config.batch_size, config.thread_count, get_training_files(), [this](const TrainingDataEntry& e) {
@@ -38,19 +67,10 @@ void Model::init() {
         }
     );
 
-    loss = get_loss();
-    optim = get_optim();
-    lr_sched = get_lr_scheduler();
-    wdl_sched = get_wdl_scheduler();
-
-    if (!loss || !optim || !lr_sched)
-        error("All components (loss, optimizer, scheduler) must be initialized!");
-
-    network->set_output(build(stm_input, nstm_input));
+    graph = std::make_unique<nn::graph::Graph>(build());
+    network = std::make_unique<nn::Network>(*graph.get());
 
     network->init(config.batch_size);
-    stm_input->init(config.batch_size);
-    nstm_input->init(config.batch_size);
     optim->init(network->get_params());
 
     is_initialized = true;
@@ -60,7 +80,7 @@ void Model::print_info(int epoch, const std::string& output_path) const {
     std::cout << "\n=============================== Training Data ==============================\n\n";
     const auto& training_files = dataloader->get_filenames();
     if (training_files.empty())
-        error("No training data found in the specified paths!");
+        error("Model: No training data found in the specified paths!");
 
     for (const auto& f : training_files)
         std::cout << f << std::endl;
@@ -87,47 +107,11 @@ void Model::print_info(int epoch, const std::string& output_path) const {
         std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get() << std::endl;
 }
 
-void Model::fill_inputs(std::vector<TrainingDataEntry>& ds) {
-    auto& stm_features = stm_input->get_output();
-    auto& nstm_features = nstm_input->get_output();
+void Model::next_batch(const std::vector<TrainingDataEntry>& ds) {
+    fill_inputs(ds);
 
-    const int max_entries = stm_input->get_size();
-
-    for (size_t i = 0; i < ds.size(); i++) {
-        const Position& pos = ds[i].pos;
-
-        const Color stm = pos.sideToMove();
-        const Square ksq_stm = pos.kingSquare(stm);
-        const Square ksq_nstm = pos.kingSquare(!stm);
-
-        const int offset = i * max_entries;
-
-        Bitboard pieces = pos.piecesBB();
-
-        int count = 0;
-        for (auto sq : pieces) {
-            Piece p = pos.pieceAt(sq);
-
-            int idx = offset + count;
-            stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
-            nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
-
-            count++;
-        }
-
-        if (count < max_entries) {
-            for (int i = count; i < max_entries; i++) {
-                int idx = offset + i;
-                stm_features(idx) = -1;
-                nstm_features(idx) = -1;
-            }
-        }
-
-        float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / config.eval_div));
-        float wdl_target = (ds[i].result + 1) / 2.0f;
-
-        targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;
-    }
+    auto& stm_features = get_inputs()[0]->get_indices();
+    auto& nstm_features = get_inputs()[1]->get_indices();
 
     stm_features.host_to_dev_async();
     nstm_features.host_to_dev_async();
@@ -140,7 +124,7 @@ float Model::predict(const std::string& fen) {
 
     std::vector<TrainingDataEntry> ds{{pos}};
 
-    fill_inputs(ds);
+    next_batch(ds);
     network->forward(ds);
 
     auto& output = network->get_output().get_data();
@@ -182,7 +166,7 @@ void Model::train(const std::string& output_path) {
 
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
             auto data_entries = dataloader->next();
-            fill_inputs(data_entries);
+            next_batch(data_entries);
 
             optim->clear_grads();
             network->forward(data_entries);

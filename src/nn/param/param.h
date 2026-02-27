@@ -104,7 +104,7 @@ class Param {
     void load_tensor(FILE* f, Tensor& tensor) {
         auto& data = tensor.get_data();
         if ((int)fread(data.host_address(), sizeof(float), data.size(), f) != data.size())
-            error("Failed reading tensor data from file!");
+            error("Param: Failed reading tensor data from file!");
         data.host_to_dev();
     }
 
@@ -113,7 +113,7 @@ class Param {
 
         data.dev_to_host();
         if ((int)fwrite(data.host_address(), sizeof(float), data.size(), f) != data.size())
-            error("Failed writing tensor data to file!");
+            error("Param: Failed writing tensor data to file!");
     }
 
     template <typename T>

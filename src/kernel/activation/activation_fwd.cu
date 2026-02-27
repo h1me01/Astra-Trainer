@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 1024;
 
-template <Activation type>
+template <ActivationType type>
 __global__ void activation_fwd_kernel(const float* in_d, float* out_d, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
@@ -28,7 +28,7 @@ __global__ void activation_fwd_kernel(const float* in_d, float* out_d, const int
     }
 }
 
-void activation_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Activation type) {
+void activation_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const ActivationType type) {
     CHECK(in_d.size() == out_d.size());
     CHECK(in_d.is_dev_allocated() && out_d.is_dev_allocated());
 

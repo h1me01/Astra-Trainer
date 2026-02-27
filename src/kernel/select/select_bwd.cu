@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void select_bwd_kernel(
     float* in_g,
     const float* out_d,
@@ -28,7 +28,7 @@ __global__ void select_bwd_kernel(
     in_g[in_offset] += out_g[out_offset] * activate_bwd<act_type, true>(out_d[out_offset]);
 }
 
-void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices, const Activation act_type) {
+void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices, const ActivationType act_type) {
     auto& out_d = out.get_data();
     auto& out_g = out.get_grads();
 

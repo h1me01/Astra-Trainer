@@ -88,7 +88,7 @@ inline void Optimizer::load_buffer(
 ) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open()) {
-        error("Failed to open optimizer " + buffer_name + " file: " + filepath.string());
+        error("Optimizer: Failed to open " + buffer_name + ": " + filepath.string());
     }
 
     for (size_t i = 0; i < buffers.size(); ++i) {
@@ -100,7 +100,7 @@ inline void Optimizer::load_buffer(
         const size_t bytes_read = file.gcount();
         if (bytes_read != bytes_to_read) {
             error(
-                "Failed to read " + buffer_name + " buffer " + std::to_string(i) + ": expected " +
+                "Optimizer: Failed to read " + buffer_name + " buffer " + std::to_string(i) + ": expected " +
                 std::to_string(bytes_to_read) + " bytes, got " + std::to_string(bytes_read) + " bytes"
             );
         }
@@ -112,7 +112,7 @@ inline void Optimizer::load_buffer(
 inline void Optimizer::save_buffer(const std::filesystem::path& filepath, std::vector<Array<float>>& buffers) const {
     std::ofstream file(filepath, std::ios::binary);
     if (!file.is_open()) {
-        error("Failed to create optimizer state file: " + filepath.string());
+        error("Optimizer: Failed to create state file: " + filepath.string());
     }
 
     for (auto& buffer : buffers) {
@@ -122,7 +122,7 @@ inline void Optimizer::save_buffer(const std::filesystem::path& filepath, std::v
         file.write(reinterpret_cast<const char*>(buffer.host_address()), bytes_to_write);
 
         if (!file.good()) {
-            error("Failed to write optimizer state to: " + filepath.string());
+            error("Optimizer: Failed to write optimizer state to: " + filepath.string());
         }
     }
 }
@@ -131,14 +131,14 @@ inline void Optimizer::load(const std::string& path) {
     const std::filesystem::path state_path = std::filesystem::path(path) / "state";
 
     if (!std::filesystem::exists(state_path)) {
-        error("Optimizer state directory does not exist: " + state_path.string());
+        error("Optimizer: State directory does not exist: " + state_path.string());
     }
 
     try {
         load_buffer(state_path / "momentum.bin", momentum, "momentum");
         load_buffer(state_path / "velocity.bin", velocity, "velocity");
     } catch (const std::exception& e) {
-        error("Failed to load optimizer state from " + state_path.string() + ": " + e.what());
+        error("Optimizer: Failed to load state from " + state_path.string() + ": " + e.what());
     }
 }
 
@@ -151,7 +151,7 @@ inline void Optimizer::save(const std::string& path) const {
         save_buffer(state_path / "momentum.bin", const_cast<std::vector<Array<float>>&>(momentum));
         save_buffer(state_path / "velocity.bin", const_cast<std::vector<Array<float>>&>(velocity));
     } catch (const std::exception& e) {
-        error("Failed to save optimizer state to " + state_path.string() + ": " + e.what());
+        error("Optimizer: Failed to save state to " + state_path.string() + ": " + e.what());
     }
 }
 

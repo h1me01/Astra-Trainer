@@ -16,8 +16,8 @@ void affine_fwd(
     DenseMatrix& biases_d,
     const DenseMatrix& inputs_d,
     DenseMatrix& out_d,
-    const Activation act_type
+    const ActivationType act_type
 );
-void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const Activation act_type);
+void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const ActivationType act_type);
 
 } // namespace kernel

@@ -9,6 +9,9 @@ class PairwiseMul : public Operation {
   public:
     PairwiseMul(SPtr<Operation> input)
         : input(input) {
+
+        CHECK(input);
+
         name = "pairwise_mul";
 
         if (input->get_output_dim() % 2 != 0)

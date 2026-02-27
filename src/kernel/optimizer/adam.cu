@@ -6,37 +6,6 @@ constexpr int num_threads = 1024;
 
 constexpr float epsilon = 1e-8f;
 
-__device__ __forceinline__ void adam_update_f4(
-    float4& val,
-    float4& mom,
-    float4& vel,
-    const float4& grad,
-    const float lr,
-    const float beta1,
-    const float beta2,
-    const float decay,
-    const float min_val,
-    const float max_val,
-    const float grad_scale
-) {
-    const float one_minus_beta1 = 1.0f - beta1;
-    const float one_minus_beta2 = 1.0f - beta2;
-
-#pragma unroll
-    for (int i = 0; i < 4; i++) {
-        float* v = &val.x + i;
-        float* m = &mom.x + i;
-        float* ve = &vel.x + i;
-        const float* g = &grad.x + i;
-
-        const float scaled_grad = (*g) * grad_scale;
-        *v *= decay;
-        *m = beta1 * (*m) + one_minus_beta1 * scaled_grad;
-        *ve = beta2 * (*ve) + one_minus_beta2 * scaled_grad * scaled_grad;
-        *v = clamp(*v - lr * (*m) / (sqrtf(*ve) + epsilon), min_val, max_val);
-    }
-}
-
 __global__ void adam_kernel(
     float* vals,
     const float* grads,
@@ -57,21 +26,32 @@ __global__ void adam_kernel(
     if (vec_idx >= size)
         return;
 
+    const float one_minus_beta1 = 1.0f - beta1;
+    const float one_minus_beta2 = 1.0f - beta2;
+
     if (vec_idx + 4 <= size) {
         float4 val = as_vec<float4>(vals)[idx];
         float4 mom = as_vec<float4>(moms)[idx];
         float4 vel = as_vec<float4>(vels)[idx];
         const float4 grad = as_vec<const float4>(grads)[idx];
 
-        adam_update_f4(val, mom, vel, grad, lr, beta1, beta2, decay, min_val, max_val, grad_scale);
+        auto update = [&](float& v, float& m, float& ve, float g) {
+            g *= grad_scale;
+            v *= decay;
+            m = beta1 * m + one_minus_beta1 * g;
+            ve = beta2 * ve + one_minus_beta2 * g * g;
+            v = clamp(v - lr * m / (sqrtf(ve) + epsilon), min_val, max_val);
+        };
+
+        update(val.x, mom.x, vel.x, grad.x);
+        update(val.y, mom.y, vel.y, grad.y);
+        update(val.z, mom.z, vel.z, grad.z);
+        update(val.w, mom.w, vel.w, grad.w);
 
         as_vec<float4>(vals)[idx] = val;
         as_vec<float4>(moms)[idx] = mom;
         as_vec<float4>(vels)[idx] = vel;
     } else {
-        const float one_minus_beta1 = 1.0f - beta1;
-        const float one_minus_beta2 = 1.0f - beta2;
-
         for (int i = vec_idx; i < size; i++) {
             const float scaled_grad = grads[i] * grad_scale;
             vals[i] *= decay;

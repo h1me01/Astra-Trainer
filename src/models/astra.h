@@ -4,6 +4,8 @@
 
 namespace model {
 
+using namespace graph;
+
 constexpr std::array<int, 64> input_bucket = {
     0, 1, 2, 3, 3, 2, 1, 0, //
     4, 5, 6, 7, 7, 6, 5, 4, //
@@ -14,6 +16,22 @@ constexpr std::array<int, 64> input_bucket = {
     9, 9, 9, 9, 9, 9, 9, 9, //
     9, 9, 9, 9, 9, 9, 9, 9, //
 };
+
+constexpr int MAX_ACTIVE_FEATURES = 32;
+
+constexpr int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
+    // if king is on opposite side, flip psq horizontally
+    if (ksq.file() > fileD)
+        psq.flipHorizontally();
+
+    // relative squares
+    if (view == Color::Black) {
+        psq.flipVertically();
+        ksq.flipVertically();
+    }
+
+    return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6 + input_bucket[int(ksq)] * 768;
+}
 
 struct Astra : Model {
     Astra() {
@@ -27,18 +45,45 @@ struct Astra : Model {
         config.eval_div = 400.0;
     }
 
-    int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
-        // if king is on opposite side, flip psq horizontally
-        if (ksq.file() > fileD)
-            psq.flipHorizontally();
+    void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
+        auto& stm_features = get_inputs()[0]->get_indices();
+        auto& nstm_features = get_inputs()[1]->get_indices();
 
-        // relative squares
-        if (view == Color::Black) {
-            psq.flipVertically();
-            ksq.flipVertically();
+        for (size_t i = 0; i < ds.size(); i++) {
+            const Position& pos = ds[i].pos;
+
+            const Color stm = pos.sideToMove();
+            const Square ksq_stm = pos.kingSquare(stm);
+            const Square ksq_nstm = pos.kingSquare(!stm);
+
+            const int offset = i * MAX_ACTIVE_FEATURES;
+
+            Bitboard pieces = pos.piecesBB();
+
+            int count = 0;
+            for (auto sq : pieces) {
+                Piece p = pos.pieceAt(sq);
+
+                int idx = offset + count;
+                stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
+                nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
+
+                count++;
+            }
+
+            if (count < MAX_ACTIVE_FEATURES) {
+                for (int i = count; i < MAX_ACTIVE_FEATURES; i++) {
+                    int idx = offset + i;
+                    stm_features(idx) = -1;
+                    nstm_features(idx) = -1;
+                }
+            }
+
+            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / config.eval_div));
+            float wdl_target = (ds[i].result + 1) / 2.0f;
+
+            targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;
         }
-
-        return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6 + input_bucket[int(ksq)] * 768;
     }
 
     bool filter_entry(const TrainingDataEntry& e) override {
@@ -60,18 +105,17 @@ struct Astra : Model {
         return false;
     }
 
-    Operation build(const Input stm_in, const Input nstm_in) {
-        using namespace op;
-
+    Node build() {
+        const int ft_size = 1024;
+        const int l1_size = 16;
+        const int l2_size = 32;
         const int bucket_count = 8;
 
-        const int l1_size = 1024;
-
         // create layers
-        auto ft = sparse_affine(num_buckets(input_bucket) * 768, l1_size).factorized();
-        auto l1 = affine(l1_size, 16 * bucket_count);
-        auto l2 = affine(16, 32 * bucket_count);
-        auto l3 = affine(32, bucket_count);
+        auto ft = sparse_affine(num_buckets(input_bucket) * 768, ft_size).factorized();
+        auto l1 = affine(ft_size, l1_size * bucket_count);
+        auto l2 = affine(l1_size, l2_size * bucket_count);
+        auto l3 = affine(l2_size, bucket_count);
 
         auto bucket_index = select_indices(bucket_count, [&](const Position& pos) { //
             return (pos.pieceCount() - 2) / 4;
@@ -86,6 +130,9 @@ struct Astra : Model {
         l3.weights_format().transpose();
 
         // build network
+        auto stm_in = create_input(MAX_ACTIVE_FEATURES);
+        auto nstm_in = create_input(MAX_ACTIVE_FEATURES);
+
         auto ft_stm = ft(stm_in).clipped_relu().pairwise_mul();
         auto ft_nstm = ft(nstm_in).clipped_relu().pairwise_mul();
 
@@ -98,9 +145,9 @@ struct Astra : Model {
         return l3_out;
     }
 
-    Loss get_loss() override { return loss::mse(Activation::Sigmoid); }
+    Loss get_loss() override { return loss::mse(ActivationType::Sigmoid); }
 
-    Optimizer get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
+    OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
         float lr = 0.001;

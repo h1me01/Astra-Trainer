@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void pairwise_mul_fwd_kernel(
     const float* in_d, float* out_d, const int feature_size, const int out_r, const int batch_size
 ) {
@@ -24,7 +24,9 @@ __global__ void pairwise_mul_fwd_kernel(
     out_d[out_idx] = activate_fwd<act_type>(val);
 }
 
-void pairwise_mul_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int out_offset, const Activation act_type) {
+void pairwise_mul_fwd(
+    const DenseMatrix& in_d, DenseMatrix& out_d, const int out_offset, const ActivationType act_type
+) {
     const int feature_size = in_d.rows() / 2;
 
     CHECK(

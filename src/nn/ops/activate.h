@@ -6,23 +6,25 @@ namespace nn::op {
 
 class Activate : public Operation {
   public:
-    Activate(SPtr<Operation> input, Activation type)
+    Activate(SPtr<Operation> input, ActivationType type)
         : input(input),
           type(type) {
+
+        CHECK(input);
 
         name = "activate_";
 
         switch (type) {
-        case Activation::ReLU:
+        case ActivationType::ReLU:
             name += "relu";
             break;
-        case Activation::ClippedReLU:
+        case ActivationType::ClippedReLU:
             name += "clipped_relu";
             break;
-        case Activation::SqrClippedReLU:
+        case ActivationType::SqrClippedReLU:
             name += "sqr_clipped_relu";
             break;
-        case Activation::Sigmoid:
+        case ActivationType::Sigmoid:
             name += "sigmoid";
             break;
         default:
@@ -41,7 +43,7 @@ class Activate : public Operation {
     std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
 
   private:
-    Activation type;
+    ActivationType type;
     SPtr<Operation> input;
 };
 

@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <Activation act_type>
+template <ActivationType act_type>
 __global__ void select_fwd_kernel(
     const float* in_d, float* out_d, const int* indices, const int in_r, const int out_r, const int batch_size
 ) {
@@ -24,7 +24,7 @@ __global__ void select_fwd_kernel(
     out_d[out_offset] = activate_fwd<act_type>(in_value);
 }
 
-void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& indices, const Activation act_type) {
+void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& indices, const ActivationType act_type) {
     CHECK(in_d.cols() == out_d.cols());
     CHECK(out_d.cols() == indices.size());
 

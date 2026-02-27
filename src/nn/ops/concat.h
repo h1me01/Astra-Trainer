@@ -12,6 +12,10 @@ class Concat : public Operation {
         if (inputs.size() < 2)
             error("Concat: requires at least 2 inputs!");
 
+        for (const auto& input : inputs) {
+            CHECK(input);
+        }
+
         name = "concat";
 
         for (const auto& input : inputs)
@@ -45,8 +49,8 @@ class Concat : public Operation {
     int fuse(SPtr<Operation> op) {
         CHECK(should_skip());
         CHECK(
-            get_activation() == Activation::Linear        //
-            || op->get_activation() == Activation::Linear //
+            get_activation() == ActivationType::Linear        //
+            || op->get_activation() == ActivationType::Linear //
         );
 
         int offset = 0;

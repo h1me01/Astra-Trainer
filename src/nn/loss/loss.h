@@ -6,7 +6,7 @@ namespace nn::loss {
 
 class Loss {
   public:
-    Loss(Activation act)
+    Loss(ActivationType act)
         : act_type(act) {}
 
     virtual ~Loss() = default;
@@ -21,7 +21,7 @@ class Loss {
     void clear() { loss.clear_dev(); }
 
   protected:
-    Activation act_type;
+    ActivationType act_type;
     Array<float> loss{1};
 };
 
