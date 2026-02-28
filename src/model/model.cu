@@ -110,11 +110,9 @@ void Model::print_info(int epoch, const std::string& output_path) const {
 void Model::next_batch(const std::vector<TrainingDataEntry>& ds) {
     fill_inputs(ds);
 
-    auto& stm_features = get_inputs()[0]->get_indices();
-    auto& nstm_features = get_inputs()[1]->get_indices();
+    for (auto& input : get_inputs())
+        input->get_indices().host_to_dev_async();
 
-    stm_features.host_to_dev_async();
-    nstm_features.host_to_dev_async();
     targets.host_to_dev_async();
 }
 
