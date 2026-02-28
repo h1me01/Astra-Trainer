@@ -148,9 +148,14 @@ class OptimHandle {
     explicit OptimHandle(Optimizer optim)
         : optim(std::move(optim)) {}
 
-    OptimHandle& clamp(float min, float max) {
+    OptimHandle& clamp(float min, float max) & {
         optim->clamp(min, max);
         return *this;
+    }
+
+    OptimHandle&& clamp(float min, float max) && {
+        optim->clamp(min, max);
+        return std::move(*this);
     }
 
     Optimizer take() { return std::move(optim); }
@@ -162,11 +167,11 @@ class OptimHandle {
 namespace optim {
 
 inline OptimHandle adam(float beta1, float beta2) {
-    return OptimHandle(std::make_shared<nn::optim::Adam>(beta1, beta2));
+    return OptimHandle(std::make_unique<nn::optim::Adam>(beta1, beta2));
 }
 
 inline OptimHandle adamw(float beta1, float beta2, float decay) {
-    return OptimHandle(std::make_shared<nn::optim::Adam>(beta1, beta2, decay));
+    return OptimHandle(std::make_unique<nn::optim::Adam>(beta1, beta2, decay));
 }
 
 } // namespace optim

@@ -29,20 +29,6 @@ struct Test : Model {
         config.thread_count = 2;
     }
 
-    int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
-        // if king is on opposite side, flip psq horizontally
-        if (ksq.file() > fileD)
-            psq.flipHorizontally();
-
-        // relative squares
-        if (view == Color::Black) {
-            psq.flipVertically();
-            ksq.flipVertically();
-        }
-
-        return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6;
-    }
-
     bool filter_entry(const TrainingDataEntry& e) override {
         if (std::abs(e.score) >= 32000)
             return true;
@@ -99,7 +85,7 @@ struct Test : Model {
             float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / 400.0f));
             float wdl_target = (ds[i].result + 1) / 2.0f;
 
-            targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;
+            targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
         }
     }
 

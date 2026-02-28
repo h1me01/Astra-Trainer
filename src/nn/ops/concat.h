@@ -48,10 +48,6 @@ class Concat : public Operation {
 
     int fuse(SPtr<Operation> op) {
         CHECK(should_skip());
-        CHECK(
-            get_activation() == ActivationType::Linear        //
-            || op->get_activation() == ActivationType::Linear //
-        );
 
         int offset = 0;
         for (int i = 0; i < get_inputs().size(); i++) {

@@ -5,7 +5,7 @@
 namespace model {
 
 using Loss = Ptr<nn::loss::Loss>;
-using Optimizer = SPtr<nn::optim::Optimizer>;
+using Optimizer = Ptr<nn::optim::Optimizer>;
 using LRScheduler = Ptr<nn::lr_sched::LRScheduler>;
 using WDLScheduler = Ptr<nn::wdl_sched::WDLScheduler>;
 using Input = SPtr<nn::op::Input>;
