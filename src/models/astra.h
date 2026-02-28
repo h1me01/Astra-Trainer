@@ -18,6 +18,7 @@ constexpr std::array<int, 64> input_bucket = {
 };
 
 constexpr int MAX_ACTIVE_FEATURES = 32;
+constexpr float EVAL_SCALE = 400.0f;
 
 constexpr int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     // if king is on opposite side, flip psq horizontally
@@ -42,7 +43,6 @@ struct Astra : Model {
         config.batches_per_epoch = 6104;
         config.save_rate = 20;
         config.thread_count = 2;
-        config.eval_div = 400.0;
     }
 
     void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
@@ -79,7 +79,7 @@ struct Astra : Model {
                 }
             }
 
-            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / config.eval_div));
+            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / EVAL_SCALE));
             float wdl_target = (ds[i].result + 1) / 2.0f;
 
             targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;
@@ -104,6 +104,8 @@ struct Astra : Model {
 
         return false;
     }
+
+    float predict(std::string fen) override { return Model::predict(fen) * EVAL_SCALE; }
 
     Node build() {
         const int ft_size = 1024;

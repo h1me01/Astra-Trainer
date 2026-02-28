@@ -27,7 +27,6 @@ struct Test : Model {
         config.batches_per_epoch = 512;
         config.save_rate = 20;
         config.thread_count = 2;
-        config.eval_div = 400.0;
     }
 
     int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) override {
@@ -97,7 +96,7 @@ struct Test : Model {
                 }
             }
 
-            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / config.eval_div));
+            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / 400.0f));
             float wdl_target = (ds[i].result + 1) / 2.0f;
 
             targets(i) = wdl_sched->get() * score_target + (1.0f - wdl_sched->get()) * wdl_target;

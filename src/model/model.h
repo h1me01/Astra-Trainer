@@ -17,14 +17,13 @@ struct TrainingConfig {
     int batches_per_epoch = 6104;
     int save_rate = 20;
     int thread_count = 2;
-    float eval_div = 400.0f;
 };
 
 class Model {
   public:
     virtual ~Model() = default;
 
-    void train(const std::string& output_path);
+    void train(std::string output_path = "");
 
     void load_params(const std::string& file) {
         init();
@@ -90,6 +89,7 @@ class Model {
     virtual Node build() = 0;
     virtual void fill_inputs(const std::vector<TrainingDataEntry>& ds) = 0;
     virtual bool filter_entry(const TrainingDataEntry& e) { return false; }
+    virtual float predict(std::string fen);
 
     virtual Loss get_loss() = 0;
     virtual OptimHandle get_optim() = 0;
@@ -114,8 +114,6 @@ class Model {
     void init();
     void print_info(int epoch, const std::string& output_path) const;
     void next_batch(const std::vector<TrainingDataEntry>& ds);
-
-    float predict(const std::string& fen);
 
     void save_checkpoint(const std::string& path) {
         try {

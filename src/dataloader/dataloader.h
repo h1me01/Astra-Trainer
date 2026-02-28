@@ -2,6 +2,7 @@
 
 #include <deque>
 
+#include "../misc.h"
 #include "../training_data_format/include.h"
 
 namespace dataloader {
@@ -17,6 +18,12 @@ class Dataloader {
         : m_batch_size(batch_size),
           m_concurrency(concurrency),
           m_filenames(filenames) {
+
+        for (const auto& f : m_filenames) {
+            std::ifstream file(f);
+            if (!file.good())
+                error("Dataloader: File not found: " + f);
+        }
 
         auto is_not_binpack = [](const std::string& f) {
             return f.size() < 8 || f.compare(f.size() - 8, 8, ".binpack") != 0;

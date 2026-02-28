@@ -15,7 +15,6 @@ target_link_libraries(astra_trainer PRIVATE
     CUDA::cudart
     CUDA::cublas
     CUDA::cusparse
-    CUDA::nvtx3
 )
 
 target_compile_options(astra_trainer PRIVATE

@@ -93,7 +93,6 @@ void Model::print_info(int epoch, const std::string& output_path) const {
     std::cout << "Batches/Epoch:     " << config.batches_per_epoch << std::endl;
     std::cout << "Save Rate:         " << config.save_rate << std::endl;
     std::cout << "Thread Count:      " << config.thread_count << std::endl;
-    std::cout << "Eval Div:          " << config.eval_div << std::endl;
     std::cout << "LR Scheduler:      " << lr_sched->get_info() << std::endl;
     std::cout << "WDL Scheduler:     " << wdl_sched->get_info() << std::endl;
     std::cout << "Output Path:       " << output_path << std::endl;
@@ -116,7 +115,7 @@ void Model::next_batch(const std::vector<TrainingDataEntry>& ds) {
     targets.host_to_dev_async();
 }
 
-float Model::predict(const std::string& fen) {
+float Model::predict(std::string fen) {
     Position pos;
     pos.set(fen);
 
@@ -128,10 +127,10 @@ float Model::predict(const std::string& fen) {
     auto& output = network->get_output().get_data();
     output.dev_to_host();
 
-    return output(0) * config.eval_div;
+    return output(0);
 }
 
-void Model::train(const std::string& output_path) {
+void Model::train(std::string output_path) {
     init();
 
     std::string training_folder;
@@ -139,7 +138,7 @@ void Model::train(const std::string& output_path) {
     int epoch = 0;
 
     if (loaded_checkpoint.empty()) {
-        training_folder = output_path + "/" + name;
+        training_folder = output_path.empty() ? name : output_path + "/" + name;
         create_directory(training_folder);
         log.open(training_folder + "/log.txt", false);
         log.write({"epoch", "loss"});

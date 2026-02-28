@@ -36,7 +36,7 @@ void activation_bwd(Tensor& in, const DenseMatrix& out_g, const ActivationType t
     CHECK(in_d.size() == out_g.size());
     CHECK(in_d.is_dev_allocated() && out_g.is_dev_allocated());
 
-    const int blocks = cuda::ceil_div(in_d.size(), num_threads);
+    const int blocks = cuda::ceil_div(in_d.size(), 4 * num_threads);
     DISPATCH_ACTIVATION(
         type,
         activation_bwd_kernel,

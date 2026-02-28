@@ -4,37 +4,34 @@ namespace kernel {
 
 constexpr int num_threads = 1024;
 
-__global__ void factorizer_fwd_kernel(
-    const float* factorizer_d, const float* weights_d, float* out_d, const int factorizer_size, const int total_size
-) {
+__global__ void factorizer_bwd_kernel(float* in_g, const float* out_g, const int in_size, const int total_size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
     if (vec_idx >= total_size)
         return;
 
-    const int f_idx = idx % (factorizer_size / 4);
+    const int f_idx = idx % (in_size / 4);
 
     if (vec_idx + 4 <= total_size) {
-        float4 f_val = as_vec<const float4>(factorizer_d)[f_idx];
-        float4 w_val = as_vec<const float4>(weights_d)[idx];
-        as_vec<float4>(out_d)[idx] =
-            make_float4(f_val.x + w_val.x, f_val.y + w_val.y, f_val.z + w_val.z, f_val.w + w_val.w);
+        float4 out_val = as_vec<const float4>(out_g)[idx];
+
+        float4* dst = &as_vec<float4>(in_g)[f_idx];
+        atomicAdd(&dst->x, out_val.x);
+        atomicAdd(&dst->y, out_val.y);
+        atomicAdd(&dst->z, out_val.z);
+        atomicAdd(&dst->w, out_val.w);
     } else {
         for (int i = vec_idx; i < total_size; i++)
-            out_d[i] = factorizer_d[i % factorizer_size] + weights_d[i];
+            atomicAdd(&in_g[i % in_size], out_g[i]);
     }
 }
 
-void factorizer_fwd(const DenseMatrix& factorizer_d, const DenseMatrix& weights_d, DenseMatrix& out_d) {
-    CHECK(weights_d.size() == out_d.size());
-    CHECK(out_d.size() % factorizer_d.size() == 0);
-    CHECK(factorizer_d.size() % 4 == 0);
-    CHECK(out_d.dev_address() && factorizer_d.dev_address() && weights_d.dev_address());
+void factorizer_bwd(DenseMatrix& in_g, const DenseMatrix& out_g) {
+    CHECK(out_g.size() % in_g.size() == 0);
+    CHECK(out_g.dev_address() && in_g.dev_address());
 
-    const int blocks = cuda::ceil_div(out_d.size(), num_threads * 4);
-    factorizer_fwd_kernel<<<blocks, num_threads>>>(
-        factorizer_d.dev_address(), weights_d.dev_address(), out_d.dev_address(), factorizer_d.size(), out_d.size()
-    );
+    const int blocks = cuda::ceil_div(out_g.size(), num_threads * 4);
+    factorizer_bwd_kernel<<<blocks, num_threads>>>(in_g.dev_address(), out_g.dev_address(), in_g.size(), out_g.size());
 }
 
 } // namespace kernel
