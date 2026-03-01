@@ -6,7 +6,7 @@ namespace nn::op {
 
 class Activate : public Operation {
   public:
-    Activate(SPtr<Operation> input, ActivationType type)
+    Activate(Operation* input, ActivationType type)
         : input(input),
           type(type) {
 
@@ -40,11 +40,11 @@ class Activate : public Operation {
 
     void backward() override { kernel::activation_bwd(input->get_output(), output.get_grads(), type); }
 
-    std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
+    std::vector<Operation*> get_inputs() const override { return {input}; }
 
   private:
     ActivationType type;
-    SPtr<Operation> input;
+    Operation* input;
 };
 
 } // namespace nn::op

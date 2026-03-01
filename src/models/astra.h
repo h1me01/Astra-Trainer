@@ -6,32 +6,17 @@ namespace model {
 
 using namespace graph;
 
-constexpr std::array<int, 64> input_bucket = {
-    0, 1, 2, 3, 3, 2, 1, 0, //
-    4, 5, 6, 7, 7, 6, 5, 4, //
-    8, 8, 8, 8, 8, 8, 8, 8, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-    9, 9, 9, 9, 9, 9, 9, 9, //
-};
-
 constexpr int MAX_ACTIVE_FEATURES = 32;
-constexpr float EVAL_SCALE = 400.0f;
+constexpr float EVAL_DIV = 400.0;
 
 constexpr int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
-    // if king is on opposite side, flip psq horizontally
-    if (ksq.file() > fileD)
-        psq.flipHorizontally();
-
     // relative squares
     if (view == Color::Black) {
         psq.flipVertically();
         ksq.flipVertically();
     }
 
-    return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6 + input_bucket[int(ksq)] * 768;
+    return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6;
 }
 
 struct Astra : Model {
@@ -79,7 +64,7 @@ struct Astra : Model {
                 }
             }
 
-            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / EVAL_SCALE));
+            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / EVAL_DIV));
             float wdl_target = (ds[i].result + 1) / 2.0f;
 
             targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
@@ -87,25 +72,13 @@ struct Astra : Model {
     }
 
     bool filter_entry(const TrainingDataEntry& e) override {
-        if (std::abs(e.score) >= 32000)
-            return true;
-        if (e.ply <= 8)
-            return true;
-        if (e.isCapturingMove() || e.isInCheck())
-            return true;
-
-        auto do_wld_skip = [&]() {
-            std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
-            auto& prng = rng::get_thread_local_rng();
-            return distrib(prng);
-        };
-        if (do_wld_skip())
-            return true;
-
-        return false;
+        return std::abs(e.score) > 10000 || //
+               e.isInCheck() ||             //
+               e.isCapturingMove() ||       //
+               e.move.type != MoveType::Normal;
     }
 
-    float predict(std::string fen) override { return Model::predict(fen) * EVAL_SCALE; }
+    float predict(std::string fen) override { return Model::predict(fen) * EVAL_DIV; }
 
     Node build() {
         const int ft_size = 1024;
@@ -114,7 +87,7 @@ struct Astra : Model {
         const int bucket_count = 8;
 
         // create layers
-        auto ft = sparse_affine(num_buckets(input_bucket) * 768, ft_size).factorized();
+        auto ft = sparse_affine(768, ft_size);
         auto l1 = affine(ft_size, l1_size * bucket_count);
         auto l2 = affine(l1_size, l2_size * bucket_count);
         auto l3 = affine(l2_size, bucket_count);
@@ -156,13 +129,9 @@ struct Astra : Model {
         return lr_sched::cosine_annealing(lr, lr * 0.3 * 0.3 * 0.3, config.epochs);
     }
 
-    WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.5); }
+    WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.7); }
 
-    std::vector<std::string> get_training_files() override {
-        return {
-            "/home/h1me/Downloads/data.binpack",
-        };
-    }
+    std::vector<std::string> get_training_files() override { return {"/home/h1me/Downloads/data.binpack"}; }
 };
 
 } // namespace model

@@ -57,7 +57,6 @@ class Dataloader {
                 worker.join();
     }
 
-    // prevent copying
     Dataloader(const Dataloader&) = delete;
     Dataloader& operator=(const Dataloader&) = delete;
 

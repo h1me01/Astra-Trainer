@@ -1,11 +1,14 @@
 #pragma once
 
+#include "../misc.h"
 #include "common.h"
 
 namespace model {
 
 namespace ng = nn::graph;
 namespace np = nn::param;
+
+using BuildCtx = ng::Graph::BuildContext;
 
 namespace save_format {
 
@@ -19,7 +22,7 @@ constexpr auto float32 = Type::float32;
 
 class NodeHandle {
   public:
-    NodeHandle(SPtr<ng::Node> node)
+    NodeHandle(ng::Node* node)
         : node(node) {}
 
     NodeHandle relu() { return make_activation(ng::OpType::ReLU); }
@@ -27,26 +30,28 @@ class NodeHandle {
     NodeHandle sqr_clipped_relu() { return make_activation(ng::OpType::SqrClippedReLU); }
     NodeHandle sigmoid() { return make_activation(ng::OpType::Sigmoid); }
 
-    NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node, indices)); }
+    NodeHandle select(SelectIndices indices) {
+        return NodeHandle(BuildCtx::register_node(make_ptr<ng::SelectNode>(node, indices)));
+    }
 
-    NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node)); }
+    NodeHandle pairwise_mul() { return NodeHandle(BuildCtx::register_node(make_ptr<ng::PairwiseMulNode>(node))); }
 
-    operator SPtr<ng::Node>() const { return node; }
+    operator ng::Node*() const { return node; }
 
-    SPtr<ng::Node> get() const { return node; }
+    ng::Node* get() const { return node; }
 
   private:
-    SPtr<ng::Node> node;
+    ng::Node* node;
 
     NodeHandle make_activation(ng::OpType op_type) {
-        return NodeHandle(std::make_shared<ng::ActivationNode>(op_type, node));
+        return NodeHandle(BuildCtx::register_node(make_ptr<ng::ActivationNode>(op_type, node)));
     }
 };
 
 class SparseAffineBuilder {
   public:
     SparseAffineBuilder(int input_dim, int output_dim)
-        : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
+        : param(BuildCtx::register_param(make_ptr<np::Param>(input_dim, output_dim))) {}
 
     SparseAffineBuilder& factorized() {
         if (param->get_input_dim() == 768)
@@ -55,8 +60,8 @@ class SparseAffineBuilder {
         return *this;
     }
 
-    NodeHandle operator()(SPtr<ng::InputNode> a) {
-        return NodeHandle(std::make_shared<ng::SparseAffineNode>(param, a));
+    NodeHandle operator()(ng::InputNode* a) {
+        return NodeHandle(BuildCtx::register_node(make_ptr<ng::SparseAffineNode>(param, a)));
     }
 
     Tensor& get_weights() { return param->get_weights(); }
@@ -66,15 +71,17 @@ class SparseAffineBuilder {
     np::SaveFormat& biases_format() { return param->biases_format(); }
 
   private:
-    SPtr<np::Param> param;
+    np::Param* param;
 };
 
 class AffineBuilder {
   public:
     AffineBuilder(int input_dim, int output_dim)
-        : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
+        : param(BuildCtx::register_param(make_ptr<np::Param>(input_dim, output_dim))) {}
 
-    NodeHandle operator()(SPtr<ng::Node> a) { return NodeHandle(std::make_shared<ng::AffineNode>(param, a)); }
+    NodeHandle operator()(ng::Node* a) {
+        return NodeHandle(BuildCtx::register_node(make_ptr<ng::AffineNode>(param, a)));
+    }
 
     Tensor& get_weights() { return param->get_weights(); }
     Tensor& get_biases() { return param->get_biases(); }
@@ -83,13 +90,13 @@ class AffineBuilder {
     np::SaveFormat& biases_format() { return param->biases_format(); }
 
   private:
-    SPtr<np::Param> param;
+    np::Param* param;
 };
 
 namespace graph {
 
-inline SPtr<ng::InputNode> create_input(int size) {
-    return std::make_shared<ng::InputNode>(size);
+inline InputNode create_input(int size) {
+    return static_cast<InputNode>(BuildCtx::register_node(make_ptr<ng::InputNode>(size)));
 }
 
 inline SparseAffineBuilder sparse_affine(int input_dim, int output_dim) {
@@ -102,15 +109,15 @@ inline AffineBuilder affine(int input_dim, int output_dim) {
 
 template <typename Fn>
 inline SelectIndices select_indices(int count, Fn&& fn) {
-    return std::make_shared<nn::SelectIndices>(count, std::forward<Fn>(fn));
+    return BuildCtx::register_select_indices(make_ptr<nn::op::SelectIndices>(count, std::forward<Fn>(fn)));
 }
 
 inline NodeHandle concat(std::vector<NodeHandle> inputs) {
-    std::vector<SPtr<ng::Node>> nodes;
+    std::vector<ng::Node*> nodes;
     nodes.reserve(inputs.size());
     for (auto& h : inputs)
         nodes.push_back(h.get());
-    return NodeHandle(std::make_shared<ng::ConcatNode>(nodes));
+    return NodeHandle(BuildCtx::register_node(make_ptr<ng::ConcatNode>(nodes)));
 }
 
 } // namespace graph
@@ -118,15 +125,15 @@ inline NodeHandle concat(std::vector<NodeHandle> inputs) {
 namespace lr_sched {
 
 inline LRScheduler constant(float lr) {
-    return std::make_unique<nn::lr_sched::Constant>(lr);
+    return make_ptr<nn::lr_sched::Constant>(lr);
 }
 
 inline LRScheduler step_decay(float lr, float gamma, int step_size) {
-    return std::make_unique<nn::lr_sched::StepDecay>(lr, gamma, step_size);
+    return make_ptr<nn::lr_sched::StepDecay>(lr, gamma, step_size);
 }
 
 inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epochs) {
-    return std::make_unique<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
+    return make_ptr<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
 }
 
 } // namespace lr_sched
@@ -134,11 +141,11 @@ inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epoc
 namespace wdl_sched {
 
 inline WDLScheduler constant(float val) {
-    return std::make_unique<nn::wdl_sched::Constant>(val);
+    return make_ptr<nn::wdl_sched::Constant>(val);
 }
 
 inline WDLScheduler linear(float start_val, float final_val, int max_epochs) {
-    return std::make_unique<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
+    return make_ptr<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
 }
 
 } // namespace wdl_sched
@@ -167,11 +174,11 @@ class OptimHandle {
 namespace optim {
 
 inline OptimHandle adam(float beta1, float beta2) {
-    return OptimHandle(std::make_unique<nn::optim::Adam>(beta1, beta2));
+    return OptimHandle(make_ptr<nn::optim::Adam>(beta1, beta2));
 }
 
 inline OptimHandle adamw(float beta1, float beta2, float decay) {
-    return OptimHandle(std::make_unique<nn::optim::Adam>(beta1, beta2, decay));
+    return OptimHandle(make_ptr<nn::optim::Adam>(beta1, beta2, decay));
 }
 
 } // namespace optim
@@ -179,11 +186,11 @@ inline OptimHandle adamw(float beta1, float beta2, float decay) {
 namespace loss {
 
 inline Loss mse(ActivationType act = ActivationType::Linear) {
-    return std::make_unique<nn::loss::MPE>(2.0, act);
+    return make_ptr<nn::loss::MPE>(2.0, act);
 }
 
 inline Loss mpe(float power, ActivationType act = ActivationType::Linear) {
-    return std::make_unique<nn::loss::MPE>(power, act);
+    return make_ptr<nn::loss::MPE>(power, act);
 }
 
 } // namespace loss

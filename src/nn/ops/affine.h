@@ -6,7 +6,7 @@ namespace nn::op {
 
 class Affine : public Operation {
   public:
-    Affine(SPtr<Param> param, SPtr<Operation> input)
+    Affine(Param* param, Operation* input)
         : param(param),
           input(input) {
 
@@ -35,13 +35,13 @@ class Affine : public Operation {
         kernel::affine_bwd(param->get_weights(), param->get_biases(), input->get_output(), output, act_type);
     }
 
-    std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
+    std::vector<Operation*> get_inputs() const override { return {input}; }
 
-    SPtr<Param> get_param() override { return param; }
+    Param* get_param() override { return param; }
 
   private:
-    SPtr<Param> param;
-    SPtr<Operation> input;
+    Param* param;
+    Operation* input;
 };
 
 } // namespace nn::op

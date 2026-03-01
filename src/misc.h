@@ -47,17 +47,16 @@ using namespace std::filesystem;
     } while (0)
 
 template <typename T>
-using SPtr = std::shared_ptr<T>;
-
-template <typename T>
-using WPtr = std::weak_ptr<T>;
-
-template <typename T>
 using Ptr = std::unique_ptr<T>;
 
+template <typename T, typename... Args>
+Ptr<T> make_ptr(Args&&... args) {
+    return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
 template <typename T, typename U>
-auto dpc(U&& ptr) {
-    return std::dynamic_pointer_cast<T>(std::forward<U>(ptr));
+T* dpc(U* ptr) {
+    return dynamic_cast<T*>(ptr);
 }
 
 inline std::string format_number(float num, int precision = 6) {
@@ -71,17 +70,14 @@ inline void error(const std::string& message) {
     std::abort();
 }
 
-inline std::vector<std::string> files_from_paths(const std::vector<std::string>& paths) {
+inline std::vector<std::string> files_from_folder(std::string path) {
     std::vector<std::string> files;
-    for (const auto& path : paths) {
-        try {
-            for (const auto& entry : recursive_directory_iterator(path)) {
-                if (entry.is_regular_file())
-                    files.push_back(entry.path().string());
-            }
-        } catch (const filesystem_error& e) {
-            std::cerr << "Filesystem error in path " << path << ": " << e.what() << std::endl;
-        }
+    try {
+        for (const auto& entry : recursive_directory_iterator(path))
+            if (entry.is_regular_file())
+                files.push_back(entry.path().string());
+    } catch (const filesystem_error& e) {
+        std::cerr << "Filesystem error in path " << path << ": " << e.what() << std::endl;
     }
 
     return files;
@@ -90,22 +86,20 @@ inline std::vector<std::string> files_from_paths(const std::vector<std::string>&
 class Logger {
   public:
     Logger() {}
-
     Logger(std::string path) { file = std::ofstream(path, std::ios::app); }
-
-    void open(std::string path, bool append = false) {
-        if (file.is_open())
-            file.close();
-
-        if (append)
-            file = std::ofstream(path, std::ios::app);
-        else
-            file = std::ofstream(path);
-    }
 
     ~Logger() {
         if (file.is_open())
             file.close();
+    }
+
+    void open(std::string path, bool append = false) {
+        if (file.is_open())
+            file.close();
+        if (append)
+            file = std::ofstream(path, std::ios::app);
+        else
+            file = std::ofstream(path);
     }
 
     void write(std::initializer_list<std::string> args) {

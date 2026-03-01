@@ -2,7 +2,7 @@
 
 namespace model {
 
-// helper
+// Helper
 
 void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms, bool newline = false) {
     if (newline)
@@ -61,14 +61,18 @@ void Model::init() {
 
     targets = Array<float>(config.batch_size, true);
 
-    dataloader = std::make_unique<Dataloader>(
+    dataloader = make_ptr<Dataloader>(
         config.batch_size, config.thread_count, get_training_files(), [this](const TrainingDataEntry& e) {
             return filter_entry(e);
         }
     );
 
-    graph = std::make_unique<nn::graph::Graph>(build());
-    network = std::make_unique<nn::Network>(*graph.get());
+    nn::graph::Graph::BuildContext ctx;
+    nn::graph::Graph::BuildContext::active = &ctx;
+    auto* output = build();
+    nn::graph::Graph::BuildContext::active = nullptr;
+    graph = make_ptr<nn::graph::Graph>(output, std::move(ctx));
+    network = make_ptr<nn::Network>(*graph.get());
 
     network->init(config.batch_size);
     optim->init(network->get_params());
@@ -161,6 +165,9 @@ void Model::train(std::string output_path) {
         Timer timer;
         loss->clear();
 
+        lr_sched->step(epoch);
+        wdl_sched->step(epoch);
+
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
             auto data_entries = dataloader->next();
             next_batch(data_entries);
@@ -188,9 +195,6 @@ void Model::train(std::string output_path) {
         log.write({std::to_string(epoch), std::to_string(epoch_loss)});
         if (epoch % std::max(config.save_rate, 1) == 0 || epoch == config.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(epoch));
-
-        lr_sched->step(epoch);
-        wdl_sched->step(epoch);
     }
 }
 

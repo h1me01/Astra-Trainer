@@ -8,7 +8,7 @@ namespace nn::op {
 
 class SparseAffine : public Operation {
   public:
-    SparseAffine(SPtr<Param> params, SPtr<Input> input)
+    SparseAffine(Param* params, Input* input)
         : param(params),
           input(input) {
 
@@ -27,13 +27,12 @@ class SparseAffine : public Operation {
     }
 
     void init(int batch_size) override {
-        if (concat.expired())
+        if (!concat)
             Operation::init(batch_size);
     }
 
     void forward() override {
-        auto concat_ptr = concat.lock();
-        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
+        auto& real_output = concat ? concat->get_output() : output;
 
         if (param->has_factorizer()) {
             kernel::factorizer_fwd(
@@ -66,8 +65,7 @@ class SparseAffine : public Operation {
     }
 
     void backward() override {
-        auto concat_ptr = concat.lock();
-        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
+        auto& real_output = concat ? concat->get_output() : output;
 
         if (pairwise_fused) {
             auto& real_weights = param->has_factorizer() ? factorized_output : param->get_weights().get_data();
@@ -99,9 +97,9 @@ class SparseAffine : public Operation {
         }
     }
 
-    void set_concat(SPtr<Concat> concat) {
-        this->concat = concat;
-        out_offset = concat->fuse(shared_from_this());
+    void set_concat(Concat* c) {
+        concat = c;
+        out_offset = concat->fuse(this);
     }
 
     void set_pairwise_fused() {
@@ -111,17 +109,17 @@ class SparseAffine : public Operation {
 
     bool is_pairwise_fused() const { return pairwise_fused; }
 
-    SPtr<Param> get_param() override { return param; }
+    Param* get_param() override { return param; }
 
-    SPtr<Input> get_input() const { return input; }
+    Input* get_input() const { return input; }
 
   private:
     int out_offset = 0;
     bool pairwise_fused = false;
 
-    SPtr<Param> param;
-    WPtr<Concat> concat;
-    SPtr<Input> input;
+    Param* param;
+    Concat* concat = nullptr;
+    Input* input;
     DenseMatrix factorized_output;
 };
 

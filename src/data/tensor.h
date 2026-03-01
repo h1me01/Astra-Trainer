@@ -31,7 +31,7 @@ class Tensor {
     }
 
     void uniform_init(float min_val, float max_val) {
-        std::mt19937 gen{std::random_device{}()};
+        static std::mt19937 gen{std::random_device{}()};
         for (int i = 0; i < data.size(); i++)
             data(i) = std::uniform_real_distribution<float>(min_val, max_val)(gen);
         data.host_to_dev();
@@ -39,7 +39,7 @@ class Tensor {
     }
 
     void he_init(int input_size) {
-        std::mt19937 gen{std::random_device{}()};
+        static std::mt19937 gen{std::random_device{}()};
         for (int i = 0; i < data.size(); i++)
             data(i) = std::normal_distribution<float>(0.0, std::sqrt(2.0 / input_size))(gen);
         data.host_to_dev();

@@ -23,14 +23,14 @@ struct Test : Model {
         name = "test_model";
 
         config.epochs = 3;
-        config.batch_size = 64;
-        config.batches_per_epoch = 512;
+        config.batch_size = 16384;
+        config.batches_per_epoch = 4;
         config.save_rate = 20;
-        config.thread_count = 2;
+        config.thread_count = 4;
     }
 
     bool filter_entry(const TrainingDataEntry& e) override {
-        if (std::abs(e.score) >= 32000)
+        if (std::abs(e.score) > 10000)
             return true;
         if (e.ply <= 8)
             return true;
@@ -90,18 +90,33 @@ struct Test : Model {
     }
 
     Node build() {
-        auto ft = sparse_affine(768, 16);
-        auto l1 = affine(2 * 16, 1);
+        const int ft_size = 32;
+        const int l1_size = 8;
+        const int l2_size = 16;
+        const int bucket_count = 8;
 
-        auto stm_in = create_input(32);
-        auto nstm_in = create_input(32);
+        auto ft = sparse_affine(768, ft_size);
+        auto l1 = affine(ft_size, l1_size * bucket_count);
+        auto l2 = affine(l1_size, l2_size * bucket_count);
+        auto l3 = affine(l2_size, bucket_count);
 
-        auto ft_stm = ft(stm_in).sqr_clipped_relu();
-        auto ft_nstm = ft(nstm_in).sqr_clipped_relu();
+        auto bucket_index = select_indices(bucket_count, [&](const Position& pos) { //
+            return (pos.pieceCount() - 2) / 4;
+        });
+
+        auto stm_in = create_input(MAX_ACTIVE_FEATURES);
+        auto nstm_in = create_input(MAX_ACTIVE_FEATURES);
+
+        auto ft_stm = ft(stm_in).clipped_relu().pairwise_mul();
+        auto ft_nstm = ft(nstm_in).clipped_relu().pairwise_mul();
 
         auto cat_ft = concat({ft_stm, ft_nstm});
 
-        return l1(cat_ft);
+        auto l1_out = l1(cat_ft).select(bucket_index).clipped_relu();
+        auto l2_out = l2(l1_out).select(bucket_index).clipped_relu();
+        auto l3_out = l3(l2_out).select(bucket_index);
+
+        return l3_out;
     }
 
     Loss get_loss() override { return loss::mse(ActivationType::Sigmoid); }

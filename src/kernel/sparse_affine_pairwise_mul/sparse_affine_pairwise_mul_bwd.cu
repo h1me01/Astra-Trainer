@@ -23,13 +23,13 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
 
     const int half = weights_r / 2;
 
-    if (row >= half || batch_idx >= batch_size)
-        return;
-
     extern __shared__ int shared_features[];
     for (int i = threadIdx.x; i < max_entries; i += blockDim.x)
         shared_features[i] = features[batch_idx * max_entries + i];
     __syncthreads();
+
+    if (row >= half || batch_idx >= batch_size)
+        return;
 
     float sum_a = biases_d[row];
     float sum_b = biases_d[row + half];
@@ -91,13 +91,12 @@ void sparse_affine_pairwise_mul_bwd(
     );
 
     CHECK(weights_g.rows() == biases_g.rows());
-    CHECK(out_g.cols() <= 65535 && out_g.rows() >= out_offset + weights_g.rows());
+    CHECK(out_g.cols() <= 65535 && out_g.rows() >= out_offset + weights_g.rows() / 2);
 
-    const int batch_size = out_g.cols();
-    const int row_tiles = cuda::ceil_div(weights_g.rows(), num_threads);
+    const int row_tiles = cuda::ceil_div(weights_g.rows() / 2, num_threads);
     const int shared_mem = max_entries * sizeof(int);
 
-    dim3 grid(batch_size, row_tiles);
+    dim3 grid(out_g.cols(), row_tiles);
 
     DISPATCH_ACTIVATION(
         act_type,

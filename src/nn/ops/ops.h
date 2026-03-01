@@ -43,7 +43,7 @@ class SelectIndices {
     std::function<int(const Position&)> fn;
 };
 
-class Operation : public std::enable_shared_from_this<Operation> {
+class Operation {
   public:
     virtual ~Operation() = default;
 
@@ -65,9 +65,9 @@ class Operation : public std::enable_shared_from_this<Operation> {
 
     DenseMatrix& get_grads() { return output.get_grads(); }
 
-    virtual std::vector<SPtr<Operation>> get_inputs() const { return {}; }
+    virtual std::vector<Operation*> get_inputs() const { return {}; }
 
-    virtual SPtr<Param> get_param() { return nullptr; }
+    virtual Param* get_param() { return nullptr; }
 
     std::string get_name() const { return name; }
 

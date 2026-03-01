@@ -7,7 +7,7 @@ namespace nn::op {
 
 class PairwiseMul : public Operation {
   public:
-    PairwiseMul(SPtr<Operation> input)
+    PairwiseMul(Operation* input)
         : input(input) {
 
         CHECK(input);
@@ -22,34 +22,32 @@ class PairwiseMul : public Operation {
     }
 
     void init(int batch_size) override {
-        if (concat.expired())
+        if (!concat)
             Operation::init(batch_size);
     }
 
     void forward() override {
-        auto concat_ptr = concat.lock();
-        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
+        auto& real_output = concat ? concat->get_output() : output;
         kernel::pairwise_mul_fwd(input->get_data(), real_output.get_data(), out_offset, act_type);
     }
 
     void backward() override {
-        auto concat_ptr = concat.lock();
-        auto& real_output = concat_ptr ? concat_ptr->get_output() : output;
+        auto& real_output = concat ? concat->get_output() : output;
         kernel::pairwise_mul_bwd(input->get_output(), real_output, out_offset, act_type);
     }
 
-    void set_concat(SPtr<Concat> concat) {
-        CHECK(concat);
-        this->concat = concat;
-        out_offset = concat->fuse(shared_from_this());
+    void set_concat(Concat* c) {
+        CHECK(c);
+        concat = c;
+        out_offset = concat->fuse(this);
     }
 
-    std::vector<SPtr<Operation>> get_inputs() const override { return {input}; }
+    std::vector<Operation*> get_inputs() const override { return {input}; }
 
   private:
     int out_offset = 0;
-    WPtr<Concat> concat;
-    SPtr<Operation> input;
+    Concat* concat = nullptr;
+    Operation* input;
 };
 
 } // namespace nn::op

@@ -6,7 +6,7 @@ namespace nn::op {
 
 class Concat : public Operation {
   public:
-    Concat(std::vector<SPtr<Operation>> inputs)
+    Concat(std::vector<Operation*> inputs)
         : inputs(inputs) {
 
         if (inputs.size() < 2)
@@ -44,14 +44,14 @@ class Concat : public Operation {
         }
     }
 
-    std::vector<SPtr<Operation>> get_inputs() const override { return inputs; }
+    std::vector<Operation*> get_inputs() const override { return inputs; }
 
-    int fuse(SPtr<Operation> op) {
+    int fuse(Operation* op) {
         CHECK(should_skip());
 
         int offset = 0;
-        for (int i = 0; i < get_inputs().size(); i++) {
-            if (get_inputs()[i].get() == op.get())
+        for (int i = 0; i < (int)get_inputs().size(); i++) {
+            if (get_inputs()[i] == op)
                 return offset;
             offset += get_inputs()[i]->get_output_dim();
         }
@@ -66,7 +66,7 @@ class Concat : public Operation {
 
   private:
     bool skip = false;
-    std::vector<SPtr<Operation>> inputs;
+    std::vector<Operation*> inputs;
 };
 
 } // namespace nn::op

@@ -26,7 +26,7 @@ class Network {
 
     void init(int batch_size) {
         if (operations.size() == 0)
-            error("Network has no operations!");
+            error("Network: No operations found!");
 
         for (auto& op : operations)
             op->init(batch_size);
@@ -51,21 +51,21 @@ class Network {
     Tensor& get_output() { return operations.back()->get_output(); }
     const Tensor& get_output() const { return operations.back()->get_output(); }
 
-    std::vector<SPtr<op::Input>> get_inputs() {
-        std::vector<SPtr<op::Input>> result;
+    std::vector<op::Input*> get_inputs() {
+        std::vector<op::Input*> result;
         for (auto& op : operations)
-            if (auto input = dpc<op::Input>(op))
+            if (auto* input = dpc<op::Input>(op.get()))
                 result.push_back(input);
         return result;
     }
 
-    std::vector<SPtr<Param>> get_params() {
-        std::vector<SPtr<Param>> params;
+    std::vector<Param*> get_params() {
+        std::vector<Param*> params;
         std::unordered_set<Param*> seen;
 
         for (auto& l : operations) {
-            auto m = l->get_param();
-            if (m && seen.insert(m.get()).second)
+            auto* m = l->get_param();
+            if (m && seen.insert(m).second)
                 params.push_back(m);
         }
 
@@ -73,17 +73,16 @@ class Network {
     }
 
   private:
-    std::vector<SPtr<Input>> inputs;
-    std::vector<SPtr<Operation>> operations;
-    std::vector<SPtr<SelectIndices>> select_indices;
+    std::vector<Ptr<Operation>> operations;
+    std::vector<SelectIndices*> select_indices;
 
     void init_select_indices(const Graph& graph) {
         std::unordered_set<SelectIndices*> seen;
 
         for (const auto& node : graph.get_nodes()) {
-            if (auto select_node = dpc<SelectNode>(node)) {
-                auto indices = select_node->get_indices();
-                if (seen.insert(indices.get()).second)
+            if (auto* select_node = dpc<SelectNode>(node.get())) {
+                auto* indices = select_node->get_indices();
+                if (seen.insert(indices).second)
                     select_indices.push_back(indices);
             }
         }
@@ -91,34 +90,34 @@ class Network {
 
     void init_operations(const Graph& graph) {
         auto& nodes = graph.get_nodes();
-        std::unordered_map<Node*, SPtr<Operation>> op_map;
+        std::unordered_map<Node*, Operation*> op_map;
 
         for (auto& node : nodes) {
-            std::vector<SPtr<Operation>> input_ops;
-            for (auto& input : node->get_inputs())
-                input_ops.push_back(op_map.at(input.get()));
+            std::vector<Operation*> input_ops;
+            for (auto* input : node->get_inputs())
+                input_ops.push_back(op_map.at(input));
 
-            SPtr<Operation> op = make_operation(node, input_ops);
-            op_map[node.get()] = op;
-            operations.push_back(op);
+            auto op = make_operation(node.get(), input_ops);
+            op_map[node.get()] = op.get();
+            operations.push_back(std::move(op));
         }
     }
 
-    SPtr<Operation> make_operation(SPtr<Node> node, std::vector<SPtr<Operation>> inputs) {
-        auto set_activation_if_any = [&](auto op, OpType act) {
+    Ptr<Operation> make_operation(Node* node, std::vector<Operation*> inputs) {
+        auto set_activation_if_any = [&](auto* op, OpType act) {
             if (act != OpType::None)
                 op->set_activation(node_op_to_activation(act));
         };
 
         switch (node->get_op_type()) {
         case OpType::Input:
-            return std::make_shared<op::Input>(node->get_output_dim());
+            return make_ptr<op::Input>(node->get_output_dim());
         case OpType::SparseAffine: {
-            auto sn = dpc<SparseAffineNode>(node);
+            auto* sn = dpc<SparseAffineNode>(node);
             CHECK(sn);
 
-            auto op = std::make_shared<op::SparseAffine>(sn->get_param(), dpc<Input>(inputs[0]));
-            set_activation_if_any(op, sn->get_activation());
+            auto op = make_ptr<op::SparseAffine>(sn->get_param(), dpc<Input>(inputs[0]));
+            set_activation_if_any(op.get(), sn->get_activation());
 
             if (sn->is_pairwise_fused())
                 op->set_pairwise_fused();
@@ -126,56 +125,56 @@ class Network {
             return op;
         }
         case OpType::Affine: {
-            auto an = dpc<AffineNode>(node);
+            auto* an = dpc<AffineNode>(node);
             CHECK(an);
 
-            auto op = std::make_shared<op::Affine>(an->get_param(), inputs[0]);
-            set_activation_if_any(op, an->get_activation());
+            auto op = make_ptr<op::Affine>(an->get_param(), inputs[0]);
+            set_activation_if_any(op.get(), an->get_activation());
             return op;
         }
         case OpType::Concat: {
-            auto cn = dpc<ConcatNode>(node);
+            auto* cn = dpc<ConcatNode>(node);
             CHECK(cn);
 
-            auto op = std::make_shared<op::Concat>(inputs);
+            auto op = make_ptr<op::Concat>(inputs);
 
             if (cn->is_fused()) {
                 op->set_skip();
-                for (auto& in : inputs) {
-                    if (auto sa = dpc<op::SparseAffine>(in))
-                        sa->set_concat(op);
-                    else if (auto pm = dpc<op::PairwiseMul>(in))
-                        pm->set_concat(op);
+                for (auto* in : inputs) {
+                    if (auto* sa = dpc<op::SparseAffine>(in))
+                        sa->set_concat(op.get());
+                    else if (auto* pm = dpc<op::PairwiseMul>(in))
+                        pm->set_concat(op.get());
                     else
                         CHECK(false);
                 }
             } else {
-                set_activation_if_any(op, cn->get_activation());
+                set_activation_if_any(op.get(), cn->get_activation());
             }
 
             return op;
         }
         case OpType::Select: {
-            auto sn = dpc<SelectNode>(node);
+            auto* sn = dpc<SelectNode>(node);
             CHECK(sn);
 
-            auto op = std::make_shared<op::Select>(inputs[0], sn->get_indices());
-            set_activation_if_any(op, sn->get_activation());
+            auto op = make_ptr<op::Select>(inputs[0], sn->get_indices());
+            set_activation_if_any(op.get(), sn->get_activation());
             return op;
         }
         case OpType::PairwiseMul: {
-            auto pmn = dpc<PairwiseMulNode>(node);
+            auto* pmn = dpc<PairwiseMulNode>(node);
             CHECK(pmn);
 
-            auto op = std::make_shared<op::PairwiseMul>(inputs[0]);
-            set_activation_if_any(op, pmn->get_activation());
+            auto op = make_ptr<op::PairwiseMul>(inputs[0]);
+            set_activation_if_any(op.get(), pmn->get_activation());
             return op;
         }
         case OpType::ReLU:
         case OpType::ClippedReLU:
         case OpType::SqrClippedReLU:
         case OpType::Sigmoid:
-            return std::make_shared<op::Activate>(inputs[0], node_op_to_activation(node->get_op_type()));
+            return make_ptr<op::Activate>(inputs[0], node_op_to_activation(node->get_op_type()));
         default:
             CHECK(false);
             return nullptr;
