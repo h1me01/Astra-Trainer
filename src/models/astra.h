@@ -64,7 +64,7 @@ struct Astra : Model {
                 }
             }
 
-            float score_target = 1.0f / (1.0f + expf(-float(ds[i].score) / EVAL_DIV));
+            float score_target = sigmoid(float(ds[i].score) / EVAL_DIV);
             float wdl_target = (ds[i].result + 1) / 2.0f;
 
             targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;

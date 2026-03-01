@@ -22,4 +22,8 @@ inline int num_buckets(const std::array<int, 64>& bucket_map) {
     return max_bucket + 1;
 }
 
+inline float sigmoid(float x) {
+    return 1.0f / (1.0f + std::exp(-x));
+}
+
 } // namespace model
