@@ -166,13 +166,13 @@ class OptimHandle {
     explicit OptimHandle(Optimizer optim)
         : optim(std::move(optim)) {}
 
-    OptimHandle& clamp(float min, float max) & {
-        optim->clamp(min, max);
+    OptimHandle& clamp_params(float min, float max) & {
+        optim->clamp_params(min, max);
         return *this;
     }
 
-    OptimHandle&& clamp(float min, float max) && {
-        optim->clamp(min, max);
+    OptimHandle&& clamp_params(float min, float max) && {
+        optim->clamp_params(min, max);
         return std::move(*this);
     }
 

@@ -78,11 +78,7 @@ void Model::init() {
 
 void Model::print_info(int epoch, const std::string& output_path) const {
     std::cout << "\n=============================== Training Data ==============================\n\n";
-    const auto& training_files = dataloader->get_filenames();
-    if (training_files.empty())
-        error("Model: No training data found in the specified paths!");
-
-    for (const auto& f : training_files)
+    for (const auto f : dataloader->get_filenames())
         std::cout << f << std::endl;
 
     std::cout << "\n=============================== Trainer Info ===============================\n\n";

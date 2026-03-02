@@ -101,7 +101,7 @@ struct Test : Model {
 
     Loss get_loss() override { return loss::mse(ActivationType::Sigmoid); }
 
-    OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
+    OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp_params(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
         float lr = 0.001;
@@ -111,10 +111,7 @@ struct Test : Model {
     WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.5); }
 
     Dataloader get_dataloader() override {
-        const int thread_count = 2;
-        const std::vector<std::string> training_files = {"/home/h1me/Downloads/data.binpack"};
-
-        return dataloader::create(thread_count, training_files, [this](const TrainingDataEntry& e) {
+        return dataloader::create(2, {"/home/h1me/Downloads/data.binpack"}, [this](const TrainingDataEntry& e) {
             return std::abs(e.score) > 10000 || //
                    e.isInCheck() ||             //
                    e.isCapturingMove() ||       //

@@ -115,7 +115,7 @@ struct Astra : Model {
 
     Loss get_loss() override { return loss::mse(ActivationType::Sigmoid); }
 
-    OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
+    OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp_params(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
         return lr_sched::cosine_annealing(LR, LR * 0.3 * 0.3 * 0.3, config.epochs);
@@ -124,7 +124,7 @@ struct Astra : Model {
     WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.7); }
 
     Dataloader get_dataloader() override {
-        const int thread_count = 2;
+        int thread_count = 4;
 
         return dataloader::create(
             thread_count, {"/home/h1me/Downloads/data.binpack"}, [this](const TrainingDataEntry& e) {
