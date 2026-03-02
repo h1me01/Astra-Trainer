@@ -8,16 +8,31 @@ template <ActivationType act_type>
 __global__ void
 mpe_kernel(const float* targets, const float* out_d, float* out_g, float* loss, const float power, const int size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size)
-        return;
 
-    const float act = activate_fwd<act_type>(out_d[idx]);
-    const float diff = act - targets[idx];
-    const float abs_diff = abs(diff);
-    const float sign = (diff > 0.0f) ? 1.0f : -1.0f;
+    float local_loss = 0.0f;
 
-    out_g[idx] = sign * power * powf(abs_diff, power - 1.0f) * activate_bwd<act_type, true>(act);
-    atomicAdd(loss, powf(abs_diff, power));
+    if (idx < size) {
+        const float act = activate_fwd<act_type>(out_d[idx]);
+        const float diff = act - targets[idx];
+        const float abs_diff = abs(diff);
+        const float sign = (diff > 0.0f) ? 1.0f : -1.0f;
+
+        out_g[idx] = sign * power * powf(abs_diff, power - 1.0f) * activate_bwd<act_type, true>(act);
+        local_loss = powf(abs_diff, power);
+    }
+
+    __shared__ float smem[num_threads];
+    smem[threadIdx.x] = local_loss;
+    __syncthreads();
+
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (threadIdx.x < stride)
+            smem[threadIdx.x] += smem[threadIdx.x + stride];
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+        atomicAdd(loss, smem[0]);
 }
 
 void mpe_loss(
