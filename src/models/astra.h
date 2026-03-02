@@ -8,6 +8,7 @@ using namespace graph;
 
 constexpr int MAX_ACTIVE_FEATURES = 32;
 constexpr float EVAL_DIV = 400.0;
+constexpr float LR = 0.001;
 
 constexpr int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
     // relative squares
@@ -27,7 +28,6 @@ struct Astra : Model {
         config.batch_size = 16384;
         config.batches_per_epoch = 6104;
         config.save_rate = 20;
-        config.thread_count = 2;
     }
 
     void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
@@ -71,13 +71,6 @@ struct Astra : Model {
         }
     }
 
-    bool filter_entry(const TrainingDataEntry& e) override {
-        return std::abs(e.score) > 10000 || //
-               e.isInCheck() ||             //
-               e.isCapturingMove() ||       //
-               e.move.type != MoveType::Normal;
-    }
-
     float predict(std::string fen) override { return Model::predict(fen) * EVAL_DIV; }
 
     Node build() {
@@ -92,7 +85,7 @@ struct Astra : Model {
         auto l2 = affine(l1_size, l2_size * bucket_count);
         auto l3 = affine(l2_size, bucket_count);
 
-        auto bucket_index = select_indices(bucket_count, [&](const Position& pos) { //
+        auto bucket_index = select_index_fn(bucket_count, [&](const Position& pos) { //
             return (pos.pieceCount() - 2) / 4;
         });
 
@@ -125,13 +118,23 @@ struct Astra : Model {
     OptimHandle get_optim() override { return optim::adamw(0.9, 0.999, 0.01).clamp(-0.99, 0.99); }
 
     LRScheduler get_lr_scheduler() override {
-        float lr = 0.001;
-        return lr_sched::cosine_annealing(lr, lr * 0.3 * 0.3 * 0.3, config.epochs);
+        return lr_sched::cosine_annealing(LR, LR * 0.3 * 0.3 * 0.3, config.epochs);
     }
 
     WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.7); }
 
-    std::vector<std::string> get_training_files() override { return {"/home/h1me/Downloads/data.binpack"}; }
+    Dataloader get_dataloader() override {
+        const int thread_count = 2;
+
+        return dataloader::create(
+            thread_count, {"/home/h1me/Downloads/data.binpack"}, [this](const TrainingDataEntry& e) {
+                return std::abs(e.score) > 10000 || //
+                       e.isInCheck() ||             //
+                       e.isCapturingMove() ||       //
+                       e.move.type != MoveType::Normal;
+            }
+        );
+    }
 };
 
 } // namespace model

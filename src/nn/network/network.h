@@ -18,7 +18,7 @@ class Network {
     Network(const Graph& graph) {
         kernel::create_cublas();
 
-        init_select_indices(graph);
+        init_select_index_fns(graph);
         init_operations(graph);
     }
 
@@ -30,14 +30,14 @@ class Network {
 
         for (auto& op : operations)
             op->init(batch_size);
-        for (auto& indices : select_indices)
+        for (auto& indices : select_index_fns)
             indices->init(batch_size);
     }
 
     void forward(const std::vector<TrainingDataEntry>& data_entries) {
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->clear_grads();
-        for (auto& indices : select_indices)
+        for (auto& indices : select_index_fns)
             indices->step(data_entries);
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->forward();
@@ -74,16 +74,16 @@ class Network {
 
   private:
     std::vector<Ptr<Operation>> operations;
-    std::vector<SelectIndices*> select_indices;
+    std::vector<SelectIndices*> select_index_fns;
 
-    void init_select_indices(const Graph& graph) {
+    void init_select_index_fns(const Graph& graph) {
         std::unordered_set<SelectIndices*> seen;
 
         for (const auto& node : graph.get_nodes()) {
             if (auto* select_node = dpc<SelectNode>(node.get())) {
                 auto* indices = select_node->get_indices();
                 if (seen.insert(indices).second)
-                    select_indices.push_back(indices);
+                    select_index_fns.push_back(indices);
             }
         }
     }

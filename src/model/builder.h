@@ -20,6 +20,17 @@ constexpr auto float32 = Type::float32;
 
 } // namespace save_format
 
+inline int num_buckets(const std::array<int, 64>& bucket_map) {
+    int max_bucket = 0;
+    for (int b : bucket_map)
+        max_bucket = std::max(max_bucket, b);
+    return max_bucket + 1;
+}
+
+inline float sigmoid(float x) {
+    return 1.0f / (1.0f + std::exp(-x));
+}
+
 class NodeHandle {
   public:
     NodeHandle(ng::Node* node)
@@ -108,8 +119,8 @@ inline AffineBuilder affine(int input_dim, int output_dim) {
 }
 
 template <typename Fn>
-inline SelectIndices select_indices(int count, Fn&& fn) {
-    return BuildCtx::register_select_indices(make_ptr<nn::op::SelectIndices>(count, std::forward<Fn>(fn)));
+inline SelectIndices select_index_fn(int count, Fn&& fn) {
+    return BuildCtx::register_select_index_fn(make_ptr<nn::op::SelectIndices>(count, std::forward<Fn>(fn)));
 }
 
 inline NodeHandle concat(std::vector<NodeHandle> inputs) {
@@ -194,5 +205,17 @@ inline Loss mpe(float power, ActivationType act = ActivationType::Linear) {
 }
 
 } // namespace loss
+
+namespace dataloader {
+
+inline Dataloader create(
+    int thread_count,
+    std::vector<std::string> filenames,
+    std::function<bool(const TrainingDataEntry&)> skip_predicate = nullptr
+) {
+    return make_ptr<nn::dataloader::Dataloader>(thread_count, filenames, skip_predicate);
+}
+
+} // namespace dataloader
 
 } // namespace model

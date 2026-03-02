@@ -26,26 +26,6 @@ struct Test : Model {
         config.batch_size = 16384;
         config.batches_per_epoch = 4;
         config.save_rate = 20;
-        config.thread_count = 4;
-    }
-
-    bool filter_entry(const TrainingDataEntry& e) override {
-        if (std::abs(e.score) > 10000)
-            return true;
-        if (e.ply <= 8)
-            return true;
-        if (e.isCapturingMove() || e.isInCheck())
-            return true;
-
-        auto do_wld_skip = [&]() {
-            std::bernoulli_distribution distrib(1.0 - e.score_result_prob());
-            auto& prng = rng::get_thread_local_rng();
-            return distrib(prng);
-        };
-        if (do_wld_skip())
-            return true;
-
-        return false;
     }
 
     void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
@@ -100,7 +80,7 @@ struct Test : Model {
         auto l2 = affine(l1_size, l2_size * bucket_count);
         auto l3 = affine(l2_size, bucket_count);
 
-        auto bucket_index = select_indices(bucket_count, [&](const Position& pos) { //
+        auto bucket_index = select_index_fn(bucket_count, [&](const Position& pos) { //
             return (pos.pieceCount() - 2) / 4;
         });
 
@@ -130,10 +110,16 @@ struct Test : Model {
 
     WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.5); }
 
-    std::vector<std::string> get_training_files() override {
-        return {
-            "/home/h1me/Downloads/data.binpack",
-        };
+    Dataloader get_dataloader() override {
+        const int thread_count = 2;
+        const std::vector<std::string> training_files = {"/home/h1me/Downloads/data.binpack"};
+
+        return dataloader::create(thread_count, training_files, [this](const TrainingDataEntry& e) {
+            return std::abs(e.score) > 10000 || //
+                   e.isInCheck() ||             //
+                   e.isCapturingMove() ||       //
+                   e.move.type != MoveType::Normal;
+        });
     }
 };
 

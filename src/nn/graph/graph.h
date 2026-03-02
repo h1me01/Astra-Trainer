@@ -16,7 +16,7 @@ class Graph {
     struct BuildContext {
         std::vector<Ptr<Node>> nodes;
         std::vector<Ptr<Param>> params;
-        std::vector<Ptr<SelectIndices>> select_indices;
+        std::vector<Ptr<SelectIndices>> select_index_fn;
 
         inline static thread_local BuildContext* active = nullptr;
 
@@ -34,17 +34,17 @@ class Graph {
             return ptr;
         }
 
-        static SelectIndices* register_select_indices(Ptr<SelectIndices> si) {
+        static SelectIndices* register_select_index_fn(Ptr<SelectIndices> si) {
             CHECK(active);
             auto* ptr = si.get();
-            active->select_indices.push_back(std::move(si));
+            active->select_index_fn.push_back(std::move(si));
             return ptr;
         }
     };
 
     Graph(Node* output, BuildContext ctx) {
         params = std::move(ctx.params);
-        select_indices = std::move(ctx.select_indices);
+        select_index_fn = std::move(ctx.select_index_fn);
 
         std::vector<Node*> ordered;
         topological_sort(output, ordered);
@@ -90,12 +90,12 @@ class Graph {
     }
 
     const std::vector<Ptr<Node>>& get_nodes() const { return nodes; }
-    const std::vector<Ptr<SelectIndices>>& get_select_indices() const { return select_indices; }
+    const std::vector<Ptr<SelectIndices>>& get_select_index_fn() const { return select_index_fn; }
 
   private:
     std::vector<Ptr<Node>> nodes;
     std::vector<Ptr<Param>> params;
-    std::vector<Ptr<SelectIndices>> select_indices;
+    std::vector<Ptr<SelectIndices>> select_index_fn;
     std::unordered_map<Node*, std::vector<Node*>> consumers;
 
     // Build

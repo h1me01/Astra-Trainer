@@ -3,11 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "../dataloader/dataloader.h"
 #include "builder.h"
 #include "common.h"
-
-using namespace dataloader;
 
 namespace model {
 
@@ -16,7 +13,6 @@ struct TrainingConfig {
     int batch_size = 16384;
     int batches_per_epoch = 6104;
     int save_rate = 20;
-    int thread_count = 2;
 };
 
 class Model {
@@ -88,14 +84,13 @@ class Model {
 
     virtual Node build() = 0;
     virtual void fill_inputs(const std::vector<TrainingDataEntry>& ds) = 0;
-    virtual bool filter_entry(const TrainingDataEntry& e) { return false; }
     virtual float predict(std::string fen);
 
     virtual Loss get_loss() = 0;
     virtual OptimHandle get_optim() = 0;
     virtual LRScheduler get_lr_scheduler() = 0;
     virtual WDLScheduler get_wdl_scheduler() = 0;
-    virtual std::vector<std::string> get_training_files() = 0;
+    virtual Dataloader get_dataloader() = 0;
 
   private:
     bool is_initialized = false;
@@ -103,10 +98,10 @@ class Model {
     Loss loss;
     Optimizer optim;
     LRScheduler lr_sched;
+    Dataloader dataloader;
 
     Ptr<nn::graph::Graph> graph;
     Ptr<nn::Network> network;
-    Ptr<Dataloader> dataloader;
 
     std::string loaded_model;
     std::string loaded_checkpoint;

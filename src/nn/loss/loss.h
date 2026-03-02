@@ -22,7 +22,7 @@ class Loss {
 
   protected:
     ActivationType act_type;
-    Array<float> loss{1};
+    Array<float> loss{1, true};
 };
 
 } // namespace nn::loss

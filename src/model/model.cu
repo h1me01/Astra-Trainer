@@ -55,17 +55,12 @@ void Model::init() {
     optim = get_optim().take();
     lr_sched = get_lr_scheduler();
     wdl_sched = get_wdl_scheduler();
+    dataloader = get_dataloader();
 
     if (!loss || !optim || !lr_sched || !wdl_sched)
         error("Model: All components (loss, optimizer, scheduler) must be initialized!");
 
     targets = Array<float>(config.batch_size, true);
-
-    dataloader = make_ptr<Dataloader>(
-        config.batch_size, config.thread_count, get_training_files(), [this](const TrainingDataEntry& e) {
-            return filter_entry(e);
-        }
-    );
 
     nn::graph::Graph::BuildContext ctx;
     nn::graph::Graph::BuildContext::active = &ctx;
@@ -74,6 +69,7 @@ void Model::init() {
     graph = make_ptr<nn::graph::Graph>(output, std::move(ctx));
     network = make_ptr<nn::Network>(*graph.get());
 
+    dataloader->init(config.batch_size);
     network->init(config.batch_size);
     optim->init(network->get_params());
 
@@ -96,7 +92,6 @@ void Model::print_info(int epoch, const std::string& output_path) const {
     std::cout << "Batch Size:        " << config.batch_size << std::endl;
     std::cout << "Batches/Epoch:     " << config.batches_per_epoch << std::endl;
     std::cout << "Save Rate:         " << config.save_rate << std::endl;
-    std::cout << "Thread Count:      " << config.thread_count << std::endl;
     std::cout << "LR Scheduler:      " << lr_sched->get_info() << std::endl;
     std::cout << "WDL Scheduler:     " << wdl_sched->get_info() << std::endl;
     std::cout << "Output Path:       " << output_path << std::endl;

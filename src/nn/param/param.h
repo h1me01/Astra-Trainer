@@ -140,11 +140,17 @@ class Param {
         auto quantize = [&](float v) -> T {
             if constexpr (std::is_same_v<T, float>)
                 return v;
-            return static_cast<T>(std::clamp(
-                std::round(v * format.get_scale()),
-                (float)std::numeric_limits<T>::min(),
-                (float)std::numeric_limits<T>::max()
-            ));
+
+            T min_qv = std::numeric_limits<T>::min();
+            T max_qv = std::numeric_limits<T>::max();
+            T qv = std::round(v * format.get_scale());
+
+            if (qv < min_qv || qv > max_qv) {
+                std::cout << "Warning: Value " << v << " is out of range for quantization and will be clamped!"
+                          << std::endl;
+            }
+
+            return static_cast<T>(std::clamp(qv, (T)min_qv, (T)max_qv));
         };
 
         if (format.is_transposed()) {

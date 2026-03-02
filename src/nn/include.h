@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dataloader/dataloader.h"
 #include "graph/graph.h"
 #include "loss/include.h"
 #include "lr_scheduler/include.h"
