@@ -57,8 +57,8 @@ void Model::init() {
     wdl_sched = get_wdl_scheduler();
     dataloader = get_dataloader();
 
-    if (!loss || !optim || !lr_sched || !wdl_sched)
-        error("Model: All components (loss, optimizer, scheduler) must be initialized!");
+    if (!loss || !optim || !lr_sched || !wdl_sched || !dataloader)
+        error("Model: All components (loss, optimizer, scheduler, dataloader) must be initialized!");
 
     targets = Array<float>(config.batch_size, true);
 
