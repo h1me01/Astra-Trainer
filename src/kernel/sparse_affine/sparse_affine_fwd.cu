@@ -10,7 +10,8 @@ __global__ void sparse_affine_fwd_vec_kernel(
     const float* biases_d,
     const int* indices,
     float* out_d,
-    const int weights_r,
+    const int weights_r4,
+    const int out_r4,
     const int batch_size,
     const int max_entries
 ) {
@@ -18,7 +19,6 @@ __global__ void sparse_affine_fwd_vec_kernel(
 
     const int row4 = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.y;
-    const int weights_r4 = weights_r / 4;
 
     if (row4 >= weights_r4 || batch_idx >= batch_size)
         return;
@@ -38,7 +38,7 @@ __global__ void sparse_affine_fwd_vec_kernel(
         add_t4(val, w);
     }
 
-    as_vec<float4>(out_d)[weights_r4 * batch_idx + row4] = activate_fwd_f4<act_type>(val);
+    as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = activate_fwd_f4<act_type>(val);
 }
 
 template <ActivationType act_type>
@@ -48,6 +48,7 @@ __global__ void sparse_affine_fwd_kernel(
     const int* indices,
     float* out_d,
     const int weights_r,
+    const int out_r,
     const int batch_size,
     const int max_entries
 ) {
@@ -67,7 +68,7 @@ __global__ void sparse_affine_fwd_kernel(
         sum += weights_d[f_idx * weights_r + row];
     }
 
-    out_d[weights_r * batch_idx + row] = activate_fwd<act_type>(sum);
+    out_d[out_r * batch_idx + row] = activate_fwd<act_type>(sum);
 }
 
 void sparse_affine_fwd(
@@ -87,6 +88,7 @@ void sparse_affine_fwd(
     );
 
     const int weights_r = weights_d.rows();
+    const int out_r = out_d.rows();
     const int batch_size = out_d.cols();
     CHECK(batch_size <= 65535 && weights_r + out_offset <= out_d.rows());
 
@@ -108,7 +110,8 @@ void sparse_affine_fwd(
                 biases_d.dev_address(),
                 indices.dev_address(),
                 out_d.dev_address() + out_offset,
-                weights_r,
+                weights_r / 4,
+                out_r / 4,
                 batch_size,
                 max_entries
             )
@@ -123,6 +126,7 @@ void sparse_affine_fwd(
                 indices.dev_address(),
                 out_d.dev_address() + out_offset,
                 weights_r,
+                out_r,
                 batch_size,
                 max_entries
             )
