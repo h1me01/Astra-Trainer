@@ -5604,7 +5604,7 @@ struct CompressedTrainingDataEntryParallelReader {
 
                 if(!m_localBuffer.empty()) {
                     // now shuffle the local buffer
-                    auto &prng = rng::get_thread_local_rng();
+                    auto &prng = external::rng::get_thread_local_rng();
                     std::shuffle(m_localBuffer.begin(), m_localBuffer.end(), prng);
 
                     std::unique_lock lock(m_waitingBufferMutex);
@@ -5717,7 +5717,7 @@ struct CompressedTrainingDataEntryParallelReader {
 
     bool fetchNextChunkIfNeeded(std::size_t &m_offset, std::vector<unsigned char> &m_chunk) {
         if(m_offset + sizeof(PackedTrainingDataEntry) + 2 > m_chunk.size()) {
-            auto &prng = rng::get_thread_local_rng();
+            auto &prng = external::rng::get_thread_local_rng();
             const std::size_t fileId = m_inputFileDistribution(prng);
             auto &inputFile = m_inputFiles[fileId];
 

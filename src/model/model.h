@@ -21,6 +21,15 @@ class Model {
 
     void train(std::string output_path = "");
 
+    void make_deterministic() {
+        setenv("CUBLAS_WORKSPACE_CONFIG", ":4294967296", 1);
+        setenv("CUDA_LAUNCH_BLOCKING", "1", 1);
+        setenv("CUDA_DEVICE_ORDER", "PCI_BUS_ID", 1);
+
+        external::rng::reset_thread_local_rng();
+        rng::reset_tensor_rng();
+    }
+
     void load_params(const std::string& file) {
         init();
 

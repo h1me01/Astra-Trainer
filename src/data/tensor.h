@@ -8,6 +8,19 @@
 
 namespace data {
 
+namespace rng {
+
+inline auto& get_tensor_rng() {
+    static thread_local std::mt19937 gen(std::random_device{}());
+    return gen;
+}
+
+inline void reset_tensor_rng() {
+    get_tensor_rng().seed(42);
+}
+
+} // namespace rng
+
 class Tensor {
   public:
     Tensor()
@@ -31,17 +44,15 @@ class Tensor {
     }
 
     void uniform_init(float min_val, float max_val) {
-        static std::mt19937 gen{std::random_device{}()};
         for (int i = 0; i < data.size(); i++)
-            data(i) = std::uniform_real_distribution<float>(min_val, max_val)(gen);
+            data(i) = std::uniform_real_distribution<float>(min_val, max_val)(rng::get_tensor_rng());
         data.host_to_dev();
         grads.clear();
     }
 
     void he_init(int input_size) {
-        static std::mt19937 gen{std::random_device{}()};
         for (int i = 0; i < data.size(); i++)
-            data(i) = std::normal_distribution<float>(0.0, std::sqrt(2.0 / input_size))(gen);
+            data(i) = std::normal_distribution<float>(0.0, std::sqrt(2.0 / input_size))(rng::get_tensor_rng());
         data.host_to_dev();
         grads.clear();
     }

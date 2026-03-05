@@ -24,15 +24,13 @@ __global__ void pairwise_mul_fwd_kernel(
     out_d[out_idx] = activate_fwd<act_type>(val);
 }
 
-void pairwise_mul_fwd(
-    const DenseMatrix& in_d, DenseMatrix& out_d, const int out_offset, const ActivationType act_type
-) {
+void pairwise_mul_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const ActivationType act_type) {
     const int feature_size = in_d.rows() / 2;
 
     CHECK(
         in_d.rows() % 2 == 0 &&        //
         in_d.cols() == out_d.cols() && //
-        out_d.rows() >= out_offset + feature_size
+        out_d.rows() == feature_size
     );
 
     CHECK(in_d.is_dev_allocated() && out_d.is_dev_allocated());
@@ -41,9 +39,7 @@ void pairwise_mul_fwd(
     DISPATCH_ACTIVATION(
         act_type,
         pairwise_mul_fwd_kernel,
-        <<<blocks, num_threads>>>(
-            in_d.dev_address(), out_d.dev_address() + out_offset, feature_size, out_d.rows(), in_d.cols()
-        )
+        <<<blocks, num_threads>>>(in_d.dev_address(), out_d.dev_address(), feature_size, out_d.rows(), in_d.cols())
     );
 }
 

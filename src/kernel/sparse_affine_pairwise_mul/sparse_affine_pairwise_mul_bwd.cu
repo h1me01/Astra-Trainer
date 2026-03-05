@@ -68,7 +68,7 @@ void sparse_affine_pairwise_mul_bwd(
     const DenseMatrix& weights_d,
     DenseMatrix& weights_g,
     Tensor& biases,
-    const Tensor& out,
+    const DenseMatrix& out_g,
     const Array<int>& features,
     const int max_entries,
     const int out_offset,
@@ -77,21 +77,17 @@ void sparse_affine_pairwise_mul_bwd(
     const auto& biases_d = biases.get_data();
     auto& biases_g = biases.get_grads();
 
-    const auto& out_d = out.get_data();
-    const auto& out_g = out.get_grads();
-
     CHECK(
         weights_g.is_dev_allocated() && //
         biases_g.is_dev_allocated() &&  //
         weights_d.is_dev_allocated() && //
         biases_d.is_dev_allocated() &&  //
         out_g.is_dev_allocated() &&     //
-        out_d.is_dev_allocated() &&     //
         features.is_dev_allocated()
     );
 
     CHECK(weights_g.rows() == biases_g.rows());
-    CHECK(out_g.cols() <= 65535 && out_g.rows() >= out_offset + weights_g.rows() / 2);
+    CHECK(out_g.cols() <= 65535 && 2 * out_g.rows() >= weights_g.rows() + out_offset);
 
     const int row_tiles = cuda::ceil_div(weights_g.rows() / 2, num_threads);
     const int shared_mem = max_entries * sizeof(int);

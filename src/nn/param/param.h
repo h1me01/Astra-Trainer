@@ -3,37 +3,10 @@
 #include <optional>
 
 #include "../../data/include.h"
+#include "factorizer.h"
+#include "save_format.h"
 
 namespace nn::param {
-
-class SaveFormat {
-  public:
-    enum class Type { int8, int16, float32 };
-
-    SaveFormat& transpose() {
-        m_transpose = true;
-        return *this;
-    }
-
-    SaveFormat& type(Type t) {
-        m_type = t;
-        return *this;
-    }
-
-    SaveFormat& scale(int s) {
-        m_scale = s;
-        return *this;
-    }
-
-    Type get_type() const { return m_type; }
-    int get_scale() const { return m_scale; }
-    bool is_transposed() const { return m_transpose; }
-
-  private:
-    int m_scale = 1;
-    bool m_transpose = false;
-    Type m_type = Type::float32;
-};
 
 class Param {
   public:
@@ -48,20 +21,20 @@ class Param {
         biases.zero_init();
     }
 
-    void create_factorizer() { factorizer = Tensor(weights.get_data().rows(), 768); }
+    void create_factorizer() { factorizer = Factorizer(&weights); }
 
     bool has_factorizer() const { return factorizer.has_value(); }
 
     void save(FILE* f) {
         if (has_factorizer())
-            write_tensor(f, *factorizer);
+            write_tensor(f, (*factorizer).get_base());
         write_tensor(f, weights);
         write_tensor(f, biases);
     }
 
     void load(FILE* f) {
         if (has_factorizer())
-            load_tensor(f, *factorizer);
+            load_tensor(f, (*factorizer).get_base());
         load_tensor(f, weights);
         load_tensor(f, biases);
     }
@@ -82,22 +55,22 @@ class Param {
 
     Tensor& get_weights() { return weights; }
     Tensor& get_biases() { return biases; }
-    Tensor& get_factorizer() { return *factorizer; }
+    Factorizer& get_factorizer() { return *factorizer; }
 
     const Tensor& get_weights() const { return weights; }
     const Tensor& get_biases() const { return biases; }
-    const Tensor& get_factorizer() const { return *factorizer; }
+    const Factorizer& get_factorizer() const { return *factorizer; }
 
     std::vector<Tensor*> get() {
         if (has_factorizer())
-            return {&(*factorizer), &weights, &biases};
+            return {&(*factorizer).get_base(), &weights, &biases};
         return {&weights, &biases};
     }
 
   private:
     Tensor weights;
     Tensor biases;
-    std::optional<Tensor> factorizer;
+    std::optional<Factorizer> factorizer;
     SaveFormat weights_save_format;
     SaveFormat biases_save_format;
 
@@ -123,7 +96,7 @@ class Param {
         DenseMatrix facto;
         if (add_factorizer) {
             // repeat to match weights dimensions
-            auto& facto_data = factorizer->get_data();
+            auto& facto_data = factorizer->get_base().get_data();
             facto_data.dev_to_host();
             const int num_repeats = data.cols() / facto_data.cols();
 

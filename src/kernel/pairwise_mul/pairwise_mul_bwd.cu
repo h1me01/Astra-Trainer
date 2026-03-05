@@ -26,12 +26,15 @@ __global__ void pairwise_mul_bwd_kernel(
 
     const int out_idx = batch_idx * out_r + feature_idx;
 
-    const float grad = out_g[out_idx] * activate_bwd<act_type, true>(out_d[out_idx]);
+    float grad = out_g[out_idx];
+    if constexpr (act_type != ActivationType::Linear)
+        grad *= activate_bwd<act_type, true>(out_d[out_idx]);
+
     in_g[in_offset_a] += grad * in_d[in_offset_b];
     in_g[in_offset_b] += grad * in_d[in_offset_a];
 }
 
-void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const ActivationType act_type) {
+void pairwise_mul_bwd(Tensor& in, const Tensor& out, const ActivationType act_type) {
     const auto& in_d = in.get_data();
     auto& in_g = in.get_grads();
 
@@ -43,7 +46,7 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
     CHECK(
         in_d.rows() % 2 == 0 &&        //
         in_d.cols() == out_g.cols() && //
-        out_g.rows() >= out_offset + feature_size
+        out_g.rows() == feature_size
     );
 
     CHECK(
@@ -60,8 +63,8 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const int out_offset, const
         <<<blocks, num_threads>>>(
             in_d.dev_address(),
             in_g.dev_address(),
-            out_d.dev_address() + out_offset,
-            out_g.dev_address() + out_offset,
+            out_d.dev_address(),
+            out_g.dev_address(),
             feature_size,
             out_g.rows(),
             in_d.cols()

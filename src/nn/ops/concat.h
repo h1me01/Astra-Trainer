@@ -4,29 +4,31 @@
 
 namespace nn::op {
 
-class Concat : public Operation {
+class ConcatBase : public Operation {
   public:
-    Concat(std::vector<Operation*> inputs)
+    ConcatBase(std::string op_name, std::vector<Operation*>& inputs)
         : inputs(inputs) {
-
         if (inputs.size() < 2)
             error("Concat: requires at least 2 inputs!");
-
-        for (const auto& input : inputs) {
-            CHECK(input);
-        }
-
-        name = "concat";
-
         for (const auto& input : inputs)
-            input_dim += input->get_output_dim();
-
-        output_dim = input_dim;
+            CHECK(input);
+        name = std::move(op_name);
+        for (const auto& input : inputs)
+            output_dim += input->get_output_dim();
+        input_dim = output_dim;
     }
 
+    std::vector<Operation*> get_inputs() const override { return inputs; }
+
+  protected:
+    std::vector<Operation*> inputs;
+};
+
+struct Concat : public ConcatBase {
+    Concat(std::vector<Operation*>& inputs)
+        : ConcatBase("concat", inputs) {}
+
     void forward() override {
-        if (skip)
-            return;
         int offset = 0;
         for (const auto& input : inputs) {
             kernel::concat_fwd(input->get_data(), output.get_data(), offset, act_type);
@@ -35,38 +37,31 @@ class Concat : public Operation {
     }
 
     void backward() override {
-        if (skip)
-            return;
         int offset = 0;
         for (const auto& input : inputs) {
             kernel::concat_bwd(input->get_grads(), output, offset, act_type);
             offset += input->get_output_dim();
         }
     }
+};
 
-    std::vector<Operation*> get_inputs() const override { return inputs; }
+struct FusedConcat : public ConcatBase {
+    FusedConcat(std::vector<Operation*>& inputs)
+        : ConcatBase("fused_concat", inputs) {}
+
+    void forward() override {}
+    void backward() override {}
 
     int fuse(Operation* op) {
-        CHECK(should_skip());
-
         int offset = 0;
-        for (int i = 0; i < (int)get_inputs().size(); i++) {
-            if (get_inputs()[i] == op)
+        for (const auto& input : inputs) {
+            if (input == op)
                 return offset;
-            offset += get_inputs()[i]->get_output_dim();
+            offset += input->get_output_dim();
         }
-
         error("Concat fusion failed! (this should never happen)");
-
         return -1;
     }
-
-    void set_skip() { skip = true; }
-    bool should_skip() const { return skip; }
-
-  private:
-    bool skip = false;
-    std::vector<Operation*> inputs;
 };
 
 } // namespace nn::op

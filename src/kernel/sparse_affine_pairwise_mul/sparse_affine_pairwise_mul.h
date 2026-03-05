@@ -22,7 +22,7 @@ void sparse_affine_pairwise_mul_bwd(
     const DenseMatrix& weights_d,
     DenseMatrix& weights_g,
     Tensor& biases,
-    const Tensor& out,
+    const DenseMatrix& out_g,
     const Array<int>& indices,
     const int max_entries,
     const int out_offset,

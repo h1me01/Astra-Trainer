@@ -82,7 +82,7 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
 
     // update biases gradients
     {
-        const int blocks = cuda::ceil_div(out_g.rows(), num_threads);
+        const int blocks = cuda::ceil_div(out_g.size(), num_threads);
         biases_bwd_kernel<<<blocks, num_threads>>>(
             biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols()
         );

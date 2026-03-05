@@ -20,6 +20,7 @@ class Network {
 
         init_select_index_fns(graph);
         init_operations(graph);
+        cache_params_and_inputs();
     }
 
     ~Network() { kernel::destroy_cublas(); }
@@ -39,6 +40,10 @@ class Network {
             operations[i]->clear_grads();
         for (auto& indices : select_index_fns)
             indices->step(data_entries);
+
+        for (auto& param : get_params())
+            if (param->has_factorizer())
+                param->get_factorizer().forward();
         for (size_t i = 0; i < operations.size(); i++)
             operations[i]->forward();
     }
@@ -46,35 +51,22 @@ class Network {
     void backward() {
         for (int i = operations.size() - 1; i >= 0; i--)
             operations[i]->backward();
+        for (auto& param : get_params())
+            if (param->has_factorizer())
+                param->get_factorizer().backward();
     }
 
     Tensor& get_output() { return operations.back()->get_output(); }
     const Tensor& get_output() const { return operations.back()->get_output(); }
 
-    std::vector<op::Input*> get_inputs() {
-        std::vector<op::Input*> result;
-        for (auto& op : operations)
-            if (auto* input = dpc<op::Input>(op.get()))
-                result.push_back(input);
-        return result;
-    }
-
-    std::vector<Param*> get_params() {
-        std::vector<Param*> params;
-        std::unordered_set<Param*> seen;
-
-        for (auto& l : operations) {
-            auto* m = l->get_param();
-            if (m && seen.insert(m).second)
-                params.push_back(m);
-        }
-
-        return params;
-    }
+    std::vector<op::Input*> get_inputs() { return inputs; }
+    std::vector<Param*> get_params() { return params; }
 
   private:
     std::vector<Ptr<Operation>> operations;
     std::vector<SelectIndices*> select_index_fns;
+    std::vector<op::Input*> inputs;
+    std::vector<Param*> params;
 
     void init_select_index_fns(const Graph& graph) {
         std::unordered_set<SelectIndices*> seen;
@@ -103,6 +95,21 @@ class Network {
         }
     }
 
+    void cache_params_and_inputs() {
+        std::unordered_set<op::Input*> seen_inputs;
+        std::unordered_set<Param*> seen_params;
+
+        for (auto& op : operations) {
+            if (auto* inp = dpc<op::Input>(op.get()))
+                if (seen_inputs.insert(inp).second)
+                    inputs.push_back(inp);
+
+            if (auto* p = op->get_param())
+                if (seen_params.insert(p).second)
+                    params.push_back(p);
+        }
+    }
+
     Ptr<Operation> make_operation(Node* node, std::vector<Operation*> inputs) {
         auto set_activation_if_any = [&](auto* op, OpType act) {
             if (act != OpType::None)
@@ -116,12 +123,15 @@ class Network {
             auto* sn = dpc<SparseAffineNode>(node);
             CHECK(sn);
 
-            auto op = make_ptr<op::SparseAffine>(sn->get_param(), dpc<Input>(inputs[0]));
-            set_activation_if_any(op.get(), sn->get_activation());
+            auto* input = dpc<Input>(inputs[0]);
 
+            Ptr<op::SparseAffineBase> op;
             if (sn->is_pairwise_fused())
-                op->set_pairwise_fused();
+                op = make_ptr<op::SparseAffinePairwiseMul>(sn->get_param(), input);
+            else
+                op = make_ptr<op::SparseAffine>(sn->get_param(), input);
 
+            set_activation_if_any(op.get(), sn->get_activation());
             return op;
         }
         case OpType::Affine: {
@@ -136,22 +146,20 @@ class Network {
             auto* cn = dpc<ConcatNode>(node);
             CHECK(cn);
 
-            auto op = make_ptr<op::Concat>(inputs);
-
+            Ptr<op::ConcatBase> op;
             if (cn->is_fused()) {
-                op->set_skip();
+                op = make_ptr<op::FusedConcat>(inputs);
                 for (auto* in : inputs) {
-                    if (auto* sa = dpc<op::SparseAffine>(in))
-                        sa->set_concat(op.get());
-                    else if (auto* pm = dpc<op::PairwiseMul>(in))
-                        pm->set_concat(op.get());
+                    if (auto* sa = dpc<op::SparseAffineBase>(in))
+                        sa->fuse_with_concat(dpc<op::FusedConcat>(op.get()));
                     else
                         CHECK(false);
                 }
             } else {
-                set_activation_if_any(op.get(), cn->get_activation());
+                op = make_ptr<op::Concat>(inputs);
             }
 
+            set_activation_if_any(op.get(), cn->get_activation());
             return op;
         }
         case OpType::Select: {

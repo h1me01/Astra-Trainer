@@ -91,12 +91,12 @@ class ConcatNode : public Node {
   public:
     ConcatNode(const std::vector<Node*> inputs)
         : Node(OpType::Concat, get_output_dim(inputs), inputs) {
-        if (inputs.empty())
-            error("Graph: Concat must have at least 1 input!");
+        if (inputs.size() < 2)
+            error("Graph: Concat must have at least 2 inputs!");
     }
 
     void set_fused() { fused = true; }
-    bool is_fused() { return fused; }
+    bool is_fused() const { return fused; }
 
   private:
     bool fused = false;

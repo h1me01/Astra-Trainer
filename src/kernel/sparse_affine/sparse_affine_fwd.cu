@@ -90,7 +90,8 @@ void sparse_affine_fwd(
     const int weights_r = weights_d.rows();
     const int out_r = out_d.rows();
     const int batch_size = out_d.cols();
-    CHECK(batch_size <= 65535 && weights_r + out_offset <= out_d.rows());
+
+    CHECK(batch_size <= 65535 && out_r >= weights_r + out_offset);
 
     const bool use_vec = (weights_r % 4 == 0);
     const int effective_rows = use_vec ? weights_r / 4 : weights_r;

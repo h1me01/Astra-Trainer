@@ -113,7 +113,8 @@ void sparse_affine_pairwise_mul_fwd(
 
     const int weights_r = weights_d.rows();
     const int batch_size = out_d.cols();
-    CHECK(batch_size <= 65535 && weights_r + out_offset <= 2 * out_d.rows());
+
+    CHECK(batch_size <= 65535 && 2 * out_d.rows() >= weights_r + out_offset);
 
     const bool use_vec = (weights_r % 8 == 0);
     const int effective_rows = use_vec ? weights_r / 4 / 2 : weights_r / 2;

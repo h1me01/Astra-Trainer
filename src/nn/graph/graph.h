@@ -75,8 +75,6 @@ class Graph {
             }
 
             std::string extra;
-            if (auto* cn = dpc<ConcatNode>(node); cn && cn->is_fused())
-                extra += " [concat-fused]";
             if (node->get_activation() != OpType::None)
                 extra += " [+" + op_type_str(node->get_activation()) + "]";
             if (auto* sa = dpc<SparseAffineNode>(node); sa && sa->is_pairwise_fused())
@@ -275,7 +273,7 @@ class Graph {
                 }
 
                 OpType t = input->get_op_type();
-                if (t != OpType::SparseAffine && t != OpType::PairwiseMul) {
+                if (t != OpType::SparseAffine) {
                     all_fusable = false;
                     break;
                 }
@@ -291,9 +289,30 @@ class Graph {
             changed = false;
             for (auto& node : nodes) {
                 auto* cn = dpc<ConcatNode>(node.get());
-                if (!cn || cn->is_fused())
+                if (!cn)
                     continue;
-                if (try_fuse_activation(node.get())) {
+
+                if (cn->is_fused()) {
+                    Node* c = sole_consumer(node.get());
+                    if (!c || !is_activation(c->get_op_type()))
+                        continue;
+
+                    bool valid_inputs = true;
+                    for (auto* in : node->get_inputs()) {
+                        if (sole_consumer(in) != node.get() || is_activation(in->get_activation())) {
+                            valid_inputs = false;
+                            break;
+                        }
+                    }
+
+                    if (valid_inputs) {
+                        for (auto* in : node->get_inputs())
+                            in->set_activation(c->get_op_type());
+                        absorb_node(c, node.get());
+                        changed = true;
+                        break;
+                    }
+                } else if (try_fuse_activation(node.get())) {
                     changed = true;
                     break;
                 }
