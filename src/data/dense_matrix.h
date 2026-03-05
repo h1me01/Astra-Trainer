@@ -35,6 +35,15 @@ class DenseMatrix {
     void host_to_dev() { data.host_to_dev(); }
     void dev_to_host() { data.dev_to_host(); }
 
+    DenseMatrix repeat(int times) const {
+        DenseMatrix result(m_rows, times * m_cols);
+        for (int t = 0; t < times; t++)
+            for (int r = 0; r < m_rows; r++)
+                for (int c = 0; c < m_cols; c++)
+                    result(r, t * m_cols + c) = (*this)(r, c);
+        return result;
+    }
+
     bool is_host_allocated() const { return data.is_host_allocated(); }
     bool is_dev_allocated() const { return data.is_dev_allocated(); }
 

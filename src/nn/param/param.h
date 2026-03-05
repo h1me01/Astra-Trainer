@@ -95,17 +95,9 @@ class Param {
 
         DenseMatrix facto;
         if (add_factorizer) {
-            // repeat to match weights dimensions
             auto& facto_data = factorizer->get_base().get_data();
             facto_data.dev_to_host();
-            const int num_repeats = data.cols() / facto_data.cols();
-
-            facto = DenseMatrix(data.rows(), data.cols());
-
-            for (int r = 0; r < data.rows(); r++)
-                for (int rep = 0; rep < num_repeats; rep++)
-                    for (int c = 0; c < facto_data.cols(); c++)
-                        facto(r, rep * facto_data.cols() + c) = facto_data(r, c);
+            facto = facto_data.repeat(data.cols() / facto_data.cols());
         }
 
         Array<T> quantized(data.size());
