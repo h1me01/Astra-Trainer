@@ -159,7 +159,7 @@ void Model::train(std::string output_path) {
             auto data_entries = dataloader->next();
             next_batch(data_entries);
 
-            optim->clear_grads();
+            optim->zero_grads();
             network->forward(data_entries);
             loss->compute(targets, network->get_output());
             network->backward();

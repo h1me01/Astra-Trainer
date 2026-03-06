@@ -37,7 +37,7 @@ class Optimizer {
         init_buffers();
     }
 
-    void clear_grads() {
+    void zero_grads() {
         for (auto* t : params)
             t->get_grads().clear_dev();
     }

@@ -39,9 +39,7 @@ class NodeHandle {
     NodeHandle sqr_clipped_relu() { return make_activation(ng::OpType::SqrClippedReLU); }
     NodeHandle sigmoid() { return make_activation(ng::OpType::Sigmoid); }
 
-    NodeHandle select(SelectIndices indices) {
-        return NodeHandle(std::make_shared<ng::SelectNode>(node, indices));
-    }
+    NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node, indices)); }
 
     NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node)); }
 
@@ -88,9 +86,7 @@ class AffineBuilder {
     AffineBuilder(int input_dim, int output_dim)
         : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
-    NodeHandle operator()(SPtr<ng::Node> a) {
-        return NodeHandle(std::make_shared<ng::AffineNode>(param, a));
-    }
+    NodeHandle operator()(SPtr<ng::Node> a) { return NodeHandle(std::make_shared<ng::AffineNode>(param, a)); }
 
     Tensor& get_weights() { return param->get_weights(); }
     Tensor& get_biases() { return param->get_biases(); }

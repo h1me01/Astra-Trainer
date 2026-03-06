@@ -8,13 +8,13 @@ namespace data {
 class DenseMatrix {
   public:
     DenseMatrix()
-        : m_rows(0),
-          m_cols(0),
+        : rows_(0),
+          cols_(0),
           data() {}
 
     DenseMatrix(int rows, int cols)
-        : m_rows(rows),
-          m_cols(cols),
+        : rows_(rows),
+          cols_(cols),
           data(rows * cols) {}
 
     DenseMatrix(const DenseMatrix&) = default;
@@ -22,8 +22,8 @@ class DenseMatrix {
     DenseMatrix& operator=(const DenseMatrix&) = default;
     DenseMatrix& operator=(DenseMatrix&&) noexcept = default;
 
-    int rows() const { return m_rows; }
-    int cols() const { return m_cols; }
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
     int size() const { return data.size(); }
 
     float operator()(int idx) const { return data(idx); }
@@ -36,11 +36,11 @@ class DenseMatrix {
     void dev_to_host() { data.dev_to_host(); }
 
     DenseMatrix repeat(int times) const {
-        DenseMatrix result(m_rows, times * m_cols);
+        DenseMatrix result(rows_, times * cols_);
         for (int t = 0; t < times; t++)
-            for (int r = 0; r < m_rows; r++)
-                for (int c = 0; c < m_cols; c++)
-                    result(r, t * m_cols + c) = (*this)(r, c);
+            for (int r = 0; r < rows_; r++)
+                for (int c = 0; c < cols_; c++)
+                    result(r, t * cols_ + c) = (*this)(r, c);
         return result;
     }
 
@@ -51,17 +51,17 @@ class DenseMatrix {
     float* dev_address() const { return data.dev_address(); }
 
     float operator()(int r, int c) const {
-        CHECK(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
-        return data.get(m_rows * c + r);
+        CHECK(r >= 0 && r < rows_ && c >= 0 && c < cols_);
+        return data.get(rows_ * c + r);
     }
 
     float& operator()(int r, int c) {
-        CHECK(r >= 0 && r < m_rows && c >= 0 && c < m_cols);
-        return data.get(m_rows * c + r);
+        CHECK(r >= 0 && r < rows_ && c >= 0 && c < cols_);
+        return data.get(rows_ * c + r);
     }
 
   private:
-    int m_rows, m_cols;
+    int rows_, cols_;
     Array<float> data;
 };
 

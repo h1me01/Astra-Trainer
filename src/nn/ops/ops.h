@@ -52,7 +52,7 @@ class Operation {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
-    void clear_grads() { output.get_grads().clear_dev(); }
+    void zero_grads() { output.get_grads().clear_dev(); }
 
     int get_input_dim() const { return input_dim; }
     int get_output_dim() const { return output_dim; }

@@ -34,7 +34,7 @@ class Network {
 
     void forward(const std::vector<TrainingDataEntry>& data_entries) {
         for (auto& op : operations)
-            op->clear_grads();
+            op->zero_grads();
         for (auto& idx : select_indices)
             idx->step(data_entries);
 

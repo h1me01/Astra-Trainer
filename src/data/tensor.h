@@ -60,12 +60,12 @@ class Tensor {
     void clamp(float min_val, float max_val) {
         if (min_val > max_val)
             error("Tensor: Min in Tensor cannot be greater than max!");
-        m_lower_bound = min_val;
-        m_upper_bound = max_val;
+        lower_bound_ = min_val;
+        upper_bound_ = max_val;
     }
 
-    float lower_bound() const { return m_lower_bound; }
-    float upper_bound() const { return m_upper_bound; }
+    float lower_bound() const { return lower_bound_; }
+    float upper_bound() const { return upper_bound_; }
 
     DenseMatrix& get_data() { return data; }
     const DenseMatrix& get_data() const { return data; }
@@ -81,8 +81,8 @@ class Tensor {
     DenseMatrix data;
     DenseMatrix grads;
 
-    float m_lower_bound = std::numeric_limits<float>::lowest();
-    float m_upper_bound = std::numeric_limits<float>::max();
+    float lower_bound_ = std::numeric_limits<float>::lowest();
+    float upper_bound_ = std::numeric_limits<float>::max();
 };
 
 } // namespace data
