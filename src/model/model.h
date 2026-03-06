@@ -160,7 +160,7 @@ class Model {
         cudaDeviceProp prop{};
         CUDA_CHECK(cudaGetDeviceProperties(&prop, device));
 
-        return "device " + std::to_string(device) + " (" + prop.name + ")";
+        return prop.name;
     }
 };
 

@@ -7,17 +7,16 @@ namespace model {
 using namespace graph;
 
 constexpr int MAX_ACTIVE_FEATURES = 32;
-constexpr float EVAL_DIV = 400.0;
+constexpr float EVAL_SCALE = 400.0;
 constexpr float LR = 0.001;
 
-constexpr int feature_index(PieceType pt, Color pc, Square psq, Square ksq, Color view) {
-    // relative squares
+constexpr int feature_index(Piece pc, Square psq, Square ksq, Color view) {
     if (view == Color::Black) {
         psq.flipVertically();
         ksq.flipVertically();
     }
 
-    return int(psq) + int(pt) * 64 + (int(pc) != int(view)) * 64 * 6;
+    return int(psq) + int(pc.type()) * 64 + (int(pc.color()) != int(view)) * 64 * 6;
 }
 
 struct Astra : Model {
@@ -36,42 +35,34 @@ struct Astra : Model {
 
         for (size_t i = 0; i < ds.size(); i++) {
             const Position& pos = ds[i].pos;
-
             const Color stm = pos.sideToMove();
             const Square ksq_stm = pos.kingSquare(stm);
             const Square ksq_nstm = pos.kingSquare(!stm);
-
             const int offset = i * MAX_ACTIVE_FEATURES;
 
-            Bitboard pieces = pos.piecesBB();
-
             int count = 0;
-            for (auto sq : pieces) {
-                Piece p = pos.pieceAt(sq);
+            for (auto sq : pos.piecesBB()) {
+                Piece pc = pos.pieceAt(sq);
 
+                int idx = offset + count++;
+                stm_features(idx) = feature_index(pc, sq, ksq_stm, stm);
+                nstm_features(idx) = feature_index(pc, sq, ksq_nstm, !stm);
+            }
+
+            for (; count < MAX_ACTIVE_FEATURES; count++) {
                 int idx = offset + count;
-                stm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_stm, stm);
-                nstm_features(idx) = feature_index(p.type(), p.color(), sq, ksq_nstm, !stm);
-
-                count++;
+                stm_features(idx) = -1;
+                nstm_features(idx) = -1;
             }
 
-            if (count < MAX_ACTIVE_FEATURES) {
-                for (int i = count; i < MAX_ACTIVE_FEATURES; i++) {
-                    int idx = offset + i;
-                    stm_features(idx) = -1;
-                    nstm_features(idx) = -1;
-                }
-            }
-
-            float score_target = sigmoid(float(ds[i].score) / EVAL_DIV);
+            float score_target = sigmoid(ds[i].score / EVAL_SCALE);
             float wdl_target = (ds[i].result + 1) / 2.0f;
 
             targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
         }
     }
 
-    float predict(std::string fen) override { return Model::predict(fen) * EVAL_DIV; }
+    float predict(std::string fen) override { return Model::predict(fen) * EVAL_SCALE; }
 
     Node build() {
         const int ft_size = 1024;
@@ -124,16 +115,14 @@ struct Astra : Model {
     WDLScheduler get_wdl_scheduler() override { return wdl_sched::constant(0.7); }
 
     Dataloader get_dataloader() override {
-        int thread_count = 4;
+        auto should_skip = [](const TrainingDataEntry& e) {
+            return std::abs(e.score) > 10000 //
+                   || e.isInCheck()          //
+                   || e.isCapturingMove()    //
+                   || e.move.type != MoveType::Normal;
+        };
 
-        return dataloader::create(
-            thread_count, {"/home/h1me/Downloads/data.binpack"}, [this](const TrainingDataEntry& e) {
-                return std::abs(e.score) > 10000 || //
-                       e.isInCheck() ||             //
-                       e.isCapturingMove() ||       //
-                       e.move.type != MoveType::Normal;
-            }
-        );
+        return dataloader::create(4, {"/home/h1me/Downloads/data.binpack"}, should_skip);
     }
 };
 
