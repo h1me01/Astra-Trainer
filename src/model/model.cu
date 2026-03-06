@@ -62,12 +62,8 @@ void Model::init() {
 
     targets = Array<float>(config.batch_size, true);
 
-    nn::graph::Graph::BuildContext ctx;
-    nn::graph::Graph::BuildContext::active = &ctx;
-    auto* output = build();
-    nn::graph::Graph::BuildContext::active = nullptr;
-    graph = make_ptr<nn::graph::Graph>(output, std::move(ctx));
-    network = make_ptr<nn::Network>(*graph.get());
+    nn::graph::Graph graph(build());
+    network = std::make_unique<nn::Network>(graph);
 
     dataloader->init(config.batch_size);
     network->init(config.batch_size);

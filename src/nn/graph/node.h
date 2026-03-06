@@ -11,7 +11,7 @@ using namespace nn::op;
 
 class Node {
   public:
-    Node(OpType op_type, int output_dim, std::vector<Node*> inputs)
+    Node(OpType op_type, int output_dim, std::vector<SPtr<Node>> inputs)
         : op_type(op_type),
           output_dim(output_dim),
           inputs(inputs) {
@@ -28,8 +28,8 @@ class Node {
 
     std::string get_op_type_str() { return op_type_str(op_type); }
 
-    std::vector<Node*>& get_inputs() { return inputs; }
-    const std::vector<Node*>& get_inputs() const { return inputs; }
+    std::vector<SPtr<Node>>& get_inputs() { return inputs; }
+    const std::vector<SPtr<Node>>& get_inputs() const { return inputs; }
 
     void set_activation(OpType act_type) {
         CHECK(is_activation(act_type));
@@ -42,7 +42,7 @@ class Node {
     OpType op_type;
     int output_dim;
     OpType act_type = OpType::None;
-    std::vector<Node*> inputs;
+    std::vector<SPtr<Node>> inputs;
 };
 
 struct InputNode : public Node {
@@ -52,23 +52,23 @@ struct InputNode : public Node {
 
 class SparseAffineNode : public Node {
   public:
-    SparseAffineNode(Param* param, InputNode* input)
+    SparseAffineNode(SPtr<Param> param, SPtr<InputNode> input)
         : Node(OpType::SparseAffine, param->get_output_dim(), {input}),
           param(param) {}
 
-    Param* get_param() { return param; }
+    SPtr<Param> get_param() { return param; }
 
     void set_pairwise_fused() { pairwise_fused = true; }
     bool is_pairwise_fused() const { return pairwise_fused; }
 
   private:
     bool pairwise_fused = false;
-    Param* param;
+    SPtr<Param> param;
 };
 
 class AffineNode : public Node {
   public:
-    AffineNode(Param* param, Node* input)
+    AffineNode(SPtr<Param> param, SPtr<Node> input)
         : Node(OpType::Affine, param->get_output_dim(), {input}),
           param(param) {
 
@@ -81,15 +81,15 @@ class AffineNode : public Node {
         }
     }
 
-    Param* get_param() { return param; }
+    SPtr<Param> get_param() { return param; }
 
   private:
-    Param* param;
+    SPtr<Param> param;
 };
 
 class ConcatNode : public Node {
   public:
-    ConcatNode(const std::vector<Node*> inputs)
+    ConcatNode(const std::vector<SPtr<Node>> inputs)
         : Node(OpType::Concat, get_output_dim(inputs), inputs) {
         if (inputs.size() < 2)
             error("Graph: Concat must have at least 2 inputs!");
@@ -101,7 +101,7 @@ class ConcatNode : public Node {
   private:
     bool fused = false;
 
-    int get_output_dim(const std::vector<Node*> inputs) {
+    int get_output_dim(const std::vector<SPtr<Node>> inputs) {
         int dim = 0;
         for (const auto in : inputs)
             dim += in->get_output_dim();
@@ -111,21 +111,21 @@ class ConcatNode : public Node {
 
 class SelectNode : public Node {
   public:
-    SelectNode(Node* input, SelectIndices* indices)
+    SelectNode(SPtr<Node> input, SPtr<SelectIndices> indices)
         : Node(OpType::Select, input->get_output_dim() / indices->partitions_size(), {input}),
           indices(indices) {
         if ((input->get_output_dim() % indices->partitions_size()) != 0)
             error("Graph: Select input dim must be divisable by the number of partitions!");
     }
 
-    SelectIndices* get_indices() { return indices; }
+    SPtr<SelectIndices> get_indices() { return indices; }
 
   private:
-    SelectIndices* indices;
+    SPtr<SelectIndices> indices;
 };
 
 struct PairwiseMulNode : public Node {
-    PairwiseMulNode(Node* input)
+    PairwiseMulNode(SPtr<Node> input)
         : Node(OpType::PairwiseMul, input->get_output_dim() / 2, {input}) {
         if ((input->get_output_dim() % 2) != 0)
             error("Graph: PairwiseMul input dim must be even!");
@@ -133,7 +133,7 @@ struct PairwiseMulNode : public Node {
 };
 
 struct ActivationNode : public Node {
-    ActivationNode(OpType op_type, Node* input)
+    ActivationNode(OpType op_type, SPtr<Node> input)
         : Node(op_type, input->get_output_dim(), {input}) {}
 };
 

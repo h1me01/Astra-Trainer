@@ -101,7 +101,7 @@ class Array {
             if (use_pinned)
                 pinned_host_data = CudaHostPtr<T>(size);
             else
-                host_data = make_ptr<T[]>(size);
+                host_data = std::make_unique<T[]>(size);
 
             dev_data = CudaDevicePtr<T>(size);
         }
@@ -115,7 +115,7 @@ class Array {
             pinned_host_data = CudaHostPtr<T>(m_size);
             std::memcpy(pinned_host_data.get(), other.pinned_host_data.get(), m_size * sizeof(T));
         } else if (other.host_data) {
-            host_data = make_ptr<T[]>(m_size);
+            host_data = std::make_unique<T[]>(m_size);
             std::memcpy(host_data.get(), other.host_data.get(), m_size * sizeof(T));
         }
 
@@ -221,7 +221,7 @@ class Array {
   protected:
     int m_size = 0;
     bool use_pinned = false;
-    Ptr<T[]> host_data;
+    UPtr<T[]> host_data;
     CudaHostPtr<T> pinned_host_data;
     CudaDevicePtr<T> dev_data;
 };

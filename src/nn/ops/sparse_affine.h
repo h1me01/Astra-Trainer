@@ -8,7 +8,7 @@ namespace nn::op {
 
 class SparseAffineBase : public Operation {
   public:
-    SparseAffineBase(std::string op_name, Param* param, Input* input, int out_dim_divisor = 1)
+    SparseAffineBase(std::string op_name, SPtr<Param> param, Input* input, int out_dim_divisor = 1)
         : param(param),
           input(input) {
 
@@ -32,7 +32,7 @@ class SparseAffineBase : public Operation {
         out_offset = concat->fuse(this);
     }
 
-    Param* get_param() override { return param; }
+    Param* get_param() override { return param.get(); }
     Input* get_input() const { return input; }
 
   protected:
@@ -45,13 +45,13 @@ class SparseAffineBase : public Operation {
     int out_offset = 0;
     FusedConcat* concat = nullptr;
 
-    Param* param;
+    SPtr<Param> param;
     Input* input;
 };
 
 class SparseAffine : public SparseAffineBase {
   public:
-    SparseAffine(Param* param, Input* input)
+    SparseAffine(SPtr<Param> param, Input* input)
         : SparseAffineBase("sparse_affine", param, input) {}
 
     void forward() override {
@@ -81,7 +81,7 @@ class SparseAffine : public SparseAffineBase {
 
 class SparseAffinePairwiseMul : public SparseAffineBase {
   public:
-    SparseAffinePairwiseMul(Param* param, Input* input)
+    SparseAffinePairwiseMul(SPtr<Param> param, Input* input)
         : SparseAffineBase("sparse_affine_pairwise_mul", param, input, 2) {}
 
     void forward() override {

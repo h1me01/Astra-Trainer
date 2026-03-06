@@ -6,7 +6,7 @@ namespace nn::op {
 
 class Affine : public Operation {
   public:
-    Affine(Param* param, Operation* input)
+    Affine(SPtr<Param> param, Operation* input)
         : param(param),
           input(input) {
 
@@ -37,10 +37,10 @@ class Affine : public Operation {
 
     std::vector<Operation*> get_inputs() const override { return {input}; }
 
-    Param* get_param() override { return param; }
+    Param* get_param() override { return param.get(); }
 
   private:
-    Param* param;
+    SPtr<Param> param;
     Operation* input;
 };
 

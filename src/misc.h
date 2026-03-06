@@ -47,17 +47,10 @@ using namespace std::filesystem;
     } while (0)
 
 template <typename T>
-using Ptr = std::unique_ptr<T>;
+using UPtr = std::unique_ptr<T>;
 
-template <typename T, typename... Args>
-Ptr<T> make_ptr(Args&&... args) {
-    return std::make_unique<T>(std::forward<Args>(args)...);
-}
-
-template <typename T, typename U>
-T* dpc(U* ptr) {
-    return dynamic_cast<T*>(ptr);
-}
+template <typename T>
+using SPtr = std::shared_ptr<T>;
 
 inline std::string format_number(float num, int precision = 6) {
     std::ostringstream oss;

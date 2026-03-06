@@ -4,16 +4,16 @@
 
 namespace model {
 
-using Loss = Ptr<nn::loss::Loss>;
-using Optimizer = Ptr<nn::optim::Optimizer>;
-using LRScheduler = Ptr<nn::lr_sched::LRScheduler>;
-using WDLScheduler = Ptr<nn::wdl_sched::WDLScheduler>;
+using Loss = UPtr<nn::loss::Loss>;
+using Optimizer = UPtr<nn::optim::Optimizer>;
+using LRScheduler = UPtr<nn::lr_sched::LRScheduler>;
+using WDLScheduler = UPtr<nn::wdl_sched::WDLScheduler>;
 using Input = nn::op::Input*;
 using Operation = nn::op::Operation*;
-using SelectIndices = nn::op::SelectIndices*;
-using Dataloader = Ptr<nn::dataloader::Dataloader>;
+using SelectIndices = SPtr<nn::op::SelectIndices>;
+using Dataloader = UPtr<nn::dataloader::Dataloader>;
 
-using Node = nn::graph::Node*;
-using InputNode = nn::graph::InputNode*;
+using Node = SPtr<nn::graph::Node>;
+using InputNode = SPtr<nn::graph::InputNode>;
 
 } // namespace model

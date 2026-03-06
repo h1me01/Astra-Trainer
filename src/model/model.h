@@ -109,8 +109,7 @@ class Model {
     LRScheduler lr_sched;
     Dataloader dataloader;
 
-    Ptr<nn::graph::Graph> graph;
-    Ptr<nn::Network> network;
+    UPtr<nn::Network> network;
 
     std::string loaded_model;
     std::string loaded_checkpoint;

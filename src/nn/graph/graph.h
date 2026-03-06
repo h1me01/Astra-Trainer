@@ -13,48 +13,10 @@ namespace nn::graph {
 
 class Graph {
   public:
-    struct BuildContext {
-        std::vector<Ptr<Node>> nodes;
-        std::vector<Ptr<Param>> params;
-        std::vector<Ptr<SelectIndices>> select_index_fn;
-
-        inline static thread_local BuildContext* active = nullptr;
-
-        static Node* register_node(Ptr<Node> n) {
-            CHECK(active);
-            auto* ptr = n.get();
-            active->nodes.push_back(std::move(n));
-            return ptr;
-        }
-
-        static Param* register_param(Ptr<Param> p) {
-            CHECK(active);
-            auto* ptr = p.get();
-            active->params.push_back(std::move(p));
-            return ptr;
-        }
-
-        static SelectIndices* register_select_index_fn(Ptr<SelectIndices> si) {
-            CHECK(active);
-            auto* ptr = si.get();
-            active->select_index_fn.push_back(std::move(si));
-            return ptr;
-        }
-    };
-
-    Graph(Node* output, BuildContext ctx) {
-        params = std::move(ctx.params);
-        select_index_fn = std::move(ctx.select_index_fn);
-
-        std::vector<Node*> ordered;
-        topological_sort(output, ordered);
-
-        std::unordered_map<Node*, Ptr<Node>> node_map;
-        for (auto& n : ctx.nodes)
-            node_map[n.get()] = std::move(n);
-        for (Node* ptr : ordered)
-            nodes.push_back(std::move(node_map.at(ptr)));
-
+    Graph(SPtr<Node> output) {
+        topological_sort(output);
+        init_params();
+        init_select_indices();
         build_consumer_map();
         optimize();
     }
@@ -65,96 +27,110 @@ class Graph {
             index[nodes[i].get()] = i;
 
         for (int i = 0; i < (int)nodes.size(); i++) {
-            auto* node = nodes[i].get();
+            auto* n = nodes[i].get();
 
-            std::string inputs_str;
-            for (auto* input : node->get_inputs()) {
-                if (!inputs_str.empty())
-                    inputs_str += ", ";
-                inputs_str += std::to_string(index[input]);
+            std::string inputs;
+            for (auto& inp : n->get_inputs()) {
+                if (!inputs.empty())
+                    inputs += ", ";
+                inputs += std::to_string(index[inp.get()]);
             }
 
             std::string extra;
-            if (node->get_activation() != OpType::None)
-                extra += " [+" + op_type_str(node->get_activation()) + "]";
-            if (auto* sa = dpc<SparseAffineNode>(node); sa && sa->is_pairwise_fused())
+            if (n->get_activation() != OpType::None)
+                extra += " [+" + op_type_str(n->get_activation()) + "]";
+            if (auto* sa = dynamic_cast<SparseAffineNode*>(n); sa && sa->is_pairwise_fused())
                 extra += " [+PairwiseMul]";
 
-            std::cout << "[" << std::right << std::setw(2) << i << "] "        //
-                      << std::left << std::setw(18) << node->get_op_type_str() //
-                      << " dim=" << std::setw(4) << node->get_output_dim()     //
-                      << (inputs_str.empty() ? "" : " <- [" + inputs_str + "]") << extra << "\n";
+            std::cout << "[" << std::right << std::setw(2) << i << "] " << std::left << std::setw(18)
+                      << n->get_op_type_str() << " dim=" << std::setw(4) << n->get_output_dim()
+                      << (inputs.empty() ? "" : " <- [" + inputs + "]") << extra << "\n";
         }
     }
 
-    const std::vector<Ptr<Node>>& get_nodes() const { return nodes; }
-    const std::vector<Ptr<SelectIndices>>& get_select_index_fn() const { return select_index_fn; }
+    const std::vector<SPtr<Node>>& get_nodes() const { return nodes; }
+    const std::vector<SPtr<Param>>& get_params() const { return params; }
+    const std::vector<SPtr<SelectIndices>>& get_select_indices() const { return select_indices; }
 
   private:
-    std::vector<Ptr<Node>> nodes;
-    std::vector<Ptr<Param>> params;
-    std::vector<Ptr<SelectIndices>> select_index_fn;
-    std::unordered_map<Node*, std::vector<Node*>> consumers;
+    std::vector<SPtr<Node>> nodes;
+    std::vector<SPtr<Param>> params;
+    std::vector<SPtr<SelectIndices>> select_indices;
+    std::unordered_map<Node*, std::vector<SPtr<Node>>> consumers;
 
     // Build
 
-    void topological_sort(Node* output, std::vector<Node*>& ordered) {
-        std::unordered_set<Node*> visited;
-        std::unordered_set<Node*> in_stack;
+    void topological_sort(SPtr<Node> output) {
+        std::unordered_set<Node*> visited, in_stack;
 
-        std::function<void(Node*)> dfs = [&](Node* node) {
-            if (in_stack.count(node))
+        std::function<void(SPtr<Node>)> dfs = [&](SPtr<Node> node) {
+            if (in_stack.count(node.get()))
                 error("Graph: Cycle detected!");
-            if (visited.count(node))
+            if (visited.count(node.get()))
                 return;
 
-            in_stack.insert(node);
-            for (auto* input : node->get_inputs())
-                dfs(input);
-            in_stack.erase(node);
+            in_stack.insert(node.get());
+            for (auto& inp : node->get_inputs())
+                dfs(inp);
+            in_stack.erase(node.get());
+            visited.insert(node.get());
 
-            visited.insert(node);
-            ordered.push_back(node);
+            nodes.push_back(node);
         };
 
         dfs(output);
     }
 
+    template <typename NodeT, typename ItemT, typename Getter>
+    void collect_unique(std::vector<SPtr<ItemT>>& out, Getter get) {
+        std::unordered_set<ItemT*> seen;
+        for (auto& node : nodes)
+            if (auto* n = dynamic_cast<NodeT*>(node.get()))
+                if (auto item = get(n); seen.insert(item.get()).second)
+                    out.push_back(item);
+    }
+
+    void init_params() {
+        collect_unique<SparseAffineNode, Param>(params, [](auto* n) { return n->get_param(); });
+        collect_unique<AffineNode, Param>(params, [](auto* n) { return n->get_param(); });
+    }
+
+    void init_select_indices() {
+        collect_unique<SelectNode, SelectIndices>(select_indices, [](auto* n) { return n->get_indices(); });
+    }
+
     void build_consumer_map() {
         consumers.clear();
         for (auto& node : nodes) {
-            consumers.emplace(node.get(), std::vector<Node*>{});
-            for (auto* input : node->get_inputs())
-                consumers[input].push_back(node.get());
+            consumers.emplace(node.get(), std::vector<SPtr<Node>>{});
+            for (auto& inp : node->get_inputs())
+                consumers[inp.get()].push_back(node);
         }
     }
 
     // Helpers
 
-    Node* sole_consumer(Node* node) const {
-        auto it = consumers.find(node);
-        if (it == consumers.end() || it->second.size() != 1)
-            return nullptr;
-        return it->second[0];
+    SPtr<Node> sole_consumer(SPtr<Node> node) const {
+        auto it = consumers.find(node.get());
+        return (it != consumers.end() && it->second.size() == 1) ? it->second[0] : nullptr;
     }
 
-    void absorb_node(Node* consumed, Node* owner) {
-        for (auto& node : nodes) {
-            if (node.get() == consumed)
-                continue;
-            for (auto*& inp : node->get_inputs())
-                if (inp == consumed)
-                    inp = owner;
-        }
+    void absorb_node(SPtr<Node> consumed, SPtr<Node> owner) {
+        for (auto& node : nodes)
+            if (node != consumed)
+                for (auto& inp : node->get_inputs())
+                    if (inp == consumed)
+                        inp = owner;
+
         nodes.erase(
-            std::remove_if(nodes.begin(), nodes.end(), [consumed](const auto& n) { return n.get() == consumed; }),
-            nodes.end()
+            std::remove_if(nodes.begin(), nodes.end(), [&](const auto& n) { return n == consumed; }), nodes.end()
         );
+
         build_consumer_map();
     }
 
-    bool try_fuse_activation(Node* node) {
-        Node* c = sole_consumer(node);
+    bool try_fuse_activation(SPtr<Node> node) {
+        auto c = sole_consumer(node);
         if (!c || !is_activation(c->get_op_type()))
             return false;
         node->set_activation(c->get_op_type());
@@ -162,162 +138,112 @@ class Graph {
         return true;
     }
 
+    template <typename T>
+    void fixed_point(std::function<bool(SPtr<Node>)> action) {
+        bool changed = true;
+        while (changed) {
+            changed = false;
+            for (auto& node : nodes) {
+                if (!dynamic_cast<T*>(node.get()))
+                    continue;
+                if (action(node)) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
+
     // Fusion passes
 
     void optimize() {
         fuse_sparse_affine();
-        fuse_affine();
-        fuse_select();
-        fuse_pairwise_mul();
+        fixed_point<AffineNode>([this](auto n) { return try_fuse_activation(n); });
+        fixed_point<SelectNode>([this](auto n) { return try_fuse_activation(n); });
+        fixed_point<PairwiseMulNode>([this](auto n) { return try_fuse_activation(n); });
         fuse_concat();
     }
 
     void fuse_sparse_affine() {
-        bool changed = true;
-        while (changed) {
-            changed = false;
-            for (auto& node : nodes) {
-                auto* sa = dpc<SparseAffineNode>(node.get());
-                if (!sa)
-                    continue;
+        fixed_point<SparseAffineNode>([this](auto node) -> bool {
+            auto* sa = dynamic_cast<SparseAffineNode*>(node.get());
 
-                Node* c1 = sole_consumer(node.get());
-                if (!c1)
-                    continue;
+            auto c1 = sole_consumer(node);
+            if (!c1)
+                return false;
 
-                if (is_activation(c1->get_op_type())) {
-                    Node* c2 = sole_consumer(c1);
-                    if (c2 && c2->get_op_type() == OpType::PairwiseMul) {
-                        // try activation + pairwise mul fusion first
-                        sa->set_activation(c1->get_op_type());
-                        sa->set_pairwise_fused();
-                        absorb_node(c1, node.get());
-                        absorb_node(c2, node.get());
-                    } else {
-                        // try only activation fusion
-                        sa->set_activation(c1->get_op_type());
-                        absorb_node(c1, node.get());
-                    }
-                    changed = true;
-                    break;
-                }
+            auto c1_type = c1->get_op_type();
 
-                // if no activation provided, try pairwise mul fusion
-                if (c1->get_op_type() == OpType::PairwiseMul) {
+            if (is_activation(c1_type)) {
+                sa->set_activation(c1_type);
+                absorb_node(c1, node);
+
+                auto c2 = sole_consumer(node);
+                if (c2 && c2->get_op_type() == OpType::PairwiseMul) {
                     sa->set_pairwise_fused();
-                    absorb_node(c1, node.get());
-                    changed = true;
-                    break;
+                    absorb_node(c2, node);
                 }
-            }
-        }
-    }
 
-    void fuse_affine() {
-        bool changed = true;
-        while (changed) {
-            changed = false;
-            for (auto& node : nodes) {
-                if (!dpc<AffineNode>(node.get()))
-                    continue;
-                if (try_fuse_activation(node.get())) {
-                    changed = true;
-                    break;
-                }
+                return true;
             }
-        }
-    }
 
-    void fuse_select() {
-        bool changed = true;
-        while (changed) {
-            changed = false;
-            for (auto& node : nodes) {
-                if (!dpc<SelectNode>(node.get()))
-                    continue;
-                if (try_fuse_activation(node.get())) {
-                    changed = true;
-                    break;
-                }
+            if (c1_type == OpType::PairwiseMul) {
+                sa->set_pairwise_fused();
+                absorb_node(c1, node);
+                return true;
             }
-        }
-    }
 
-    void fuse_pairwise_mul() {
-        bool changed = true;
-        while (changed) {
-            changed = false;
-            for (auto& node : nodes) {
-                if (!dpc<PairwiseMulNode>(node.get()))
-                    continue;
-                if (try_fuse_activation(node.get())) {
-                    changed = true;
-                    break;
-                }
-            }
-        }
+            return false;
+        });
     }
 
     void fuse_concat() {
-        // try fusing with sparse affine / pairwise mul first
+        // Pass 1: mark concat nodes whose inputs are all sole-consumed SparseAffine
         for (auto& node : nodes) {
-            auto* cn = dpc<ConcatNode>(node.get());
+            auto* cn = dynamic_cast<ConcatNode*>(node.get());
             if (!cn || cn->is_fused())
                 continue;
 
-            bool all_fusable = true;
-            for (auto* input : node->get_inputs()) {
-                if (sole_consumer(input) != node.get()) {
-                    all_fusable = false;
-                    break;
-                }
-
-                OpType t = input->get_op_type();
-                if (t != OpType::SparseAffine) {
-                    all_fusable = false;
+            bool ok = true;
+            for (auto& inp : node->get_inputs()) {
+                if (sole_consumer(inp) != node || inp->get_op_type() != OpType::SparseAffine) {
+                    ok = false;
                     break;
                 }
             }
 
-            if (all_fusable)
+            if (ok)
                 cn->set_fused();
         }
 
-        // try fusing with activation
-        bool changed = true;
-        while (changed) {
-            changed = false;
-            for (auto& node : nodes) {
-                auto* cn = dpc<ConcatNode>(node.get());
-                if (!cn)
-                    continue;
+        // Pass 2: fuse activation into fused-concat inputs, or into unfused concat directly
+        fixed_point<ConcatNode>([this](auto node) -> bool {
+            auto* cn = dynamic_cast<ConcatNode*>(node.get());
+            if (cn->is_fused()) {
+                auto c = sole_consumer(node);
+                if (!c || !is_activation(c->get_op_type()))
+                    return false;
 
-                if (cn->is_fused()) {
-                    Node* c = sole_consumer(node.get());
-                    if (!c || !is_activation(c->get_op_type()))
-                        continue;
-
-                    bool valid_inputs = true;
-                    for (auto* in : node->get_inputs()) {
-                        if (sole_consumer(in) != node.get() || is_activation(in->get_activation())) {
-                            valid_inputs = false;
-                            break;
-                        }
-                    }
-
-                    if (valid_inputs) {
-                        for (auto* in : node->get_inputs())
-                            in->set_activation(c->get_op_type());
-                        absorb_node(c, node.get());
-                        changed = true;
+                bool valid = true;
+                for (auto& in : node->get_inputs()) {
+                    if (sole_consumer(in) != node || is_activation(in->get_activation())) {
+                        valid = false;
                         break;
                     }
-                } else if (try_fuse_activation(node.get())) {
-                    changed = true;
-                    break;
                 }
+
+                if (!valid)
+                    return false;
+
+                for (auto& in : node->get_inputs())
+                    in->set_activation(c->get_op_type());
+
+                absorb_node(c, node);
+                return true;
             }
-        }
+
+            return try_fuse_activation(node);
+        });
     }
 };
 
