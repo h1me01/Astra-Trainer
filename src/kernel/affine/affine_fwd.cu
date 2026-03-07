@@ -10,9 +10,8 @@ constexpr int num_threads = 256;
 template <ActivationType act_type>
 __global__ void biases_fwd_kernel(const float* biases_d, float* out_d, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= r * c)
-        return;
-    out_d[idx] = activate_fwd<act_type>(out_d[idx] + biases_d[idx % r]);
+    if (idx < r * c)
+        out_d[idx] = activate_fwd<act_type>(out_d[idx] + biases_d[idx % r]);
 }
 
 void affine_fwd(

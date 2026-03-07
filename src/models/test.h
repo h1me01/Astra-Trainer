@@ -49,12 +49,6 @@ struct Test : Model {
                 nstm_features(idx) = feature_index(pc, sq, ksq_nstm, !stm);
             }
 
-            for (; count < MAX_ACTIVE_FEATURES; count++) {
-                int idx = offset + count;
-                stm_features(idx) = -1;
-                nstm_features(idx) = -1;
-            }
-
             float score_target = sigmoid(ds[i].score / EVAL_SCALE);
             float wdl_target = (ds[i].result + 1) / 2.0f;
 

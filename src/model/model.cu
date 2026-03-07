@@ -78,31 +78,36 @@ void Model::print_info(int epoch, const std::string& output_path) const {
         std::cout << f << std::endl;
 
     std::cout << "\n=============================== Trainer Info ===============================\n\n";
-    std::cout << "Model name:        " << name << std::endl;
-    std::cout << "Device:            " << get_device_Info() << std::endl;
-    std::cout << "Epochs:            " << config.epochs << std::endl;
-    std::cout << "Batch Size:        " << config.batch_size << std::endl;
-    std::cout << "Batches/Epoch:     " << config.batches_per_epoch << std::endl;
-    std::cout << "Save Rate:         " << config.save_rate << std::endl;
-    std::cout << "LR Scheduler:      " << lr_sched->get_info() << std::endl;
-    std::cout << "WDL Scheduler:     " << wdl_sched->get_info() << std::endl;
-    std::cout << "Output Path:       " << output_path << std::endl;
+    std::cout << "Model name        : " << name << std::endl;
+    std::cout << "Device            : " << get_device_Info() << std::endl;
+    std::cout << "Epochs            : " << config.epochs << std::endl;
+    std::cout << "Batch Size        : " << config.batch_size << std::endl;
+    std::cout << "Batches/Epoch     : " << config.batches_per_epoch << std::endl;
+    std::cout << "Save Rate         : " << config.save_rate << std::endl;
+    std::cout << "LR Scheduler      : " << lr_sched->get_info() << std::endl;
+    std::cout << "WDL Scheduler     : " << wdl_sched->get_info() << std::endl;
+    std::cout << "Output Path       : " << output_path << std::endl;
 
     if (!loaded_checkpoint.empty())
-        std::cout << "Loaded Checkpoint: " << loaded_checkpoint << std::endl;
+        std::cout << "Loaded Checkpoint : " << loaded_checkpoint << std::endl;
     else if (!loaded_model.empty())
-        std::cout << "Loaded Model:      " << loaded_model << std::endl;
+        std::cout << "Loaded Model      : " << loaded_model << std::endl;
 
     if (epoch > 0)
         std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get() << std::endl;
 }
 
 void Model::next_batch(const std::vector<TrainingDataEntry>& ds) {
+    for (auto& input : get_inputs()) {
+        auto& indices = input->get_indices();
+        for (size_t i = 0; i < indices.size(); i++)
+            indices(i) = -1;
+    }
+
     fill_inputs(ds);
 
     for (auto& input : get_inputs())
         input->get_indices().host_to_dev_async();
-
     targets.host_to_dev_async();
 }
 
@@ -165,7 +170,7 @@ void Model::train(std::string output_path) {
             network->backward();
             optim->step(lr_sched->get(), data_entries.size());
 
-            if (batch == config.batches_per_epoch || !(batch % 100)) {
+            if (batch % 100 == 0) {
                 print_progress(
                     epoch,
                     batch,
