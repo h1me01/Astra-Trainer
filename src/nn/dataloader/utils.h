@@ -15,7 +15,7 @@ inline void validate_files(std::vector<std::string> files) {
 
     std::vector<std::string> non_binpack_files;
     for (const auto& f : files)
-        if (f.size() < 8 || f.compare(f.size() - 8, 8, ".binpack") != 0)
+        if (!f.ends_with(".binpack"))
             non_binpack_files.push_back(f);
 
     if (!non_binpack_files.empty()) {

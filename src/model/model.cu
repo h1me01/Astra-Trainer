@@ -14,7 +14,7 @@ void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms
         "\repoch/batch = %3d/%4d | loss = %1.6f | pos/sec = %7d | time = %3ds%s",
         epoch,
         batch,
-        loss,
+        loss / pos_count,
         (int)round(pos_count / time_sec),
         (int)round(time_sec),
         newline ? "\n" : ""
@@ -97,18 +97,24 @@ void Model::print_info(int epoch, const std::string& output_path) const {
         std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get() << std::endl;
 }
 
-void Model::next_batch(const std::vector<TrainingDataEntry>& ds) {
+void Model::next_batch(const std::vector<TrainingDataEntry>& dataset) {
     for (auto& input : get_inputs()) {
         auto& indices = input->get_indices();
         for (size_t i = 0; i < indices.size(); i++)
             indices(i) = -1;
     }
 
-    fill_inputs(ds);
+    fill_inputs(dataset);
 
     for (auto& input : get_inputs())
         input->get_indices().host_to_dev_async();
     targets.host_to_dev_async();
+
+    optim->zero_grads();
+    network->forward(dataset);
+    loss->compute(targets, network->get_output());
+    network->backward();
+    optim->step(lr_sched->get(), dataset.size());
 }
 
 float Model::predict(std::string fen) {
@@ -161,30 +167,23 @@ void Model::train(std::string output_path) {
         wdl_sched->step(epoch);
 
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
-            auto data_entries = dataloader->next();
-            next_batch(data_entries);
-
-            optim->zero_grads();
-            network->forward(data_entries);
-            loss->compute(targets, network->get_output());
-            network->backward();
-            optim->step(lr_sched->get(), data_entries.size());
+            next_batch(dataloader->next());
 
             if (batch % 100 == 0) {
                 print_progress(
                     epoch,
                     batch,
-                    loss->get_loss() / (config.batch_size * batch),
+                    loss->get_loss(),
                     config.batch_size * batch,
                     timer.elapsed_time()
                 );
             }
         }
 
-        float epoch_loss = loss->get_loss() / positions_per_epoch;
+        float epoch_loss = loss->get_loss();
         print_progress(epoch, config.batches_per_epoch, epoch_loss, positions_per_epoch, timer.elapsed_time(), true);
 
-        log.write({std::to_string(epoch), std::to_string(epoch_loss)});
+        log.write({std::to_string(epoch), std::to_string(epoch_loss / positions_per_epoch)});
         if (epoch % std::max(config.save_rate, 1) == 0 || epoch == config.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(epoch));
     }

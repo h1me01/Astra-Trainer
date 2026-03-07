@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numbers>
 #include "lr_scheduler.h"
 
 namespace nn::lr_sched {
@@ -41,7 +42,7 @@ class CosineAnnealing : public LRScheduler {
     float final;
     int max_epochs;
 
-    const float pi = 3.14159265358979f;
+    const float pi = std::numbers::pi_v<float>;
 };
 
 } // namespace nn::lr_sched

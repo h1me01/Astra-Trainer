@@ -116,7 +116,7 @@ struct Astra : Model {
                    || e.move.type != MoveType::Normal;
         };
 
-        return dataloader::create(4, {"/home/h1me/Downloads/data.binpack"}, should_skip);
+        return dataloader::create(2, {"/home/h1me/Downloads/data.binpack"}, should_skip);
     }
 };
 

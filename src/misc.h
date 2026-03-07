@@ -53,9 +53,7 @@ template <typename T>
 using SPtr = std::shared_ptr<T>;
 
 inline std::string format_number(float num, int precision = 6) {
-    std::ostringstream oss;
-    oss << std::setprecision(precision) << num;
-    return oss.str();
+    return std::format("{:.{}g}", num, precision);
 }
 
 inline void error(const std::string& message) {

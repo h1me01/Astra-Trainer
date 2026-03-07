@@ -41,6 +41,8 @@ class Graph {
                 extra += " [+" + op_type_str(n->get_activation()) + "]";
             if (auto* sa = dynamic_cast<SparseAffineNode*>(n); sa && sa->is_pairwise_fused())
                 extra += " [+PairwiseMul]";
+            if (auto* cn = dynamic_cast<ConcatNode*>(n); cn && cn->is_fused())
+                extra += " [Fused]";
 
             std::cout << "[" << std::right << std::setw(2) << i << "] " << std::left << std::setw(18)
                       << n->get_op_type_str() << " dim=" << std::setw(4) << n->get_output_dim()
@@ -64,9 +66,9 @@ class Graph {
         std::unordered_set<Node*> visited, in_stack;
 
         std::function<void(SPtr<Node>)> dfs = [&](SPtr<Node> node) {
-            if (in_stack.count(node.get()))
+            if (in_stack.contains(node.get()))
                 error("Graph: Cycle detected!");
-            if (visited.count(node.get()))
+            if (visited.contains(node.get()))
                 return;
 
             in_stack.insert(node.get());
@@ -122,9 +124,7 @@ class Graph {
                     if (inp == consumed)
                         inp = owner;
 
-        nodes.erase(
-            std::remove_if(nodes.begin(), nodes.end(), [&](const auto& n) { return n == consumed; }), nodes.end()
-        );
+        std::erase_if(nodes, [&](const auto& n) { return n == consumed; });
 
         build_consumer_map();
     }
@@ -204,13 +204,9 @@ class Graph {
             if (!cn || cn->is_fused())
                 continue;
 
-            bool ok = true;
-            for (auto& inp : node->get_inputs()) {
-                if (sole_consumer(inp) != node || inp->get_op_type() != OpType::SparseAffine) {
-                    ok = false;
-                    break;
-                }
-            }
+            bool ok = std::ranges::all_of(node->get_inputs(), [&](auto& inp) {
+                return sole_consumer(inp) == node && inp->get_op_type() == OpType::SparseAffine;
+            });
 
             if (ok)
                 cn->set_fused();
@@ -224,13 +220,9 @@ class Graph {
                 if (!c || !is_activation(c->get_op_type()))
                     return false;
 
-                bool valid = true;
-                for (auto& in : node->get_inputs()) {
-                    if (sole_consumer(in) != node || is_activation(in->get_activation())) {
-                        valid = false;
-                        break;
-                    }
-                }
+                bool valid = std::ranges::all_of(node->get_inputs(), [&](auto& in) {
+                    return sole_consumer(in) == node && !is_activation(in->get_activation());
+                });
 
                 if (!valid)
                     return false;

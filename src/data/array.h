@@ -93,12 +93,12 @@ class Array {
   public:
     Array() = default;
 
-    explicit Array(int size, bool use_pinned = false)
-        : m_size(size),
-          use_pinned(use_pinned) {
+    explicit Array(int size, bool pinned = false)
+        : size_(size),
+          pinned(pinned) {
 
         if (size > 0) {
-            if (use_pinned)
+            if (pinned)
                 pinned_host_data = CudaHostPtr<T>(size);
             else
                 host_data = std::make_unique<T[]>(size);
@@ -108,20 +108,20 @@ class Array {
     }
 
     Array(const Array<T>& other)
-        : m_size(other.m_size),
-          use_pinned(other.use_pinned) {
+        : size_(other.size_),
+          pinned(other.pinned) {
 
-        if (use_pinned && other.pinned_host_data) {
-            pinned_host_data = CudaHostPtr<T>(m_size);
-            std::memcpy(pinned_host_data.get(), other.pinned_host_data.get(), m_size * sizeof(T));
+        if (pinned && other.pinned_host_data) {
+            pinned_host_data = CudaHostPtr<T>(size_);
+            std::memcpy(pinned_host_data.get(), other.pinned_host_data.get(), size_ * sizeof(T));
         } else if (other.host_data) {
-            host_data = std::make_unique<T[]>(m_size);
-            std::memcpy(host_data.get(), other.host_data.get(), m_size * sizeof(T));
+            host_data = std::make_unique<T[]>(size_);
+            std::memcpy(host_data.get(), other.host_data.get(), size_ * sizeof(T));
         }
 
         if (other.dev_data) {
-            dev_data = CudaDevicePtr<T>(m_size);
-            CUDA_CHECK(cudaMemcpy(dev_data.get(), other.dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToDevice));
+            dev_data = CudaDevicePtr<T>(size_);
+            CUDA_CHECK(cudaMemcpy(dev_data.get(), other.dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToDevice));
         }
     }
 
@@ -142,7 +142,7 @@ class Array {
     bool is_host_allocated() const { return host_data != nullptr || pinned_host_data; }
     bool is_dev_allocated() const { return static_cast<bool>(dev_data); }
 
-    T* host_address() const { return use_pinned ? pinned_host_data.get() : host_data.get(); }
+    T* host_address() const { return pinned ? pinned_host_data.get() : host_data.get(); }
     T* dev_address() const { return dev_data.get(); }
 
     void free_dev() { dev_data = CudaDevicePtr<T>(); }
@@ -163,64 +163,64 @@ class Array {
     }
 
     void clear_host() {
-        if (use_pinned && pinned_host_data)
-            std::memset(pinned_host_data.get(), 0, sizeof(T) * m_size);
+        if (pinned && pinned_host_data)
+            std::memset(pinned_host_data.get(), 0, sizeof(T) * size_);
         else if (host_data)
-            std::memset(host_data.get(), 0, sizeof(T) * m_size);
+            std::memset(host_data.get(), 0, sizeof(T) * size_);
     }
 
     void clear_dev() {
         if (dev_data)
-            CUDA_CHECK(cudaMemsetAsync(dev_data.get(), 0, sizeof(T) * m_size, 0));
+            CUDA_CHECK(cudaMemsetAsync(dev_data.get(), 0, sizeof(T) * size_, 0));
     }
 
     void host_to_dev() {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
-        T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
+        CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, size_ * sizeof(T), cudaMemcpyHostToDevice));
     }
 
     void host_to_dev_async(cudaStream_t stream = 0) {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
-        T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        if (use_pinned) {
-            CUDA_CHECK(cudaMemcpyAsync(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice, stream));
+        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
+        if (pinned) {
+            CUDA_CHECK(cudaMemcpyAsync(dev_data.get(), h_ptr, size_ * sizeof(T), cudaMemcpyHostToDevice, stream));
         } else {
-            CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, m_size * sizeof(T), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, size_ * sizeof(T), cudaMemcpyHostToDevice));
         }
     }
 
     void dev_to_host() {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
-        T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
-        CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), m_size * sizeof(T), cudaMemcpyDeviceToHost));
+        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
+        CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost));
     }
 
     T get(int idx) const {
         CHECK(is_host_allocated());
-        CHECK(idx >= 0 && idx < m_size);
-        T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
+        CHECK(idx >= 0 && idx < size_);
+        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
         return h_ptr[idx];
     }
 
     T& get(int idx) {
         CHECK(is_host_allocated());
-        CHECK(idx >= 0 && idx < m_size);
-        T* h_ptr = use_pinned ? pinned_host_data.get() : host_data.get();
+        CHECK(idx >= 0 && idx < size_);
+        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
         return h_ptr[idx];
     }
 
     T operator()(int idx) const { return get(idx); }
     T& operator()(int idx) { return get(idx); }
 
-    int size() const { return m_size; }
+    int size() const { return size_; }
 
   protected:
-    int m_size = 0;
-    bool use_pinned = false;
+    int size_ = 0;
+    bool pinned = false;
     UPtr<T[]> host_data;
     CudaHostPtr<T> pinned_host_data;
     CudaDevicePtr<T> dev_data;
