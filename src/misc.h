@@ -19,9 +19,6 @@
 
 using namespace std::filesystem;
 
-#ifdef NDEBUG
-#define CHECK(expr) ((void)0)
-#else
 #define CHECK(expr)                                                                                                    \
     do {                                                                                                               \
         if (!static_cast<bool>(expr)) {                                                                                \
@@ -32,7 +29,6 @@ using namespace std::filesystem;
             std::exit(1);                                                                                              \
         }                                                                                                              \
     } while (0)
-#endif
 
 #define CUDA_CHECK(expr_to_check)                                                                                      \
     do {                                                                                                               \

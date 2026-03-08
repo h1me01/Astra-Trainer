@@ -4,7 +4,7 @@
 #include <iostream>
 #include <random>
 
-#include "dense_matrix.h"
+#include "matrix.h"
 
 namespace data {
 
@@ -32,11 +32,6 @@ class Tensor {
           grads(r, c) {
         zero_init();
     }
-
-    Tensor(const Tensor&) = default;
-    Tensor(Tensor&&) noexcept = default;
-    Tensor& operator=(const Tensor&) = default;
-    Tensor& operator=(Tensor&&) noexcept = default;
 
     void zero_init() {
         data.clear();

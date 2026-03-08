@@ -15,10 +15,9 @@ __global__ void factorizer_fwd_kernel(
     const int f_idx = idx % (factorizer_size / 4);
 
     if (vec_idx + 4 <= total_size) {
-        float4 f_val = as_vec<const float4>(factorizer_d)[f_idx];
-        float4 w_val = as_vec<const float4>(weights_d)[idx];
-        as_vec<float4>(out_d)[idx] =
-            make_float4(f_val.x + w_val.x, f_val.y + w_val.y, f_val.z + w_val.z, f_val.w + w_val.w);
+        float4 f_val = as_vec<float4>(factorizer_d)[f_idx];
+        float4 w_val = as_vec<float4>(weights_d)[idx];
+        as_vec<float4>(out_d)[idx] = add_t4(f_val, w_val);
     } else {
         for (int i = vec_idx; i < total_size; i++)
             out_d[i] = factorizer_d[i % factorizer_size] + weights_d[i];

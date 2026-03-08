@@ -20,7 +20,7 @@ class StepDecay : public LRScheduler {
     }
 
     void step(int epoch) override {
-        if (epoch % step_size == 0)
+        if ((epoch + 1) % step_size == 0)
             lr *= gamma;
     }
 

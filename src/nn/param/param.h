@@ -21,7 +21,7 @@ class Param {
         biases.zero_init();
     }
 
-    void create_factorizer() { factorizer = Factorizer(&weights); }
+    void create_factorizer(int block_size) { factorizer = Factorizer(&weights, block_size); }
 
     bool has_factorizer() const { return factorizer.has_value(); }
 

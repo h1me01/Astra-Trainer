@@ -125,7 +125,7 @@ class Array {
         }
     }
 
-    Array(Array<T>&& other) noexcept = default;
+    Array<T>& operator=(Array<T>&& other) noexcept = default;
 
     Array<T>& operator=(const Array<T>& other) {
         if (this != &other) {
@@ -134,10 +134,6 @@ class Array {
         }
         return *this;
     }
-
-    Array<T>& operator=(Array<T>&& other) noexcept = default;
-
-    virtual ~Array() = default;
 
     bool is_host_allocated() const { return host_data != nullptr || pinned_host_data; }
     bool is_dev_allocated() const { return static_cast<bool>(dev_data); }
@@ -181,6 +177,13 @@ class Array {
         CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, size_ * sizeof(T), cudaMemcpyHostToDevice));
     }
 
+    void dev_to_host() {
+        if (!is_host_allocated() || !is_dev_allocated())
+            return;
+        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
+        CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost));
+    }
+
     void host_to_dev_async(cudaStream_t stream = 0) {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
@@ -192,11 +195,15 @@ class Array {
         }
     }
 
-    void dev_to_host() {
+    void dev_to_host_async(cudaStream_t stream = 0) {
         if (!is_host_allocated() || !is_dev_allocated())
             return;
         T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
-        CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost));
+        if (pinned) {
+            CUDA_CHECK(cudaMemcpyAsync(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost, stream));
+        } else {
+            CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost));
+        }
     }
 
     T get(int idx) const {

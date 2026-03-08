@@ -1,7 +1,7 @@
 #pragma once
 
 #include "array"
-#include "dense_matrix.h"
+#include "matrix.h"
 #include "tensor.h"
 
 using namespace data;

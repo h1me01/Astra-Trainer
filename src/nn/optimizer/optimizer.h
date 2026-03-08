@@ -65,9 +65,6 @@ class Optimizer {
     std::optional<float> max_param_val;
 
     virtual void init_buffers() {
-        momentum.reserve(params.size());
-        velocity.reserve(params.size());
-
         for (const auto* t : params) {
             int size = t->get_data().size();
             momentum.emplace_back(size);

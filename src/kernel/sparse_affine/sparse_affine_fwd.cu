@@ -28,14 +28,14 @@ __global__ void sparse_affine_fwd_vec_kernel(
         shared_indices[i] = sample_indices[i];
     __syncthreads();
 
-    float4 val = as_vec<const float4>(biases_d)[row4];
+    const float4* w4 = as_vec<const float4>(weights_d);
 
+    float4 val = as_vec<const float4>(biases_d)[row4];
     for (int i = 0; i < max_entries; i++) {
-        const int feat = shared_indices[i];
-        if (feat == -1)
+        const int f_idx = shared_indices[i];
+        if (f_idx == -1)
             break;
-        const float4 w = as_vec<const float4>(weights_d)[feat * weights_r4 + row4];
-        add_t4(val, w);
+        val = add_t4(val, w4[f_idx * weights_r4 + row4]);
     }
 
     as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = activate_fwd_f4<act_type>(val);
@@ -75,8 +75,7 @@ void sparse_affine_fwd(
     const DenseMatrix& weights_d,
     const DenseMatrix& biases_d,
     DenseMatrix& out_d,
-    const Array<int>& indices,
-    const int max_entries,
+    const SparseMatrix& indices,
     const int out_offset,
     const ActivationType act_type
 ) {
@@ -92,6 +91,8 @@ void sparse_affine_fwd(
     const int batch_size = out_d.cols();
 
     CHECK(batch_size <= 65535 && out_r >= weights_r + out_offset);
+
+    const int max_entries = indices.rows();
 
     const bool use_vec = (weights_r % 4 == 0);
     const int effective_rows = use_vec ? weights_r / 4 : weights_r;

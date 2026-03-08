@@ -59,7 +59,7 @@ struct FusedConcat : public ConcatBase {
                 return offset;
             offset += input->get_output_dim();
         }
-        error("Concat fusion failed! (this should never happen)");
+        CHECK(false);
         return -1;
     }
 };

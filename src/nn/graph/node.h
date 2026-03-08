@@ -16,7 +16,7 @@ class Node {
           output_dim(output_dim),
           inputs(inputs) {
         for (const auto in : inputs)
-            if (in == nullptr)
+            if (!in)
                 error("Graph: inputs cannot be null!");
     }
 

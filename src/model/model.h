@@ -17,7 +17,7 @@ struct TrainingConfig {
 
 class Model {
   public:
-    virtual ~Model() = default;
+    virtual ~Model();
 
     void train(std::string output_path = "");
 
@@ -43,7 +43,7 @@ class Model {
             fclose(f);
         } catch (const std::exception& e) {
             fclose(f);
-            throw;
+            error("Model: Failed loading parameters from " + file + ": " + e.what());
         }
 
         loaded_model = file;
@@ -89,8 +89,6 @@ class Model {
     Array<float> targets;
     WDLScheduler wdl_sched;
 
-    std::vector<Input> get_inputs() const { return network->get_inputs(); }
-
     virtual Node build() = 0;
     virtual void fill_inputs(const std::vector<TrainingDataEntry>& ds) = 0;
     virtual float predict(std::string fen);
@@ -100,6 +98,8 @@ class Model {
     virtual LRScheduler get_lr_scheduler() = 0;
     virtual WDLScheduler get_wdl_scheduler() = 0;
     virtual Dataloader get_dataloader() = 0;
+
+    Input& get_input(int idx) { return static_cast<Input&>(*network->get_inputs()[idx]); }
 
   private:
     bool is_initialized = false;
@@ -116,7 +116,7 @@ class Model {
 
     void init();
     void print_info(int epoch, const std::string& output_path) const;
-    void next_batch(const std::vector<TrainingDataEntry>& ds);
+    void prepare_batch(const std::vector<TrainingDataEntry>& ds);
 
     void save_checkpoint(const std::string& path) {
         try {
@@ -149,7 +149,7 @@ class Model {
             fclose(f);
         } catch (const std::exception& e) {
             fclose(f);
-            throw;
+            error("Model: Failed writing weights to " + file + ": " + e.what());
         }
     }
 

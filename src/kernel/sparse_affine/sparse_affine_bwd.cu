@@ -27,11 +27,11 @@ __global__ void sparse_affine_bwd_kernel(
     const int out_idx = batch_idx * out_r + row;
 
     float grad = out_g[out_idx];
-    if (grad == 0.0f)
-        return;
-
-    if constexpr (act_type != ActivationType::Linear)
+    if constexpr (act_type != ActivationType::Linear) {
         grad *= activate_bwd<act_type, true>(out_d[out_idx]);
+        if (grad == 0.0f)
+            return;
+    }
 
     atomicAdd(&biases_g[row], grad);
 
@@ -47,8 +47,7 @@ void sparse_affine_bwd(
     DenseMatrix& weights_g,
     DenseMatrix& biases_g,
     const Tensor& out,
-    const Array<int>& features,
-    const int max_entries,
+    const SparseMatrix& indices,
     const int out_offset,
     const ActivationType act_type
 ) {
@@ -60,11 +59,13 @@ void sparse_affine_bwd(
         biases_g.dev_address() &&  //
         out_d.dev_address() &&     //
         out_g.dev_address() &&     //
-        features.dev_address()
+        indices.dev_address()
     );
 
     CHECK(weights_g.rows() == biases_g.rows());
     CHECK(out_g.cols() <= 65535 && out_g.rows() >= weights_g.rows() + out_offset);
+
+    const int max_entries = indices.rows();
 
     const int batch_size = out_g.cols();
     const int row_tiles = cuda::ceil_div(weights_g.rows(), num_threads);
@@ -79,7 +80,7 @@ void sparse_affine_bwd(
             biases_g.dev_address(),
             out_d.dev_address() + out_offset,
             out_g.dev_address() + out_offset,
-            features.dev_address(),
+            indices.dev_address(),
             weights_g.rows(),
             out_g.rows(),
             batch_size,

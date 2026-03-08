@@ -29,7 +29,7 @@ class SelectIndices {
                 error("SelectIndices: Index function of Select returned negative index!");
             indices(i) = idx;
         }
-        indices.host_to_dev_async();
+        indices.host_to_dev();
     }
 
     int partitions_size() const { return num_partitions; }

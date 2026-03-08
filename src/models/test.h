@@ -30,23 +30,21 @@ struct Test : Model {
     }
 
     void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
-        auto& stm_features = get_inputs()[0]->get_indices();
-        auto& nstm_features = get_inputs()[1]->get_indices();
+        Input& stm_in = get_input(0);
+        Input& nstm_in = get_input(1);
 
         for (size_t i = 0; i < ds.size(); i++) {
             const Position& pos = ds[i].pos;
             const Color stm = pos.sideToMove();
             const Square ksq_stm = pos.kingSquare(stm);
             const Square ksq_nstm = pos.kingSquare(!stm);
-            const int offset = i * MAX_ACTIVE_FEATURES;
 
-            int count = 0;
+            int j = 0;
             for (auto sq : pos.piecesBB()) {
                 Piece pc = pos.pieceAt(sq);
-
-                int idx = offset + count++;
-                stm_features(idx) = feature_index(pc, sq, ksq_stm, stm);
-                nstm_features(idx) = feature_index(pc, sq, ksq_nstm, !stm);
+                stm_in(j, i) = feature_index(pc, sq, ksq_stm, stm);
+                nstm_in(j, i) = feature_index(pc, sq, ksq_nstm, !stm);
+                j++;
             }
 
             float score_target = sigmoid(ds[i].score / EVAL_SCALE);
@@ -55,6 +53,8 @@ struct Test : Model {
             targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
         }
     }
+
+    float predict(std::string fen) override { return Model::predict(fen) * EVAL_SCALE; }
 
     Node build() {
         const int ft_size = 32;
@@ -104,7 +104,7 @@ struct Test : Model {
                    || e.move.type != MoveType::Normal;
         };
 
-        return dataloader::create(4, {"/home/h1me/Downloads/data.binpack"}, should_skip);
+        return dataloader::create(2, {"/home/h1me/Downloads/data.binpack"}, should_skip);
     }
 };
 

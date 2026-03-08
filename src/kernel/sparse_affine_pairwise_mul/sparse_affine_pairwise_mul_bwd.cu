@@ -31,6 +31,10 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     if (row >= half || batch_idx >= batch_size)
         return;
 
+    const float grad = out_g[batch_idx * out_r + row];
+    if (grad == 0.0f)
+        return;
+
     float sum_a = biases_d[row];
     float sum_b = biases_d[row + half];
 
@@ -43,13 +47,12 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
         sum_b += weights_d[base + half];
     }
 
-    const float grad = out_g[batch_idx * out_r + row];
     const float grad_a = grad * activate_bwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
     const float grad_b = grad * activate_bwd<act_type>(sum_b) * activate_fwd<act_type>(sum_a);
 
-    if (grad_a != 0.f)
+    if (grad_a != 0.0f)
         atomicAdd(&biases_g[row], grad_a);
-    if (grad_b != 0.f)
+    if (grad_b != 0.0f)
         atomicAdd(&biases_g[row + half], grad_b);
 
     for (int i = 0; i < max_entries; i++) {
@@ -57,9 +60,9 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
         if (f_idx == -1)
             break;
         const int base = weights_r * f_idx + row;
-        if (grad_a != 0.f)
+        if (grad_a != 0.0f)
             atomicAdd(&weights_g[base], grad_a);
-        if (grad_b != 0.f)
+        if (grad_b != 0.0f)
             atomicAdd(&weights_g[base + half], grad_b);
     }
 }
@@ -69,8 +72,7 @@ void sparse_affine_pairwise_mul_bwd(
     DenseMatrix& weights_g,
     Tensor& biases,
     const DenseMatrix& out_g,
-    const Array<int>& features,
-    const int max_entries,
+    const SparseMatrix& indices,
     const int out_offset,
     const ActivationType act_type
 ) {
@@ -83,11 +85,13 @@ void sparse_affine_pairwise_mul_bwd(
         weights_d.is_dev_allocated() && //
         biases_d.is_dev_allocated() &&  //
         out_g.is_dev_allocated() &&     //
-        features.is_dev_allocated()
+        indices.is_dev_allocated()
     );
 
     CHECK(weights_g.rows() == biases_g.rows());
     CHECK(out_g.cols() <= 65535 && 2 * out_g.rows() >= weights_g.rows() + out_offset);
+
+    const int max_entries = indices.rows();
 
     const int row_tiles = cuda::ceil_div(weights_g.rows() / 2, num_threads);
     const int shared_mem = max_entries * sizeof(int);
@@ -103,7 +107,7 @@ void sparse_affine_pairwise_mul_bwd(
             weights_d.dev_address(),
             biases_d.dev_address(),
             out_g.dev_address() + out_offset,
-            features.dev_address(),
+            indices.dev_address(),
             weights_g.rows(),
             out_g.rows(),
             out_g.cols(),

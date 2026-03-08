@@ -18,7 +18,7 @@ class Affine : public Operation {
         output_dim = param->get_output_dim();
 
         if (input->get_output_dim() != input_dim)
-            error("Affine: input output dimension does not match affine input dimension!");
+            error("Affine: Input output dimension does not match affine input dimension!");
     }
 
     void forward() override {

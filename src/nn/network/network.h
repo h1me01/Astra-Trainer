@@ -161,9 +161,9 @@ class Network {
                 }
             } else {
                 op = std::make_unique<op::Concat>(inputs);
+                maybe_set_act(op.get(), cn->get_activation());
             }
 
-            maybe_set_act(op.get(), cn->get_activation());
             return op;
         }
         case OpType::Select: {
@@ -186,7 +186,7 @@ class Network {
         case OpType::ClippedReLU:
         case OpType::SqrClippedReLU:
         case OpType::Sigmoid:
-            return std::make_unique<op::Activate>(inputs[0], to_activation(node->get_op_type()));
+            return std::make_unique<op::Activation>(inputs[0], to_activation(node->get_op_type()));
         default:
             CHECK(false);
             return nullptr;

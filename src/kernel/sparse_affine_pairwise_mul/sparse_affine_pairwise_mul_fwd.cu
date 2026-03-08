@@ -42,20 +42,14 @@ __global__ void sparse_affine_pairwise_mul_fwd_vec_kernel(
             break;
 
         const int base = f_idx * weights_r4 + row4;
-        add_t4(sum_a, w4[base]);
-        add_t4(sum_b, w4[base + half4]);
+        sum_a = add_t4(sum_a, w4[base]);
+        sum_b = add_t4(sum_b, w4[base + half4]);
     }
 
-    activate_fwd_f4<act_type>(sum_a);
-    activate_fwd_f4<act_type>(sum_b);
+    sum_a = activate_fwd_f4<act_type>(sum_a);
+    sum_b = activate_fwd_f4<act_type>(sum_b);
 
-    float4 r;
-    r.x = sum_a.x * sum_b.x;
-    r.y = sum_a.y * sum_b.y;
-    r.z = sum_a.z * sum_b.z;
-    r.w = sum_a.w * sum_b.w;
-
-    as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = r;
+    as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = mul_t4(sum_a, sum_b);
 }
 
 template <ActivationType act_type>
@@ -99,8 +93,7 @@ void sparse_affine_pairwise_mul_fwd(
     const DenseMatrix& weights_d,
     const DenseMatrix& biases_d,
     DenseMatrix& out_d,
-    const Array<int>& indices,
-    const int max_entries,
+    const SparseMatrix& indices,
     const int out_offset,
     const ActivationType act_type
 ) {
@@ -115,6 +108,8 @@ void sparse_affine_pairwise_mul_fwd(
     const int batch_size = out_d.cols();
 
     CHECK(batch_size <= 65535 && 2 * out_d.rows() >= weights_r + out_offset);
+
+    const int max_entries = indices.rows();
 
     const bool use_vec = (weights_r % 8 == 0);
     const int effective_rows = use_vec ? weights_r / 4 / 2 : weights_r / 2;

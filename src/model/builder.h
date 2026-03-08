@@ -38,13 +38,10 @@ class NodeHandle {
     NodeHandle clipped_relu() { return make_activation(ng::OpType::ClippedReLU); }
     NodeHandle sqr_clipped_relu() { return make_activation(ng::OpType::SqrClippedReLU); }
     NodeHandle sigmoid() { return make_activation(ng::OpType::Sigmoid); }
-
     NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node, indices)); }
-
     NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node)); }
 
     operator SPtr<ng::Node>() const { return node; }
-
     SPtr<ng::Node> get() const { return node; }
 
   private:
@@ -60,10 +57,8 @@ class SparseAffineBuilder {
     SparseAffineBuilder(int input_dim, int output_dim)
         : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
-    SparseAffineBuilder& factorized() {
-        if (param->get_input_dim() == 768)
-            error("SparseAffine: Factorization has no benefit for input dimension of 768!");
-        param->create_factorizer();
+    SparseAffineBuilder& factorized(int block_size) {
+        param->create_factorizer(block_size);
         return *this;
     }
 
@@ -119,7 +114,6 @@ inline SelectIndices select_index_fn(int count, Fn&& fn) {
 
 inline NodeHandle concat(std::vector<NodeHandle> inputs) {
     std::vector<SPtr<ng::Node>> nodes;
-    nodes.reserve(inputs.size());
     for (auto& h : inputs)
         nodes.push_back(h.get());
     return NodeHandle(std::make_shared<ng::ConcatNode>(nodes));

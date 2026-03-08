@@ -2,6 +2,8 @@
 
 namespace model {
 
+Model::~Model() {}
+
 // Helper
 
 void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms, bool newline = false) {
@@ -14,7 +16,7 @@ void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms
         "\repoch/batch = %3d/%4d | loss = %1.6f | pos/sec = %7d | time = %3ds%s",
         epoch,
         batch,
-        loss / pos_count,
+        loss,
         (int)round(pos_count / time_sec),
         (int)round(time_sec),
         newline ? "\n" : ""
@@ -97,24 +99,15 @@ void Model::print_info(int epoch, const std::string& output_path) const {
         std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get() << std::endl;
 }
 
-void Model::next_batch(const std::vector<TrainingDataEntry>& dataset) {
-    for (auto& input : get_inputs()) {
-        auto& indices = input->get_indices();
-        for (size_t i = 0; i < indices.size(); i++)
-            indices(i) = -1;
-    }
+void Model::prepare_batch(const std::vector<TrainingDataEntry>& dataset) {
+    for (auto& input : network->get_inputs())
+        input->reset();
 
     fill_inputs(dataset);
 
-    for (auto& input : get_inputs())
-        input->get_indices().host_to_dev_async();
-    targets.host_to_dev_async();
-
-    optim->zero_grads();
-    network->forward(dataset);
-    loss->compute(targets, network->get_output());
-    network->backward();
-    optim->step(lr_sched->get(), dataset.size());
+    for (auto& input : network->get_inputs())
+        input->get_indices().host_to_dev();
+    targets.host_to_dev();
 }
 
 float Model::predict(std::string fen) {
@@ -123,7 +116,7 @@ float Model::predict(std::string fen) {
 
     std::vector<TrainingDataEntry> ds{{pos}};
 
-    next_batch(ds);
+    prepare_batch(ds);
     network->forward(ds);
 
     auto& output = network->get_output().get_data();
@@ -157,35 +150,51 @@ void Model::train(std::string output_path) {
 
     std::cout << "\n================================= Training =================================\n\n";
 
-    const int positions_per_epoch = config.batch_size * config.batches_per_epoch;
-
-    for (epoch = epoch + 1; epoch <= config.epochs; epoch++) {
+    for (; epoch < config.epochs; epoch++) {
         Timer timer;
-        loss->clear();
 
         lr_sched->step(epoch);
         wdl_sched->step(epoch);
 
+        const int display_epoch = epoch + 1;
+
+        loss->clear();
+
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
-            next_batch(dataloader->next());
+            auto current_data = dataloader->next();
+            prepare_batch(current_data);
+
+            optim->zero_grads();
+            network->forward(current_data);
+            loss->compute(targets, network->get_output());
+            network->backward();
+            optim->step(lr_sched->get(), current_data.size());
 
             if (batch % 100 == 0) {
                 print_progress(
-                    epoch,
+                    display_epoch,
                     batch,
-                    loss->get_loss(),
+                    loss->get_loss() / (batch * config.batch_size),
                     config.batch_size * batch,
                     timer.elapsed_time()
                 );
             }
         }
 
-        float epoch_loss = loss->get_loss();
-        print_progress(epoch, config.batches_per_epoch, epoch_loss, positions_per_epoch, timer.elapsed_time(), true);
+        float epoch_loss = loss->get_loss() / (config.batch_size * config.batches_per_epoch);
 
-        log.write({std::to_string(epoch), std::to_string(epoch_loss / positions_per_epoch)});
-        if (epoch % std::max(config.save_rate, 1) == 0 || epoch == config.epochs)
-            save_checkpoint(training_folder + "/checkpoint_" + std::to_string(epoch));
+        print_progress(
+            display_epoch,
+            config.batches_per_epoch,
+            epoch_loss,
+            config.batch_size * config.batches_per_epoch,
+            timer.elapsed_time(),
+            true
+        );
+
+        log.write({std::to_string(display_epoch), std::to_string(epoch_loss)});
+        if (display_epoch % std::max(config.save_rate, 1) == 0 || display_epoch == config.epochs)
+            save_checkpoint(training_folder + "/checkpoint_" + std::to_string(display_epoch));
     }
 }
 

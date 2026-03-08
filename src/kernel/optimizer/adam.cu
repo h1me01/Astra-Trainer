@@ -6,6 +6,27 @@ constexpr int num_threads = 1024;
 
 constexpr float epsilon = 1e-8f;
 
+__device__ void adam_update(
+    float& val,
+    float& mom,
+    float& vel,
+    const float grad,
+    const float lr,
+    const float beta1,
+    const float beta2,
+    const float decay,
+    const float min_val,
+    const float max_val,
+    const float grad_scale
+) {
+    const float g = grad * grad_scale;
+    val *= decay;
+    mom = beta1 * mom + (1.0f - beta1) * g;
+    vel = beta2 * vel + (1.0f - beta2) * g * g;
+    val -= lr * mom / (sqrtf(vel) + epsilon);
+    val = clamp(val, min_val, max_val);
+}
+
 __global__ void adam_kernel(
     float* vals,
     const float* grads,
@@ -22,12 +43,8 @@ __global__ void adam_kernel(
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
-
     if (vec_idx >= size)
         return;
-
-    const float one_minus_beta1 = 1.0f - beta1;
-    const float one_minus_beta2 = 1.0f - beta2;
 
     if (vec_idx + 4 <= size) {
         float4 val = as_vec<float4>(vals)[idx];
@@ -35,12 +52,8 @@ __global__ void adam_kernel(
         float4 vel = as_vec<float4>(vels)[idx];
         const float4 grad = as_vec<const float4>(grads)[idx];
 
-        auto update = [&](float& v, float& m, float& ve, float g) {
-            g *= grad_scale;
-            v *= decay;
-            m = beta1 * m + one_minus_beta1 * g;
-            ve = beta2 * ve + one_minus_beta2 * g * g;
-            v = clamp(v - lr * m / (sqrtf(ve) + epsilon), min_val, max_val);
+        const auto update = [&](float& v, float& m, float& ve, float g) {
+            adam_update(v, m, ve, g, lr, beta1, beta2, decay, min_val, max_val, grad_scale);
         };
 
         update(val.x, mom.x, vel.x, grad.x);
@@ -52,13 +65,8 @@ __global__ void adam_kernel(
         as_vec<float4>(moms)[idx] = mom;
         as_vec<float4>(vels)[idx] = vel;
     } else {
-        for (int i = vec_idx; i < size; i++) {
-            const float scaled_grad = grads[i] * grad_scale;
-            vals[i] *= decay;
-            moms[i] = beta1 * moms[i] + one_minus_beta1 * scaled_grad;
-            vels[i] = beta2 * vels[i] + one_minus_beta2 * scaled_grad * scaled_grad;
-            vals[i] = clamp(vals[i] - lr * moms[i] / (sqrtf(vels[i]) + epsilon), min_val, max_val);
-        }
+        for (int i = vec_idx; i < size; i++)
+            adam_update(vals[i], moms[i], vels[i], grads[i], lr, beta1, beta2, decay, min_val, max_val, grad_scale);
     }
 }
 

@@ -17,9 +17,6 @@ class SparseAffineBase : public Operation {
 
         input_dim = param->get_input_dim();
         output_dim = param->get_output_dim() / out_dim_divisor;
-
-        if (input_dim % 768 != 0)
-            error("SparseAffine: input dimension must be a multiple of 768!");
     }
 
     void init(int batch_size) override {
@@ -60,7 +57,6 @@ class SparseAffine : public SparseAffineBase {
             param->get_biases().get_data(),
             effective_output().get_data(),
             input->get_indices(),
-            input->size(),
             out_offset,
             act_type
         );
@@ -72,7 +68,6 @@ class SparseAffine : public SparseAffineBase {
             param->get_biases().get_grads(),
             effective_output(),
             input->get_indices(),
-            input->size(),
             out_offset,
             act_type
         );
@@ -90,7 +85,6 @@ class SparseAffinePairwiseMul : public SparseAffineBase {
             param->get_biases().get_data(),
             effective_output().get_data(),
             input->get_indices(),
-            input->size(),
             out_offset,
             act_type
         );
@@ -103,7 +97,6 @@ class SparseAffinePairwiseMul : public SparseAffineBase {
             param->get_biases(),
             effective_output().get_grads(),
             input->get_indices(),
-            input->size(),
             out_offset,
             act_type
         );

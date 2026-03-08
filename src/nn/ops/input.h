@@ -13,18 +13,26 @@ class Input : public Operation {
         name = "Input";
     }
 
-    void init(int batch_size) override { sparse_indices = Array<int>(output_dim * batch_size, true); }
+    void init(int batch_size) override {
+        indices = SparseMatrix(output_dim, batch_size);
+        indices.pinned();
+    }
 
     void forward() override {}
     void backward() override {}
 
-    Array<int>& get_indices() { return sparse_indices; }
-    const Array<int>& get_indices() const { return sparse_indices; }
+    SparseMatrix& get_indices() { return indices; }
+    const SparseMatrix& get_indices() const { return indices; }
 
-    int size() const { return output_dim; }
+    int& operator()(int r, int c) { return indices(r, c); }
+
+    void reset() {
+        for (int i = 0; i < indices.size(); i++)
+            indices(i) = -1;
+    }
 
   private:
-    Array<int> sparse_indices;
+    SparseMatrix indices;
 };
 
 } // namespace nn::op

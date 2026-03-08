@@ -13,7 +13,7 @@ __global__ void factorizer_bwd_kernel(float* in_g, const float* out_g, const int
     const int f_idx = idx % (in_size / 4);
 
     if (vec_idx + 4 <= total_size) {
-        float4 out_val = as_vec<const float4>(out_g)[idx];
+        const float4 out_val = as_vec<const float4>(out_g)[idx];
 
         float4* dst = &as_vec<float4>(in_g)[f_idx];
         atomicAdd(&dst->x, out_val.x);

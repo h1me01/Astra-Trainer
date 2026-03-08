@@ -4,31 +4,29 @@
 
 namespace nn::op {
 
-class Activate : public Operation {
+class Activation : public Operation {
   public:
-    Activate(Operation* input, ActivationType type)
+    Activation(Operation* input, ActivationType type)
         : input(input),
           type(type) {
 
         CHECK(input);
 
-        name = "activate_";
-
         switch (type) {
         case ActivationType::ReLU:
-            name += "relu";
+            name = "relu";
             break;
         case ActivationType::ClippedReLU:
-            name += "clipped_relu";
+            name = "clipped_relu";
             break;
         case ActivationType::SqrClippedReLU:
-            name += "sqr_clipped_relu";
+            name = "sqr_clipped_relu";
             break;
         case ActivationType::Sigmoid:
-            name += "sigmoid";
+            name = "sigmoid";
             break;
         default:
-            name += "linear";
+            CHECK(false);
             break;
         }
 
@@ -37,7 +35,6 @@ class Activate : public Operation {
     }
 
     void forward() override { kernel::activation_fwd(input->get_data(), output.get_data(), type); }
-
     void backward() override { kernel::activation_bwd(input->get_output(), output.get_grads(), type); }
 
     std::vector<Operation*> get_inputs() const override { return {input}; }

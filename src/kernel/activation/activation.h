@@ -35,7 +35,7 @@ namespace kernel {
 template <ActivationType type>
 __device__ __forceinline__ float activate_fwd(float x) {
     if constexpr (type == ActivationType::ReLU) {
-        return fmaxf(0.0f, x);
+        return max(0.0f, x);
     } else if constexpr (type == ActivationType::ClippedReLU) {
         return clamp(x, 0.0f, 1.0f);
     } else if constexpr (type == ActivationType::SqrClippedReLU) {
@@ -69,7 +69,7 @@ __device__ __forceinline__ float activate_bwd(float x) {
 }
 
 template <ActivationType act_type>
-__device__ __forceinline__ float4& activate_fwd_f4(float4& a) {
+__device__ __forceinline__ float4 activate_fwd_f4(float4 a) {
     a.x = activate_fwd<act_type>(a.x);
     a.y = activate_fwd<act_type>(a.y);
     a.z = activate_fwd<act_type>(a.z);

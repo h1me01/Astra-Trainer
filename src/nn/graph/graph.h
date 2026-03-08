@@ -174,10 +174,12 @@ class Graph {
 
             auto c1_type = c1->get_op_type();
 
+            // Pass 1: try SparseAffine + Activation
             if (is_activation(c1_type)) {
                 sa->set_activation(c1_type);
                 absorb_node(c1, node);
 
+                // Pass 2: try PairwiseMul fusion on top of that
                 auto c2 = sole_consumer(node);
                 if (c2 && c2->get_op_type() == OpType::PairwiseMul) {
                     sa->set_pairwise_fused();
@@ -187,6 +189,7 @@ class Graph {
                 return true;
             }
 
+            // Pass 2: try SparseAffine + PairwiseMul
             if (c1_type == OpType::PairwiseMul) {
                 sa->set_pairwise_fused();
                 absorb_node(c1, node);
@@ -198,7 +201,7 @@ class Graph {
     }
 
     void fuse_concat() {
-        // Pass 1: mark concat nodes whose inputs are all sole-consumed SparseAffine
+        // Pass 1: try fusing Concat + SparseAffine
         for (auto& node : nodes) {
             auto* cn = dynamic_cast<ConcatNode*>(node.get());
             if (!cn || cn->is_fused())
@@ -207,12 +210,11 @@ class Graph {
             bool ok = std::ranges::all_of(node->get_inputs(), [&](auto& inp) {
                 return sole_consumer(inp) == node && inp->get_op_type() == OpType::SparseAffine;
             });
-
             if (ok)
                 cn->set_fused();
         }
 
-        // Pass 2: fuse activation into fused-concat inputs, or into unfused concat directly
+        // Pass 2: try fusing activation into fused-concat inputs, or into unfused concat directly
         fixed_point<ConcatNode>([this](auto node) -> bool {
             auto* cn = dynamic_cast<ConcatNode*>(node.get());
             if (cn->is_fused()) {
