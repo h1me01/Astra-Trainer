@@ -58,6 +58,9 @@ class SparseAffineBuilder {
         : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
     SparseAffineBuilder& factorized(int block_size) {
+        if (param->has_factorizer())
+            error("SparseAffineBuilder: Factorizer already exists for this layer!");
+
         param->create_factorizer(block_size);
         return *this;
     }

@@ -86,11 +86,10 @@ class Model {
     std::string name = "Model";
     TrainingConfig config;
 
-    Array<float> targets;
     WDLScheduler wdl_sched;
 
     virtual Node build() = 0;
-    virtual void fill_inputs(const std::vector<TrainingDataEntry>& ds) = 0;
+    virtual void fill_batch(const std::vector<TrainingDataEntry>& batch) = 0;
     virtual float predict(std::string fen);
 
     virtual Loss get_loss() = 0;
@@ -100,6 +99,8 @@ class Model {
     virtual Dataloader get_dataloader() = 0;
 
     Input& get_input(int idx) { return static_cast<Input&>(*network->get_inputs()[idx]); }
+
+    Array<float>& get_targets() { return loss->get_targets(); }
 
   private:
     bool is_initialized = false;

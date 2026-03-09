@@ -29,9 +29,10 @@ struct Test : Model {
         config.save_rate = 20;
     }
 
-    void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
+    void fill_batch(const std::vector<TrainingDataEntry>& ds) override {
         Input& stm_in = get_input(0);
         Input& nstm_in = get_input(1);
+        auto& targets = get_targets();
 
         for (size_t i = 0; i < ds.size(); i++) {
             const Position& pos = ds[i].pos;

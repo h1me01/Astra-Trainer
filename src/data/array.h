@@ -184,28 +184,6 @@ class Array {
         CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost));
     }
 
-    void host_to_dev_async(cudaStream_t stream = 0) {
-        if (!is_host_allocated() || !is_dev_allocated())
-            return;
-        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
-        if (pinned) {
-            CUDA_CHECK(cudaMemcpyAsync(dev_data.get(), h_ptr, size_ * sizeof(T), cudaMemcpyHostToDevice, stream));
-        } else {
-            CUDA_CHECK(cudaMemcpy(dev_data.get(), h_ptr, size_ * sizeof(T), cudaMemcpyHostToDevice));
-        }
-    }
-
-    void dev_to_host_async(cudaStream_t stream = 0) {
-        if (!is_host_allocated() || !is_dev_allocated())
-            return;
-        T* h_ptr = pinned ? pinned_host_data.get() : host_data.get();
-        if (pinned) {
-            CUDA_CHECK(cudaMemcpyAsync(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost, stream));
-        } else {
-            CUDA_CHECK(cudaMemcpy(h_ptr, dev_data.get(), size_ * sizeof(T), cudaMemcpyDeviceToHost));
-        }
-    }
-
     T get(int idx) const {
         CHECK(is_host_allocated());
         CHECK(idx >= 0 && idx < size_);

@@ -25,8 +25,8 @@ class SelectIndices {
     void step(const std::vector<TrainingDataEntry>& data_entries) {
         for (int i = 0; i < (int)data_entries.size(); i++) {
             int idx = fn(data_entries[i].pos);
-            if (idx < 0)
-                error("SelectIndices: Index function of Select returned negative index!");
+            if (idx < 0 || idx >= num_partitions)
+                error("SelectIndices: Index function of Select returned invalid index!");
             indices(i) = idx;
         }
         indices.host_to_dev();

@@ -10,7 +10,7 @@ class MPE : public Loss {
         : Loss(act_type),
           power(power) {}
 
-    void compute(const Array<float>& targets, Tensor& output) {
+    void compute(Tensor& output) {
         kernel::mpe_loss(targets, loss, output, power, act_type);
     }
 

@@ -16,7 +16,7 @@ void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms
         "\repoch/batch = %3d/%4d | loss = %1.6f | pos/sec = %7d | time = %3ds%s",
         epoch,
         batch,
-        loss,
+        loss / pos_count,
         (int)round(pos_count / time_sec),
         (int)round(time_sec),
         newline ? "\n" : ""
@@ -62,14 +62,13 @@ void Model::init() {
     if (!loss || !optim || !lr_sched || !wdl_sched || !dataloader)
         error("Model: All components (loss, optimizer, scheduler, dataloader) must be initialized!");
 
-    targets = Array<float>(config.batch_size, true);
-
     nn::graph::Graph graph(build());
     network = std::make_unique<nn::Network>(graph);
 
-    dataloader->init(config.batch_size);
+    loss->init(config.batch_size);
     network->init(config.batch_size);
     optim->init(network->get_params());
+    dataloader->init(config.batch_size);
 
     is_initialized = true;
 }
@@ -103,11 +102,11 @@ void Model::prepare_batch(const std::vector<TrainingDataEntry>& dataset) {
     for (auto& input : network->get_inputs())
         input->reset();
 
-    fill_inputs(dataset);
+    fill_batch(dataset);
 
     for (auto& input : network->get_inputs())
         input->get_indices().host_to_dev();
-    targets.host_to_dev();
+    loss->get_targets().host_to_dev();
 }
 
 float Model::predict(std::string fen) {
@@ -166,22 +165,16 @@ void Model::train(std::string output_path) {
 
             optim->zero_grads();
             network->forward(current_data);
-            loss->compute(targets, network->get_output());
+            loss->compute(network->get_output());
             network->backward();
             optim->step(lr_sched->get(), current_data.size());
 
             if (batch % 100 == 0) {
-                print_progress(
-                    display_epoch,
-                    batch,
-                    loss->get_loss() / (batch * config.batch_size),
-                    config.batch_size * batch,
-                    timer.elapsed_time()
-                );
+                print_progress(display_epoch, batch, loss->get(), config.batch_size * batch, timer.elapsed_time());
             }
         }
 
-        float epoch_loss = loss->get_loss() / (config.batch_size * config.batches_per_epoch);
+        float epoch_loss = loss->get();
 
         print_progress(
             display_epoch,
@@ -192,7 +185,10 @@ void Model::train(std::string output_path) {
             true
         );
 
-        log.write({std::to_string(display_epoch), std::to_string(epoch_loss)});
+        log.write(
+            {std::to_string(display_epoch), std::to_string(epoch_loss / (config.batch_size * config.batches_per_epoch))}
+        );
+
         if (display_epoch % std::max(config.save_rate, 1) == 0 || display_epoch == config.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(display_epoch));
     }

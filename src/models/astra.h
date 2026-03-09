@@ -29,12 +29,13 @@ struct Astra : Model {
         config.save_rate = 20;
     }
 
-    void fill_inputs(const std::vector<TrainingDataEntry>& ds) override {
+    void fill_batch(const std::vector<TrainingDataEntry>& batch) override {
         Input& stm_in = get_input(0);
         Input& nstm_in = get_input(1);
+        auto& targets = get_targets();
 
-        for (size_t i = 0; i < ds.size(); i++) {
-            const Position& pos = ds[i].pos;
+        for (size_t i = 0; i < batch.size(); i++) {
+            const Position& pos = batch[i].pos;
             const Color stm = pos.sideToMove();
             const Square ksq_stm = pos.kingSquare(stm);
             const Square ksq_nstm = pos.kingSquare(!stm);
@@ -47,8 +48,8 @@ struct Astra : Model {
                 j++;
             }
 
-            float score_target = sigmoid(ds[i].score / EVAL_SCALE);
-            float wdl_target = (ds[i].result + 1) / 2.0f;
+            float score_target = sigmoid(batch[i].score / EVAL_SCALE);
+            float wdl_target = (batch[i].result + 1) / 2.0f;
 
             targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
         }

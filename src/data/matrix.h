@@ -43,18 +43,15 @@ class Matrix {
     void host_to_dev() { data.host_to_dev(); }
     void dev_to_host() { data.dev_to_host(); }
 
-    void host_to_dev_async(cudaStream_t stream = 0) { data.host_to_dev_async(stream); }
-    void dev_to_host_async(cudaStream_t stream = 0) { data.dev_to_host_async(stream); }
-
     bool is_host_allocated() const { return data.is_host_allocated(); }
     bool is_dev_allocated() const { return data.is_dev_allocated(); }
 
     T* host_address() const { return data.host_address(); }
     T* dev_address() const { return data.dev_address(); }
 
-    Matrix repeat(int times) const {
-        Matrix result(rows_, times * cols_);
-        for (int t = 0; t < times; t++)
+    Matrix repeat(int count) const {
+        Matrix result(rows_, count * cols_);
+        for (int t = 0; t < count; t++)
             for (int r = 0; r < rows_; r++)
                 for (int c = 0; c < cols_; c++)
                     result(r, t * cols_ + c) = (*this)(r, c);
