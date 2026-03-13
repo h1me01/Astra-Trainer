@@ -63,21 +63,25 @@ __global__ void sparse_affine_pairwise_mul_fwd_kernel(
     const int batch_size,
     const int max_entries
 ) {
+    extern __shared__ int shared_indices[];
+
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.y;
-
     const int half = weights_r / 2;
 
     if (row >= half || batch_idx >= batch_size)
         return;
 
     const int* sample_indices = indices + batch_idx * max_entries;
+    for (int i = threadIdx.x; i < max_entries; i += blockDim.x)
+        shared_indices[i] = sample_indices[i];
+    __syncthreads();
 
     float sum_a = biases_d[row];
     float sum_b = biases_d[row + half];
 
     for (int i = 0; i < max_entries; i++) {
-        const int f_idx = sample_indices[i];
+        const int f_idx = shared_indices[i];
         if (f_idx == -1)
             break;
 
@@ -116,11 +120,11 @@ void sparse_affine_pairwise_mul_fwd(
     const int threads = min(effective_rows, num_threads);
     const int row_blocks = cuda::ceil_div(effective_rows, threads);
 
+    const int shared_mem_size = max_entries * sizeof(int);
+
     dim3 grid(row_blocks, batch_size);
 
     if (use_vec) {
-        const int shared_mem_size = max_entries * sizeof(int);
-
         DISPATCH_ACTIVATION(
             act_type,
             sparse_affine_pairwise_mul_fwd_vec_kernel,
@@ -139,7 +143,7 @@ void sparse_affine_pairwise_mul_fwd(
         DISPATCH_ACTIVATION(
             act_type,
             sparse_affine_pairwise_mul_fwd_kernel,
-            <<<grid, dim3(threads)>>>(
+            <<<grid, dim3(threads), shared_mem_size>>>(
                 weights_d.dev_address(),
                 biases_d.dev_address(),
                 indices.dev_address(),

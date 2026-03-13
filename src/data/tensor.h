@@ -52,7 +52,7 @@ class Tensor {
         grads.clear();
     }
 
-    void clamp(float min_val, float max_val) {
+    void set_bounds(float min_val, float max_val) {
         if (min_val > max_val)
             error("Tensor: Min in Tensor cannot be greater than max!");
         lower_bound_ = min_val;

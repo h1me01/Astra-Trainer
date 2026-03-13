@@ -24,30 +24,15 @@ class Optimizer {
     Optimizer& operator=(Optimizer&&) = default;
 
     void init(const std::vector<Param*>& params) {
-        for (auto* l : params) {
-            for (auto& t : l->get()) {
-                if (min_param_val.has_value())
-                    t->clamp(min_param_val.value(), t->upper_bound());
-                if (max_param_val.has_value())
-                    t->clamp(t->lower_bound(), max_param_val.value());
+        for (auto* l : params)
+            for (auto& t : l->get())
                 this->params.push_back(t);
-            }
-        }
-
         init_buffers();
     }
 
     void zero_grads() {
         for (auto* t : params)
             t->get_grads().clear_dev();
-    }
-
-    void clamp_params(float min, float max) {
-        if (min > max)
-            error("Optimizer clamp: min cannot be greater than max!");
-
-        this->min_param_val = min;
-        this->max_param_val = max;
     }
 
     void load(const std::string& path);
@@ -60,9 +45,6 @@ class Optimizer {
 
     std::vector<Array<float>> momentum{};
     std::vector<Array<float>> velocity{};
-
-    std::optional<float> min_param_val;
-    std::optional<float> max_param_val;
 
     virtual void init_buffers() {
         for (const auto* t : params) {

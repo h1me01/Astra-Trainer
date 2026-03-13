@@ -33,17 +33,17 @@ class SparseAffineBase : public Operation {
     Input* get_input() const { return input; }
 
   protected:
-    DenseMatrix& effective_weights() {
-        return param->has_factorizer() ? param->get_factorizer().get_weights() : param->get_weights().get_data();
-    }
-
-    Tensor& effective_output() { return concat ? concat->get_output() : output; }
-
     int out_offset = 0;
     FusedConcat* concat = nullptr;
 
     SPtr<Param> param;
     Input* input;
+
+    DenseMatrix& effective_weights() {
+        return param->has_factorizer() ? param->get_factorizer().get_weights() : param->get_weights().get_data();
+    }
+
+    Tensor& effective_output() { return concat ? concat->get_output() : output; }
 };
 
 class SparseAffine : public SparseAffineBase {

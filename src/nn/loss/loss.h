@@ -11,9 +11,7 @@ class Loss {
 
     virtual ~Loss() = default;
 
-    void init(int batch_size) { targets = Array<float>(batch_size, true); }
-
-    virtual void compute(Tensor& output) = 0;
+    virtual void compute(Tensor& output, const Array<float>& targets) = 0;
 
     float get() {
         loss.dev_to_host();
@@ -22,11 +20,8 @@ class Loss {
 
     void clear() { loss.clear_dev(); }
 
-    Array<float>& get_targets() { return targets; }
-
   protected:
     ActivationType act_type;
-    Array<float> targets;
     Array<float> loss{1, true};
 };
 

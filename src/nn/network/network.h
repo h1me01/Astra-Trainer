@@ -15,8 +15,11 @@ using namespace op;
 
 class Network {
   public:
-    Network(const Graph& graph) {
+    Network(const SPtr<Node> output) {
         kernel::create_cublas();
+
+        auto graph = Graph(output);
+
         init_operations(graph);
         cache_data();
     }

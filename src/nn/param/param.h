@@ -44,6 +44,11 @@ class Param {
         save_tensor_quantized(f, biases, biases_save_format);
     }
 
+    void set_bounds(float min_val, float max_val) {
+        weights.set_bounds(min_val, max_val);
+        biases.set_bounds(min_val, max_val);
+    }
+
     int get_input_dim() const { return weights.get_data().cols(); }
     int get_output_dim() const { return weights.get_data().rows(); }
 

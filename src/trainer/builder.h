@@ -3,7 +3,7 @@
 #include "../misc.h"
 #include "common.h"
 
-namespace model {
+namespace trainer {
 
 namespace ng = nn::graph;
 namespace np = nn::param;
@@ -15,6 +15,7 @@ using Type = nn::SaveFormat::Type;
 constexpr auto int8 = Type::int8;
 constexpr auto int16 = Type::int16;
 constexpr auto float32 = Type::float32;
+constexpr bool transposed = true;
 
 } // namespace save_format
 
@@ -23,10 +24,6 @@ inline int num_buckets(const std::array<int, 64>& bucket_map) {
     for (int b : bucket_map)
         max_bucket = std::max(max_bucket, b);
     return max_bucket + 1;
-}
-
-inline float sigmoid(float x) {
-    return 1.0f / (1.0f + std::exp(-x));
 }
 
 class NodeHandle {
@@ -127,15 +124,15 @@ inline NodeHandle concat(std::vector<NodeHandle> inputs) {
 namespace lr_sched {
 
 inline LRScheduler constant(float lr) {
-    return std::make_unique<nn::lr_sched::Constant>(lr);
+    return std::make_shared<nn::lr_sched::Constant>(lr);
 }
 
 inline LRScheduler step_decay(float lr, float gamma, int step_size) {
-    return std::make_unique<nn::lr_sched::StepDecay>(lr, gamma, step_size);
+    return std::make_shared<nn::lr_sched::StepDecay>(lr, gamma, step_size);
 }
 
 inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epochs) {
-    return std::make_unique<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
+    return std::make_shared<nn::lr_sched::CosineAnnealing>(start_lr, final_lr, max_epochs);
 }
 
 } // namespace lr_sched
@@ -143,44 +140,23 @@ inline LRScheduler cosine_annealing(float start_lr, float final_lr, int max_epoc
 namespace wdl_sched {
 
 inline WDLScheduler constant(float val) {
-    return std::make_unique<nn::wdl_sched::Constant>(val);
+    return std::make_shared<nn::wdl_sched::Constant>(val);
 }
 
 inline WDLScheduler linear(float start_val, float final_val, int max_epochs) {
-    return std::make_unique<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
+    return std::make_shared<nn::wdl_sched::Linear>(start_val, final_val, max_epochs);
 }
 
 } // namespace wdl_sched
 
-class OptimHandle {
-  public:
-    explicit OptimHandle(Optimizer optim)
-        : optim(std::move(optim)) {}
-
-    OptimHandle& clamp_params(float min, float max) & {
-        optim->clamp_params(min, max);
-        return *this;
-    }
-
-    OptimHandle&& clamp_params(float min, float max) && {
-        optim->clamp_params(min, max);
-        return std::move(*this);
-    }
-
-    Optimizer take() { return std::move(optim); }
-
-  private:
-    Optimizer optim;
-};
-
 namespace optim {
 
-inline OptimHandle adam(float beta1, float beta2) {
-    return OptimHandle(std::make_unique<nn::optim::Adam>(beta1, beta2));
+inline Optimizer adam(float beta1, float beta2) {
+    return std::make_shared<nn::optim::Adam>(beta1, beta2);
 }
 
-inline OptimHandle adamw(float beta1, float beta2, float decay) {
-    return OptimHandle(std::make_unique<nn::optim::Adam>(beta1, beta2, decay));
+inline Optimizer adamw(float beta1, float beta2, float decay) {
+    return std::make_shared<nn::optim::Adam>(beta1, beta2, decay);
 }
 
 } // namespace optim
@@ -188,11 +164,11 @@ inline OptimHandle adamw(float beta1, float beta2, float decay) {
 namespace loss {
 
 inline Loss mse(ActivationType act = ActivationType::Linear) {
-    return std::make_unique<nn::loss::MPE>(2.0, act);
+    return std::make_shared<nn::loss::MPE>(2.0, act);
 }
 
 inline Loss mpe(float power, ActivationType act = ActivationType::Linear) {
-    return std::make_unique<nn::loss::MPE>(power, act);
+    return std::make_shared<nn::loss::MPE>(power, act);
 }
 
 } // namespace loss
@@ -204,9 +180,9 @@ inline Dataloader create(
     std::vector<std::string> filenames,
     std::function<bool(const TrainingDataEntry&)> skip_predicate = nullptr
 ) {
-    return std::make_unique<nn::dataloader::Dataloader>(thread_count, filenames, skip_predicate);
+    return std::make_shared<nn::dataloader::Dataloader>(thread_count, filenames, skip_predicate);
 }
 
 } // namespace dataloader
 
-} // namespace model
+} // namespace trainer
