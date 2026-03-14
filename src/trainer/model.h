@@ -89,21 +89,23 @@ class Model {
     GraphBuilder graph_builder;
     InputFiller input_filler;
 
+    Inputs inputs;
     std::unique_ptr<nn::Network> net;
 
     nn::Network& network() {
-        if (!net)
+        if (!net) {
             net = std::make_unique<nn::Network>(build_graph());
+            inputs.ptrs.clear();
+            for (auto* input : network().get_inputs())
+                inputs.ptrs.push_back(input);
+        }
         return *net;
     }
 
     void fill_inputs(const std::vector<TrainingDataEntry>& batch) {
         if (!input_filler)
             error("Model: no input filler set (call set_input_filler or override fill_inputs)");
-        Inputs inp;
-        for (auto* input : network().get_inputs())
-            inp.ptrs.push_back(input);
-        input_filler(batch, inp);
+        input_filler(batch, inputs);
     }
 
     void save_params_helper(const std::string& file, bool quantized) {

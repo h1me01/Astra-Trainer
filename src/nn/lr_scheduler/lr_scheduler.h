@@ -13,11 +13,6 @@ class LRScheduler {
 
     virtual void step(int epoch) = 0;
 
-    void lr_from_epoch(int epoch) {
-        for (int i = 1; i <= epoch; i++)
-            step(i);
-    }
-
     float get() const { return lr; }
 
     virtual std::string get_info() const = 0;

@@ -8,6 +8,7 @@ class StepDecay : public LRScheduler {
   public:
     StepDecay(float lr, float gamma, int step_size)
         : LRScheduler(lr),
+          base_lr(lr),
           gamma(gamma),
           step_size(step_size) {
 
@@ -19,10 +20,7 @@ class StepDecay : public LRScheduler {
             error("Step Decay LR Scheduler: step_size must be positive!");
     }
 
-    void step(int epoch) override {
-        if ((epoch + 1) % step_size == 0)
-            lr *= gamma;
-    }
+    void step(int epoch) override { lr = base_lr * std::pow(gamma, (epoch + 1) / step_size); }
 
     std::string get_info() const override {
         return "StepDecay(lr=" + std::to_string(lr) + //
@@ -31,6 +29,7 @@ class StepDecay : public LRScheduler {
     }
 
   private:
+    float base_lr;
     float gamma;
     int step_size;
 };

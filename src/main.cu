@@ -14,15 +14,14 @@ int main() {
     const float lr = 0.001f;
     const float eval_scale = 400.0f;
     const int epochs = 100;
+    const int ft_size = 1024;
+    const int l1_size = 16;
+    const int l2_size = 32;
+    const int bucket_count = 8;
 
     Model model;
 
     model.set_graph([]() {
-        const int ft_size = 1024;
-        const int l1_size = 16;
-        const int l2_size = 32;
-        const int bucket_count = 8;
-
         auto ft = sparse_affine(768, ft_size);
         auto l1 = affine(ft_size, l1_size * bucket_count);
         auto l2 = affine(l1_size, l2_size * bucket_count);

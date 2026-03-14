@@ -50,7 +50,8 @@ int epoch_from_checkpoint(const std::string checkpoint) {
 // Trainer
 
 void Trainer::init() {
-    if (_initialized) return;
+    if (_initialized)
+        return;
 
     if (!loss || !optimiser || !lr_sched || !wdl_sched || !dataloader)
         error("Trainer: All components must be non-null");
@@ -74,7 +75,6 @@ void Trainer::load_checkpoint(const std::string& path) {
         optimiser->load(path);
 
         current_epoch = epoch_from_checkpoint(path);
-        lr_sched->lr_from_epoch(current_epoch);
 
         std::cout << "Trainer: Loaded checkpoint from " << path << std::endl;
     } catch (const std::exception& e) {
@@ -126,9 +126,9 @@ void Trainer::fit(const std::string output_path) {
         lr_sched->step(current_epoch);
         wdl_sched->step(current_epoch);
 
-        const int display_epoch = current_epoch + 1;
-
         loss->clear();
+
+        const int display_epoch = current_epoch + 1;
 
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
             auto current_data = dataloader->next();
