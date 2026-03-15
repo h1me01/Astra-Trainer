@@ -63,15 +63,15 @@ __global__ void bwd_kernel(
 }
 
 template <typename Op>
-void ElemwiseBinary<Op>::forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c) {
+void ElemwiseBinary<Op>::forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c, Op op) {
     CHECK(a.size() == b.size() && a.size() == c.size());
 
     const int grid = cuda::ceil_div(a.size(), 4 * BLOCK_SIZE);
-    fwd_kernel<<<grid, BLOCK_SIZE>>>(a.dev_address(), b.dev_address(), c.dev_address(), a.size(), Op{});
+    fwd_kernel<<<grid, BLOCK_SIZE>>>(a.dev_address(), b.dev_address(), c.dev_address(), a.size(), op);
 }
 
 template <typename Op>
-void ElemwiseBinary<Op>::backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out) {
+void ElemwiseBinary<Op>::backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out, Op op) {
     CHECK(a.data().size() == b.data().size() && a.data().size() == grad_out.size());
 
     const int grid = cuda::ceil_div(a.size(), 4 * BLOCK_SIZE);
@@ -82,13 +82,13 @@ void ElemwiseBinary<Op>::backward(const Tensor& a, const Tensor& b, const DenseM
         a.grad().dev_address(),
         b.grad().dev_address(),
         a.data().size(),
-        Op{}
+        op
     );
 }
 
-template struct ElemwiseBinary<Add>;
-template struct ElemwiseBinary<Sub>;
-template struct ElemwiseBinary<Mul>;
-template struct ElemwiseBinary<Div>;
+template struct ElemwiseBinary<AddBinary>;
+template struct ElemwiseBinary<SubBinary>;
+template struct ElemwiseBinary<MulBinary>;
+template struct ElemwiseBinary<DivBinary>;
 
 } // namespace kernel

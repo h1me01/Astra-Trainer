@@ -33,17 +33,26 @@ class NodeHandle {
     NodeHandle(SPtr<ng::Node> node)
         : node_(node) {}
 
-    NodeHandle relu() { return make_unary_op(OpType::ReLU); }
-    NodeHandle clipped_relu() { return make_unary_op(OpType::ClippedReLU); }
-    NodeHandle sqr_clipped_relu() { return make_unary_op(OpType::SqrClippedReLU); }
-    NodeHandle sigmoid() { return make_unary_op(OpType::Sigmoid); }
+    NodeHandle relu() { return make_unary_op(OpType::ReLU, kernel::ReLU{}); }
+    NodeHandle clipped_relu() { return make_unary_op(OpType::ClippedReLU, kernel::ClippedReLU{}); }
+    NodeHandle sqr_clipped_relu() { return make_unary_op(OpType::SqrClippedReLU, kernel::SqrClippedReLU{}); }
+    NodeHandle sigmoid() { return make_unary_op(OpType::Sigmoid, kernel::Sigmoid{}); }
     NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node_, indices)); }
     NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node_)); }
 
-    NodeHandle operator+(NodeHandle other) { return make_binary_op(OpType::Add, other); }
-    NodeHandle operator-(NodeHandle other) { return make_binary_op(OpType::Sub, other); }
-    NodeHandle operator*(NodeHandle other) { return make_binary_op(OpType::Mul, other); }
-    NodeHandle operator/(NodeHandle other) { return make_binary_op(OpType::Div, other); }
+    NodeHandle operator+(float scalar) { return make_unary_op(OpType::AddUnary, kernel::AddUnary{scalar}); }
+    NodeHandle operator-(float scalar) { return make_unary_op(OpType::SubUnary, kernel::SubUnary{scalar}); }
+    NodeHandle operator*(float scalar) { return make_unary_op(OpType::MulUnary, kernel::MulUnary{scalar}); }
+    NodeHandle operator/(float scalar) {
+        if (scalar == 0.0f)
+            error("NodeHandle: Division by zero in unary div operation!");
+        return make_unary_op(OpType::DivUnary, kernel::DivUnary{scalar});
+    }
+
+    NodeHandle operator+(NodeHandle other) { return make_binary_op(OpType::AddBinary, other, kernel::AddBinary{}); }
+    NodeHandle operator-(NodeHandle other) { return make_binary_op(OpType::SubBinary, other, kernel::SubBinary{}); }
+    NodeHandle operator*(NodeHandle other) { return make_binary_op(OpType::MulBinary, other, kernel::MulBinary{}); }
+    NodeHandle operator/(NodeHandle other) { return make_binary_op(OpType::DivBinary, other, kernel::DivBinary{}); }
 
     operator SPtr<ng::Node>() const { return node_; }
     SPtr<ng::Node> get() const { return node_; }
@@ -51,10 +60,14 @@ class NodeHandle {
   private:
     SPtr<ng::Node> node_;
 
-    NodeHandle make_unary_op(OpType op_type) { return NodeHandle(std::make_shared<ng::UnaryNode>(op_type, node_)); }
+    template <typename Op>
+    NodeHandle make_unary_op(OpType op_type, Op op) {
+        return NodeHandle(std::make_shared<ng::UnaryNode<Op>>(op_type, node_, op));
+    }
 
-    NodeHandle make_binary_op(OpType op_type, NodeHandle other) {
-        return NodeHandle(std::make_shared<ng::BinaryNode>(op_type, node_, other.get()));
+    template <typename Op>
+    NodeHandle make_binary_op(OpType op_type, NodeHandle other, Op op) {
+        return NodeHandle(std::make_shared<ng::BinaryNode<Op>>(op_type, node_, other.get(), op));
     }
 };
 

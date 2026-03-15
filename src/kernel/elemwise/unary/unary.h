@@ -7,6 +7,30 @@
 
 namespace kernel {
 
+struct AddUnary {
+    float scalar = 0.0f;
+    __device__ float forward(float x) const { return x + scalar; }
+    __device__ float backward(float x) const { return 1.0f; }
+};
+
+struct SubUnary {
+    float scalar = 0.0f;
+    __device__ float forward(float x) const { return x - scalar; }
+    __device__ float backward(float x) const { return 1.0f; }
+};
+
+struct MulUnary {
+    float scalar = 1.0f;
+    __device__ float forward(float x) const { return x * scalar; }
+    __device__ float backward(float x) const { return scalar; }
+};
+
+struct DivUnary {
+    float scalar = 1.0f;
+    __device__ float forward(float x) const { return x / scalar; }
+    __device__ float backward(float x) const { return 1.0f / scalar; }
+};
+
 struct Linear {
     __device__ float forward(float x) const { return x; }
     template <bool fused = false>
@@ -64,8 +88,8 @@ template <typename Op>
 struct ElemwiseUnary {
     static constexpr int BLOCK_SIZE = 1024;
 
-    static void forward(const DenseMatrix& in, DenseMatrix& out);
-    static void backward(Tensor& in, const DenseMatrix& out_g);
+    static void forward(const DenseMatrix& in, DenseMatrix& out, Op op);
+    static void backward(Tensor& in, const DenseMatrix& out_g, Op op);
 };
 
 using ActOp = std::variant<Linear, ReLU, ClippedReLU, SqrClippedReLU, Sigmoid>;

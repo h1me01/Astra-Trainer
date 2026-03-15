@@ -2,6 +2,24 @@
 
 namespace nn {
 
+// helper
+
+template <typename Kernel>
+UPtr<Operation> make_unary(Node* node, Operation* input) {
+    auto* n = dynamic_cast<UnaryNode<Kernel>*>(node);
+    CHECK(n);
+    return std::make_unique<op::Unary<Kernel>>(input, n->op());
+}
+
+template <typename Kernel>
+UPtr<Operation> make_binary(Node* node, Operation* a, Operation* b) {
+    auto* n = dynamic_cast<BinaryNode<Kernel>*>(node);
+    CHECK(n);
+    return std::make_unique<op::Binary<Kernel>>(a, b, n->op());
+}
+
+// Network
+
 void Network::init_operations(const Graph& graph) {
     std::unordered_map<Node*, Operation*> op_map;
 
@@ -89,21 +107,29 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
     case OpType::PairwiseMul:
         return std::make_unique<op::PairwiseMul>(inputs[0]);
     case OpType::ReLU:
-        return std::make_unique<op::Unary<kernel::ReLU>>(inputs[0]);
+        return make_unary<kernel::ReLU>(node, inputs[0]);
     case OpType::ClippedReLU:
-        return std::make_unique<op::Unary<kernel::ClippedReLU>>(inputs[0]);
+        return make_unary<kernel::ClippedReLU>(node, inputs[0]);
     case OpType::SqrClippedReLU:
-        return std::make_unique<op::Unary<kernel::SqrClippedReLU>>(inputs[0]);
+        return make_unary<kernel::SqrClippedReLU>(node, inputs[0]);
     case OpType::Sigmoid:
-        return std::make_unique<op::Unary<kernel::Sigmoid>>(inputs[0]);
-    case OpType::Add:
-        return std::make_unique<op::Binary<kernel::Add>>(inputs[0], inputs[1]);
-    case OpType::Sub:
-        return std::make_unique<op::Binary<kernel::Sub>>(inputs[0], inputs[1]);
-    case OpType::Mul:
-        return std::make_unique<op::Binary<kernel::Mul>>(inputs[0], inputs[1]);
-    case OpType::Div:
-        return std::make_unique<op::Binary<kernel::Div>>(inputs[0], inputs[1]);
+        return make_unary<kernel::Sigmoid>(node, inputs[0]);
+    case OpType::AddUnary:
+        return make_unary<kernel::AddUnary>(node, inputs[0]);
+    case OpType::SubUnary:
+        return make_unary<kernel::SubUnary>(node, inputs[0]);
+    case OpType::MulUnary:
+        return make_unary<kernel::MulUnary>(node, inputs[0]);
+    case OpType::DivUnary:
+        return make_unary<kernel::DivUnary>(node, inputs[0]);
+    case OpType::AddBinary:
+        return make_binary<kernel::AddBinary>(node, inputs[0], inputs[1]);
+    case OpType::SubBinary:
+        return make_binary<kernel::SubBinary>(node, inputs[0], inputs[1]);
+    case OpType::MulBinary:
+        return make_binary<kernel::MulBinary>(node, inputs[0], inputs[1]);
+    case OpType::DivBinary:
+        return make_binary<kernel::DivBinary>(node, inputs[0], inputs[1]);
     default:
         CHECK(false);
         return nullptr;

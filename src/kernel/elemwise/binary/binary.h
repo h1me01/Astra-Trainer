@@ -5,7 +5,7 @@
 
 namespace kernel {
 
-struct Add {
+struct AddBinary {
     __device__ float forward(float a, float b) const { return a + b; }
     __device__ void backward(float go, float a, float b, float& ga, float& gb) const {
         ga += go;
@@ -13,7 +13,7 @@ struct Add {
     }
 };
 
-struct Sub {
+struct SubBinary {
     __device__ float forward(float a, float b) const { return a - b; }
     __device__ void backward(float go, float a, float b, float& ga, float& gb) const {
         ga += go;
@@ -21,7 +21,7 @@ struct Sub {
     }
 };
 
-struct Mul {
+struct MulBinary {
     __device__ float forward(float a, float b) const { return a * b; }
     __device__ void backward(float go, float a, float b, float& ga, float& gb) const {
         ga += go * b;
@@ -29,7 +29,7 @@ struct Mul {
     }
 };
 
-struct Div {
+struct DivBinary {
     __device__ float forward(float a, float b) const { return a / b; }
     __device__ void backward(float go, float a, float b, float& ga, float& gb) const {
         ga += go / b;
@@ -41,8 +41,8 @@ template <typename Op>
 struct ElemwiseBinary {
     static constexpr int BLOCK_SIZE = 1024;
 
-    static void forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c);
-    static void backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out);
+    static void forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c, Op op);
+    static void backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out, Op op);
 };
 
 } // namespace kernel

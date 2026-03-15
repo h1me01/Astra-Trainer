@@ -129,22 +129,40 @@ struct PairwiseMulNode : public Node {
     }
 };
 
-struct UnaryNode : public Node {
-    UnaryNode(OpType op_type, SPtr<Node> input)
-        : Node(op_type, input->output_dim(), {input}) {
+template <typename Op>
+class UnaryNode : public Node {
+  public:
+    UnaryNode(OpType op_type, SPtr<Node> input, Op op)
+        : Node(op_type, input->output_dim(), {input}),
+          op_(op) {
+
         if (!is_unary(op_type))
             error("Graph: invalid unary type!");
     }
+
+    Op op() const { return op_; }
+
+  private:
+    Op op_;
 };
 
-struct BinaryNode : public Node {
-    BinaryNode(OpType op_type, SPtr<Node> input1, SPtr<Node> input2)
-        : Node(op_type, input1->output_dim(), {input1, input2}) {
+template <typename Op>
+class BinaryNode : public Node {
+  public:
+    BinaryNode(OpType op_type, SPtr<Node> input1, SPtr<Node> input2, Op op)
+        : Node(op_type, input1->output_dim(), {input1, input2}),
+          op_(op) {
+
         if (!is_elemwise(op_type))
             error("Graph: invalid elemwise type!");
         if (input1->output_dim() != input2->output_dim())
             error("Graph: Elemwise inputs must have the same output dimension!");
     }
+
+    Op op() const { return op_; }
+
+  private:
+    Op op_;
 };
 
 } // namespace nn::graph

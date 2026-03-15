@@ -50,17 +50,17 @@ __global__ void unary_bwd_kernel(const float* in_d, float* in_g, const float* ou
 }
 
 template <typename Op>
-void ElemwiseUnary<Op>::forward(const DenseMatrix& in, DenseMatrix& out) {
+void ElemwiseUnary<Op>::forward(const DenseMatrix& in, DenseMatrix& out, Op op) {
     CHECK(in.size() == out.size());
     CHECK(in.is_dev_allocated() && out.is_dev_allocated());
 
     const int grid = cuda::ceil_div(in.size(), 4 * BLOCK_SIZE);
-    unary_fwd_kernel<<<grid, BLOCK_SIZE>>>(in.dev_address(), out.dev_address(), in.size(), Op{});
+    unary_fwd_kernel<<<grid, BLOCK_SIZE>>>(in.dev_address(), out.dev_address(), in.size(), op);
     CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 template <typename Op>
-void ElemwiseUnary<Op>::backward(Tensor& in, const DenseMatrix& out_g) {
+void ElemwiseUnary<Op>::backward(Tensor& in, const DenseMatrix& out_g, Op op) {
     const auto& in_d = in.data();
     auto& in_g = in.grad();
 
@@ -69,10 +69,15 @@ void ElemwiseUnary<Op>::backward(Tensor& in, const DenseMatrix& out_g) {
 
     const int grid = cuda::ceil_div(in_d.size(), 4 * BLOCK_SIZE);
     unary_bwd_kernel<<<grid, BLOCK_SIZE>>>(
-        in_d.dev_address(), in_g.dev_address(), out_g.dev_address(), in_d.size(), Op{}
+        in_d.dev_address(), in_g.dev_address(), out_g.dev_address(), in_d.size(), op
     );
     CUDA_KERNEL_LAUNCH_CHECK();
 }
+
+template struct ElemwiseUnary<AddUnary>;
+template struct ElemwiseUnary<SubUnary>;
+template struct ElemwiseUnary<MulUnary>;
+template struct ElemwiseUnary<DivUnary>;
 
 template struct ElemwiseUnary<Linear>;
 template struct ElemwiseUnary<ReLU>;
