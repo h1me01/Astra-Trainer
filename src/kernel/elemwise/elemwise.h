@@ -45,9 +45,4 @@ struct Elemwise {
     static void backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out);
 };
 
-extern template struct Elemwise<Add>;
-extern template struct Elemwise<Sub>;
-extern template struct Elemwise<Mul>;
-extern template struct Elemwise<Div>;
-
 } // namespace kernel
