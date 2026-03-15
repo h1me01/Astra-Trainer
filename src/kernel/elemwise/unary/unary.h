@@ -25,12 +25,6 @@ struct MulUnary {
     __device__ float backward(float x) const { return scalar; }
 };
 
-struct DivUnary {
-    float scalar = 1.0f;
-    __device__ float forward(float x) const { return x / scalar; }
-    __device__ float backward(float x) const { return 1.0f / scalar; }
-};
-
 struct Linear {
     __device__ float forward(float x) const { return x; }
     template <bool fused = false>

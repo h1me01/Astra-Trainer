@@ -119,9 +119,8 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
     case OpType::SubUnary:
         return make_unary<kernel::SubUnary>(node, inputs[0]);
     case OpType::MulUnary:
-        return make_unary<kernel::MulUnary>(node, inputs[0]);
     case OpType::DivUnary:
-        return make_unary<kernel::DivUnary>(node, inputs[0]);
+        return make_unary<kernel::MulUnary>(node, inputs[0]);
     case OpType::AddBinary:
         return make_binary<kernel::AddBinary>(node, inputs[0], inputs[1]);
     case OpType::SubBinary:

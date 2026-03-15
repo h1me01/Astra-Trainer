@@ -46,7 +46,7 @@ class NodeHandle {
     NodeHandle operator/(float scalar) {
         if (scalar == 0.0f)
             error("NodeHandle: Division by zero in unary div operation!");
-        return make_unary_op(OpType::DivUnary, kernel::DivUnary{scalar});
+        return make_unary_op(OpType::DivUnary, kernel::MulUnary{1.0f / scalar});
     }
 
     NodeHandle operator+(NodeHandle other) { return make_binary_op(OpType::AddBinary, other, kernel::AddBinary{}); }

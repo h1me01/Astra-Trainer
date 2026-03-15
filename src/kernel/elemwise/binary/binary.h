@@ -42,7 +42,7 @@ struct ElemwiseBinary {
     static constexpr int BLOCK_SIZE = 1024;
 
     static void forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c, Op op);
-    static void backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out, Op op);
+    static void backward(Tensor& a, Tensor& b, const DenseMatrix& grad_out, Op op);
 };
 
 } // namespace kernel

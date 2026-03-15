@@ -3,8 +3,7 @@
 namespace kernel {
 
 template <typename Op>
-__global__ void
-fwd_kernel(const float* __restrict__ a, const float* __restrict__ b, float* __restrict__ c, const int n, Op op) {
+__global__ void fwd_kernel(const float* a, const float* b, float* c, const int n, Op op) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
 
@@ -27,15 +26,8 @@ fwd_kernel(const float* __restrict__ a, const float* __restrict__ b, float* __re
 }
 
 template <typename Op>
-__global__ void bwd_kernel(
-    const float* __restrict__ grad_out,
-    const float* __restrict__ a,
-    const float* __restrict__ b,
-    float* __restrict__ grad_a,
-    float* __restrict__ grad_b,
-    const int n,
-    Op op
-) {
+__global__ void
+bwd_kernel(const float* grad_out, const float* a, const float* b, float* grad_a, float* grad_b, const int n, Op op) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const int vec_idx = idx * 4;
 
@@ -65,25 +57,44 @@ __global__ void bwd_kernel(
 template <typename Op>
 void ElemwiseBinary<Op>::forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c, Op op) {
     CHECK(a.size() == b.size() && a.size() == c.size());
+    CHECK(a.is_dev_allocated() && b.is_dev_allocated() && c.is_dev_allocated());
 
     const int grid = cuda::ceil_div(a.size(), 4 * BLOCK_SIZE);
     fwd_kernel<<<grid, BLOCK_SIZE>>>(a.dev_address(), b.dev_address(), c.dev_address(), a.size(), op);
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 template <typename Op>
-void ElemwiseBinary<Op>::backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out, Op op) {
-    CHECK(a.data().size() == b.data().size() && a.data().size() == grad_out.size());
+void ElemwiseBinary<Op>::backward(Tensor& a, Tensor& b, const DenseMatrix& grad_out, Op op) {
+    const auto& a_d = a.data();
+    auto& a_g = a.grad();
+
+    const auto& b_d = b.data();
+    auto& b_g = b.grad();
+
+    CHECK(a_d.size() == b_d.size() && a_d.size() == grad_out.size());
+
+    CHECK(
+        a_d.is_dev_allocated()    //
+        && a_g.is_dev_allocated() //
+        && b_d.is_dev_allocated() //
+        && b_g.is_dev_allocated() //
+        && grad_out.is_dev_allocated()
+    );
 
     const int grid = cuda::ceil_div(a.size(), 4 * BLOCK_SIZE);
     bwd_kernel<<<grid, BLOCK_SIZE>>>(
         grad_out.dev_address(),
-        a.data().dev_address(),
-        b.data().dev_address(),
-        a.grad().dev_address(),
-        b.grad().dev_address(),
-        a.data().size(),
+        a_d.dev_address(),
+        b_d.dev_address(),
+        a_g.dev_address(),
+        b_g.dev_address(),
+        a_d.size(),
         op
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 template struct ElemwiseBinary<AddBinary>;

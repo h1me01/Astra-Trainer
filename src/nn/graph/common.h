@@ -88,8 +88,14 @@ inline bool is_elemwise(OpType t) {
     return op_info(t).flags & OpTypeFlags::ElemWise;
 }
 
-inline const char* op_type_str(OpType t) {
-    return op_info(t).name;
+inline std::string op_type_str(OpType t) {
+    std::string s = op_info(t).name;
+    for (auto suffix : {"Unary", "Binary"}) {
+        auto pos = s.rfind(suffix);
+        if (pos != std::string::npos)
+            return s.substr(0, pos);
+    }
+    return s;
 }
 
 } // namespace nn::graph
