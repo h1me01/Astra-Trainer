@@ -34,8 +34,8 @@ class Activation : public Operation {
         output_dim_ = input->output_dim();
     }
 
-    void forward() override { kernel::activation_fwd(input_->data(), output_.data(), type_); }
-    void backward() override { kernel::activation_bwd(input_->output(), output_.grad(), type_); }
+    void forward() override { kernel::activation_fwd(input_->data(), data(), type_); }
+    void backward() override { kernel::activation_bwd(input_->output(), grad(), type_); }
 
     std::vector<Operation*> inputs() const override { return {input_}; }
 

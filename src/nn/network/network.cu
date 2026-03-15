@@ -108,6 +108,14 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
     case OpType::SqrClippedReLU:
     case OpType::Sigmoid:
         return std::make_unique<op::Activation>(inputs[0], to_activation(node->op_type()));
+    case OpType::Add:
+        return std::make_unique<op::Elemwise<kernel::Add>>(inputs[0], inputs[1]);
+    case OpType::Sub:
+        return std::make_unique<op::Elemwise<kernel::Sub>>(inputs[0], inputs[1]);
+    case OpType::Mul:
+        return std::make_unique<op::Elemwise<kernel::Mul>>(inputs[0], inputs[1]);
+    case OpType::Div:
+        return std::make_unique<op::Elemwise<kernel::Div>>(inputs[0], inputs[1]);
     default:
         CHECK(false);
         return nullptr;

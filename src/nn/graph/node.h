@@ -137,4 +137,12 @@ struct ActivationNode : public Node {
         : Node(op_type, input->output_dim(), {input}) {}
 };
 
+struct ElemwiseNode : public Node {
+    ElemwiseNode(OpType op_type, SPtr<Node> input1, SPtr<Node> input2)
+        : Node(op_type, input1->output_dim(), {input1, input2}) {
+        if (input1->output_dim() != input2->output_dim())
+            error("Graph: Elemwise inputs must have the same output dimension!");
+    }
+};
+
 } // namespace nn::graph

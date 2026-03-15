@@ -24,7 +24,7 @@ int main() {
     model.set_graph([]() {
         auto ft = sparse_affine(768, ft_size);
         auto l1 = affine(ft_size, l1_size * bucket_count);
-        auto l2 = affine(l1_size, l2_size * bucket_count);
+        auto l2 = affine(2 * l1_size, l2_size * bucket_count);
         auto l3 = affine(l2_size, bucket_count);
 
         auto bucket_index = select_index_fn(bucket_count, [](const Position& pos) { //
@@ -43,8 +43,12 @@ int main() {
         auto ft_stm = ft(stm_in).clipped_relu().pairwise_mul();
         auto ft_nstm = ft(nstm_in).clipped_relu().pairwise_mul();
 
-        auto l1_out = l1(concat({ft_stm, ft_nstm})).select(bucket_index).clipped_relu();
-        auto l2_out = l2(l1_out).select(bucket_index).clipped_relu();
+        auto cat_ft = concat({ft_stm, ft_nstm});
+
+        auto l1_out = l1(cat_ft).select(bucket_index);
+        auto l1_ext = concat({l1_out, l1_out * l1_out}).clipped_relu();
+
+        auto l2_out = l2(l1_ext).select(bucket_index).clipped_relu();
 
         return l3(l2_out).select(bucket_index);
     });

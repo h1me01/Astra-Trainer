@@ -31,7 +31,7 @@ struct Concat : public ConcatBase {
     void forward() override {
         int offset = 0;
         for (const auto& input : inputs_) {
-            kernel::concat_fwd(input->data(), output_.data(), offset, act_type_);
+            kernel::concat_fwd(input->data(), data(), offset, act_type_);
             offset += input->output_dim();
         }
     }

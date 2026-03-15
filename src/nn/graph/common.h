@@ -21,6 +21,11 @@ enum class OpType {
     ClippedReLU,
     SqrClippedReLU,
     Sigmoid,
+
+    Add,
+    Sub,
+    Mul,
+    Div,
 };
 
 inline bool is_activation(OpType t) {
@@ -54,6 +59,14 @@ inline std::string op_type_str(OpType op_type) {
         return "SqrClippedReLU";
     case OpType::Sigmoid:
         return "Sigmoid";
+    case OpType::Add:
+        return "Add";
+    case OpType::Sub:
+        return "Sub";
+    case OpType::Mul:
+        return "Mul";
+    case OpType::Div:
+        return "Div";
     default:
         CHECK(false);
         return "";

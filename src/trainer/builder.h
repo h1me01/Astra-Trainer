@@ -119,6 +119,22 @@ inline NodeHandle concat(std::vector<NodeHandle> inputs) {
     return NodeHandle(std::make_shared<ng::ConcatNode>(nodes));
 }
 
+inline NodeHandle operator+(NodeHandle a, NodeHandle b) {
+    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Add, a.get(), b.get()));
+}
+
+inline NodeHandle operator-(NodeHandle a, NodeHandle b) {
+    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Sub, a.get(), b.get()));
+}
+
+inline NodeHandle operator*(NodeHandle a, NodeHandle b) {
+    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Mul, a.get(), b.get()));
+}
+
+inline NodeHandle operator/(NodeHandle a, NodeHandle b) {
+    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Div, a.get(), b.get()));
+}
+
 } // namespace graph
 
 namespace lr_sched {

@@ -23,7 +23,7 @@ class Affine : public Operation {
 
     void forward() override {
         kernel::affine_fwd(
-            param_->weights().data(), param_->biases().data(), input_->data(), output_.data(), act_type_
+            param_->weights().data(), param_->biases().data(), input_->data(), data(), act_type_
         );
     }
 
