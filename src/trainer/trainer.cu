@@ -81,7 +81,7 @@ void Trainer::save_checkpoint(const std::string& path) {
 void Trainer::fit(const std::string output_path) {
     std::string training_folder = output_path.empty() ? config_.name : output_path + "/" + config_.name;
 
-    if (!exists(training_folder) || true) {
+    if (!exists(training_folder)) {
         try {
             create_directory(training_folder);
         } catch (const filesystem_error& e) {

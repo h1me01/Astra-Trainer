@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 256;
+constexpr int BLOCK_SIZE = 256;
 
 __global__ void pairwise_mul_bwd_kernel(
     const float* in_d,
@@ -52,8 +52,8 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out) {
         out_d.is_dev_allocated()
     );
 
-    const int blocks = cuda::ceil_div(feature_size * in_d.cols(), num_threads);
-    pairwise_mul_bwd_kernel<<<blocks, num_threads>>>(
+    const int blocks = cuda::ceil_div(feature_size * in_d.cols(), BLOCK_SIZE);
+    pairwise_mul_bwd_kernel<<<blocks, BLOCK_SIZE>>>(
         in_d.dev_address(),
         in_g.dev_address(),
         out_d.dev_address(),

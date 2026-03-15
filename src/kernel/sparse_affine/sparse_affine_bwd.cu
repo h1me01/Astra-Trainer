@@ -2,8 +2,8 @@
 
 namespace kernel {
 
-constexpr int num_threads = 512;
-constexpr dim3 block_size(num_threads, 1);
+constexpr int BLOCK_SIZE = 512;
+constexpr dim3 block_size(BLOCK_SIZE, 1);
 
 template <typename Op>
 __global__ void sparse_affine_bwd_kernel(
@@ -66,7 +66,7 @@ void sparse_affine_bwd(
     const int max_entries = indices.rows();
 
     const int batch_size = out_g.cols();
-    const int row_tiles = cuda::ceil_div(weights_g.rows(), num_threads);
+    const int row_tiles = cuda::ceil_div(weights_g.rows(), BLOCK_SIZE);
 
     dim3 grid(batch_size, row_tiles);
 

@@ -5,7 +5,7 @@ namespace kernel {
 constexpr float alpha = 1.0f;
 constexpr float beta = 1.0f;
 
-constexpr int num_threads = 256;
+constexpr int BLOCK_SIZE = 256;
 
 __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -47,8 +47,8 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out) {
     );
 
     // update biases gradients
-    const int blocks = cuda::ceil_div(out_g.size(), num_threads);
-    biases_bwd_kernel<<<blocks, num_threads>>>(biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols());
+    const int blocks = cuda::ceil_div(out_g.size(), BLOCK_SIZE);
+    biases_bwd_kernel<<<blocks, BLOCK_SIZE>>>(biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols());
 
     CUDA_KERNEL_LAUNCH_CHECK();
 

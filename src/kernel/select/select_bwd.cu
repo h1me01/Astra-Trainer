@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 256;
+constexpr int BLOCK_SIZE = 256;
 
 __global__ void select_bwd_kernel(
     float* in_g,
@@ -40,8 +40,8 @@ void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices)
         && indices.is_dev_allocated()
     );
 
-    const int blocks = cuda::ceil_div(out_g.size(), num_threads);
-    select_bwd_kernel<<<blocks, num_threads>>>(
+    const int blocks = cuda::ceil_div(out_g.size(), BLOCK_SIZE);
+    select_bwd_kernel<<<blocks, BLOCK_SIZE>>>(
         in_g.dev_address(),
         out_d.dev_address(),
         out_g.dev_address(),

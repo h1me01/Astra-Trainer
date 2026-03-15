@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 1024;
+constexpr int BLOCK_SIZE = 1024;
 
 template <typename Op>
 __global__ void mpe_kernel(
@@ -22,7 +22,7 @@ __global__ void mpe_kernel(
         local_loss = powf(abs_diff, power);
     }
 
-    __shared__ float smem[num_threads];
+    __shared__ float smem[BLOCK_SIZE];
     smem[threadIdx.x] = local_loss;
     __syncthreads();
 
@@ -48,8 +48,8 @@ void mpe_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, cons
         loss.is_dev_allocated()
     );
 
-    const int blocks = cuda::ceil_div(out_d.size(), num_threads);
-    mpe_kernel<<<blocks, num_threads>>>(
+    const int blocks = cuda::ceil_div(out_d.size(), BLOCK_SIZE);
+    mpe_kernel<<<blocks, BLOCK_SIZE>>>(
         targets.dev_address(), out_d.dev_address(), out_g.dev_address(), loss.dev_address(), power, out_d.size(), op
     );
 

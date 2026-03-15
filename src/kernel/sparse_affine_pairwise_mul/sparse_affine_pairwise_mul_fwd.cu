@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 256;
+constexpr int BLOCK_SIZE = 256;
 
 template <typename Op>
 __global__ void sparse_affine_pairwise_mul_fwd_vec_kernel(
@@ -126,7 +126,7 @@ void sparse_affine_pairwise_mul_fwd(
 
     const bool use_vec = (weights_r % 8 == 0);
     const int effective_rows = use_vec ? weights_r / 4 / 2 : weights_r / 2;
-    const int threads = min(effective_rows, num_threads);
+    const int threads = min(effective_rows, BLOCK_SIZE);
     const int row_blocks = cuda::ceil_div(effective_rows, threads);
 
     const int shared_mem_size = max_entries * sizeof(int);

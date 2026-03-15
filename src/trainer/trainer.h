@@ -69,10 +69,6 @@ class Trainer {
     void save_checkpoint(const std::string& path);
 
     void print_info(int epoch, const std::string output_path) const {
-        std::cout << "\n=============================== Training Data ==============================\n\n";
-        for (const auto f : dataloader_->filenames())
-            std::cout << f << std::endl;
-
         std::cout << "\n=============================== Trainer Info ===============================\n\n";
         std::cout << "Name          : " << config_.name << std::endl;
         std::cout << "Device        : " << device_Info() << std::endl;
@@ -86,6 +82,10 @@ class Trainer {
 
         if (epoch > 0)
             std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched_->get() << std::endl;
+
+        std::cout << "\n=============================== Training Data ==============================\n\n";
+        for (const auto f : dataloader_->filenames())
+            std::cout << f << std::endl;
     }
 
     std::string device_Info() const {

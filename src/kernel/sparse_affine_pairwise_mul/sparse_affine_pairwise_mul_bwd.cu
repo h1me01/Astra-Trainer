@@ -2,8 +2,8 @@
 
 namespace kernel {
 
-constexpr int num_threads = 512;
-constexpr dim3 block_size(num_threads, 1);
+constexpr int BLOCK_SIZE = 512;
+constexpr dim3 block_size(BLOCK_SIZE, 1);
 
 template <typename Op>
 __global__ void sparse_affine_pairwise_mul_bwd_kernel(
@@ -94,7 +94,7 @@ void sparse_affine_pairwise_mul_bwd(
 
     const int max_entries = indices.rows();
 
-    const int row_tiles = cuda::ceil_div(weights_g.rows() / 2, num_threads);
+    const int row_tiles = cuda::ceil_div(weights_g.rows() / 2, BLOCK_SIZE);
     const int shared_mem = max_entries * sizeof(int);
 
     dim3 grid(out_g.cols(), row_tiles);

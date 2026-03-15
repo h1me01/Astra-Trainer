@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 1024;
+constexpr int BLOCK_SIZE = 1024;
 
 __global__ void factorizer_bwd_kernel(float* in_g, const float* out_g, const int in_size, const int total_size) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -30,8 +30,8 @@ void factorizer_bwd(DenseMatrix& in_g, const DenseMatrix& out_g) {
     CHECK(out_g.size() % in_g.size() == 0);
     CHECK(out_g.dev_address() && in_g.dev_address());
 
-    const int blocks = cuda::ceil_div(out_g.size(), num_threads * 4);
-    factorizer_bwd_kernel<<<blocks, num_threads>>>(in_g.dev_address(), out_g.dev_address(), in_g.size(), out_g.size());
+    const int blocks = cuda::ceil_div(out_g.size(), BLOCK_SIZE * 4);
+    factorizer_bwd_kernel<<<blocks, BLOCK_SIZE>>>(in_g.dev_address(), out_g.dev_address(), in_g.size(), out_g.size());
 
     CUDA_KERNEL_LAUNCH_CHECK();
 }

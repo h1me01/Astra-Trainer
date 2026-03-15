@@ -3,7 +3,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 256;
+constexpr int BLOCK_SIZE = 256;
 
 __global__ void
 concat_fwd_kernel(const float* in_d, float* out_d, const int out_r, const int in_r, const int batch_size) {
@@ -24,8 +24,8 @@ void concat_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int offset) {
     CHECK(in_d.cols() == out_d.cols());
     CHECK(in_d.is_dev_allocated() && out_d.is_dev_allocated());
 
-    const int blocks = cuda::ceil_div(in_d.size(), num_threads);
-    concat_fwd_kernel<<<blocks, num_threads>>>(
+    const int blocks = cuda::ceil_div(in_d.size(), BLOCK_SIZE);
+    concat_fwd_kernel<<<blocks, BLOCK_SIZE>>>(
         in_d.dev_address(), out_d.dev_address() + offset, out_d.rows(), in_d.rows(), out_d.cols()
     );
 

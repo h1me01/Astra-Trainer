@@ -39,7 +39,7 @@ struct Div {
 
 template <typename Op>
 struct ElemwiseBinary {
-    static constexpr int BLOCK_SIZE = 256;
+    static constexpr int BLOCK_SIZE = 1024;
 
     static void forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c);
     static void backward(const Tensor& a, const Tensor& b, const DenseMatrix& grad_out);

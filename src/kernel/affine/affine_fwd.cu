@@ -5,7 +5,7 @@ namespace kernel {
 constexpr float alpha = 1.0f;
 constexpr float beta = 0.0f;
 
-constexpr int num_threads = 256;
+constexpr int BLOCK_SIZE = 256;
 
 __global__ void biases_fwd_kernel(const float* biases_d, float* out_d, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -47,8 +47,8 @@ void affine_fwd(DenseMatrix& weights_d, DenseMatrix& biases_d, const DenseMatrix
     );
 
     // add biases to dot product
-    const int blocks = cuda::ceil_div(out_d.size(), num_threads);
-    biases_fwd_kernel<<<blocks, num_threads>>>(biases_d.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols());
+    const int blocks = cuda::ceil_div(out_d.size(), BLOCK_SIZE);
+    biases_fwd_kernel<<<blocks, BLOCK_SIZE>>>(biases_d.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols());
 
     CUDA_KERNEL_LAUNCH_CHECK();
 }

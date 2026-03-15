@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-constexpr int num_threads = 1024;
+constexpr int BLOCK_SIZE = 1024;
 
 constexpr float epsilon = 1e-8f;
 
@@ -95,8 +95,8 @@ void adam_optim(
         vels.is_dev_allocated()
     );
 
-    const int blocks = cuda::ceil_div(data.size(), 4 * num_threads);
-    adam_kernel<<<blocks, num_threads>>>(
+    const int blocks = cuda::ceil_div(data.size(), 4 * BLOCK_SIZE);
+    adam_kernel<<<blocks, BLOCK_SIZE>>>(
         data.dev_address(),
         grad.dev_address(),
         moms.dev_address(),
