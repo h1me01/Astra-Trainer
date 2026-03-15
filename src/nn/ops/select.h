@@ -24,7 +24,7 @@ class Select : public Operation {
     void init(int batch_size) override { Operation::init(batch_size); }
 
     void forward() override { kernel::select_fwd(input_->data(), output_.data(), *indices_, act_type_); }
-    void backward() override { kernel::select_bwd(input_->grads(), output_, *indices_, act_type_); }
+    void backward() override { kernel::select_bwd(input_->grad(), output_, *indices_, act_type_); }
 
     SelectIndices* indices() const { return indices_.get(); }
 

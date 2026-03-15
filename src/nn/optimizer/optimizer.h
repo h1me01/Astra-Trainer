@@ -32,7 +32,7 @@ class Optimizer {
 
     void zero_grads() {
         for (auto* t : params_)
-            t->grads().clear_dev();
+            t->grad().clear_dev();
     }
 
     void load(const std::string& path);

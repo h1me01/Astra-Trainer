@@ -39,7 +39,7 @@ void mpe_loss(
     const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, const ActivationType act_type
 ) {
     const auto& out_d = out.data();
-    auto& out_g = out.grads();
+    auto& out_g = out.grad();
 
     CHECK(
         out_d.is_dev_allocated() &&   //

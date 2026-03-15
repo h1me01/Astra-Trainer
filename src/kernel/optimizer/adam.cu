@@ -83,22 +83,22 @@ void adam_optim(
     const float min_val = param.lower_bound();
     const float max_val = param.upper_bound();
 
-    auto& vals = param.data();
-    auto& grads = param.grads();
+    auto& data = param.data();
+    auto& grad = param.grad();
 
-    CHECK(moms.size() == vals.size() && vels.size() == vals.size());
+    CHECK(moms.size() == data.size() && vels.size() == data.size());
 
     CHECK(
-        vals.is_dev_allocated() &&  //
-        grads.is_dev_allocated() && //
+        data.is_dev_allocated() &&  //
+        grad.is_dev_allocated() && //
         moms.is_dev_allocated() &&  //
         vels.is_dev_allocated()
     );
 
-    const int blocks = cuda::ceil_div(vals.size(), 4 * num_threads);
+    const int blocks = cuda::ceil_div(data.size(), 4 * num_threads);
     adam_kernel<<<blocks, num_threads>>>(
-        vals.dev_address(),
-        grads.dev_address(),
+        data.dev_address(),
+        grad.dev_address(),
         moms.dev_address(),
         vels.dev_address(),
         lr,
@@ -108,7 +108,7 @@ void adam_optim(
         min_val,
         max_val,
         grad_scale,
-        vals.size()
+        data.size()
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

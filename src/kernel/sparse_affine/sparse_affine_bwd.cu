@@ -52,7 +52,7 @@ void sparse_affine_bwd(
     const ActivationType act_type
 ) {
     const auto& out_d = out.data();
-    const auto& out_g = out.grads();
+    const auto& out_g = out.grad();
 
     CHECK(
         weights_g.dev_address() && //

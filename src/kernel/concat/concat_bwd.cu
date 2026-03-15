@@ -26,7 +26,7 @@ __global__ void concat_bwd_kernel(
 }
 
 void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const ActivationType act_type) {
-    auto& out_g = out.grads();
+    auto& out_g = out.grad();
     auto& out_d = out.data();
 
     CHECK(in_g.cols() == out_g.cols());

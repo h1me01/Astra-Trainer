@@ -43,15 +43,15 @@ __global__ void biases_bwd_kernel(float* biases_g, const float* out_g, const int
 
 void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const ActivationType act_type) {
     const auto& in_d = in.data();
-    auto& in_g = in.grads();
+    auto& in_g = in.grad();
 
     const auto& out_d = out.data();
-    const auto& out_g = out.grads();
+    const auto& out_g = out.grad();
 
     const auto& weights_d = weights.data();
-    auto& weights_g = weights.grads();
+    auto& weights_g = weights.grad();
 
-    auto& biases_g = biases.grads();
+    auto& biases_g = biases.grad();
 
     CHECK(
         biases_g.cols() == 1 &&             //

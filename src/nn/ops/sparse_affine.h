@@ -63,8 +63,8 @@ struct SparseAffine : public SparseAffineBase {
 
     void backward() override {
         kernel::sparse_affine_bwd(
-            param_->weights().grads(),
-            param_->biases().grads(),
+            param_->weights().grad(),
+            param_->biases().grad(),
             effective_output(),
             input_->indices(),
             out_offset_,
@@ -91,9 +91,9 @@ struct SparseAffinePairwiseMul : public SparseAffineBase {
     void backward() override {
         kernel::sparse_affine_pairwise_mul_bwd(
             effective_weights(),
-            param_->weights().grads(),
+            param_->weights().grad(),
             param_->biases(),
-            effective_output().grads(),
+            effective_output().grad(),
             input_->indices(),
             out_offset_,
             act_type_

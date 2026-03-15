@@ -31,7 +31,7 @@ __global__ void activation_bwd_kernel(const float* in_d, float* in_g, const floa
 
 void activation_bwd(Tensor& in, const DenseMatrix& out_g, const ActivationType type) {
     const auto& in_d = in.data();
-    auto& in_g = in.grads();
+    auto& in_g = in.grad();
 
     CHECK(in_d.size() == out_g.size());
     CHECK(in_d.is_dev_allocated() && out_g.is_dev_allocated());

@@ -36,10 +36,10 @@ __global__ void pairwise_mul_bwd_kernel(
 
 void pairwise_mul_bwd(Tensor& in, const Tensor& out, const ActivationType act_type) {
     const auto& in_d = in.data();
-    auto& in_g = in.grads();
+    auto& in_g = in.grad();
 
     const auto& out_d = out.data();
-    const auto& out_g = out.grads();
+    const auto& out_g = out.grad();
 
     const int feature_size = in_d.rows() / 2;
 

@@ -77,7 +77,7 @@ void sparse_affine_pairwise_mul_bwd(
     const ActivationType act_type
 ) {
     const auto& biases_d = biases.data();
-    auto& biases_g = biases.grads();
+    auto& biases_g = biases.grad();
 
     CHECK(
         weights_g.is_dev_allocated() && //

@@ -39,7 +39,7 @@ struct Concat : public ConcatBase {
     void backward() override {
         int offset = 0;
         for (const auto& input : inputs_) {
-            kernel::concat_bwd(input->grads(), output_, offset, act_type_);
+            kernel::concat_bwd(input->grad(), output_, offset, act_type_);
             offset += input->output_dim();
         }
     }

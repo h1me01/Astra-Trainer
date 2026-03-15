@@ -52,7 +52,7 @@ class Operation {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
-    void zero_grads() { output_.grads().clear_dev(); }
+    void zero_grads() { output_.grad().clear_dev(); }
 
     int input_dim() const { return input_dim_; }
     int output_dim() const { return output_dim_; }
@@ -63,7 +63,7 @@ class Operation {
     DenseMatrix& data() { return output_.data(); }
     const DenseMatrix& data() const { return output_.data(); }
 
-    DenseMatrix& grads() { return output_.grads(); }
+    DenseMatrix& grad() { return output_.grad(); }
 
     virtual std::vector<Operation*> inputs() const { return {}; }
 

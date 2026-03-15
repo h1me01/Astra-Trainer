@@ -20,7 +20,7 @@ class Factorizer {
     }
 
     void forward() { kernel::factorizer_fwd(base_.data(), param_weights_->data(), weights_); }
-    void backward() { kernel::factorizer_bwd(base_.grads(), param_weights_->grads()); }
+    void backward() { kernel::factorizer_bwd(base_.grad(), param_weights_->grad()); }
 
     Tensor& base() { return base_; }
     DenseMatrix& weights() { return weights_; }
