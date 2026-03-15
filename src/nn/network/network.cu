@@ -86,11 +86,8 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
         CHECK(sn);
         return std::make_unique<op::Select>(inputs[0], sn->indices());
     }
-    case OpType::PairwiseMul: {
-        auto* pmn = dynamic_cast<PairwiseMulNode*>(node);
-        CHECK(pmn);
+    case OpType::PairwiseMul:
         return std::make_unique<op::PairwiseMul>(inputs[0]);
-    }
     case OpType::ReLU:
         return std::make_unique<op::Unary<kernel::ReLU>>(inputs[0]);
     case OpType::ClippedReLU:
