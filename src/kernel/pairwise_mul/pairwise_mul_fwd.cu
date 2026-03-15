@@ -41,6 +41,8 @@ void pairwise_mul_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Activat
         pairwise_mul_fwd_kernel,
         <<<blocks, num_threads>>>(in_d.dev_address(), out_d.dev_address(), feature_size, out_d.rows(), in_d.cols())
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

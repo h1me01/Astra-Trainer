@@ -155,6 +155,8 @@ void sparse_affine_pairwise_mul_fwd(
             )
         );
     }
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

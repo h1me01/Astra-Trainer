@@ -60,6 +60,8 @@ void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices,
             out_g.cols()
         )
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

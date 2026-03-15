@@ -34,6 +34,8 @@ void factorizer_fwd(const DenseMatrix& factorizer_d, const DenseMatrix& weights_
     factorizer_fwd_kernel<<<blocks, num_threads>>>(
         factorizer_d.dev_address(), weights_d.dev_address(), out_d.dev_address(), factorizer_d.size(), out_d.size()
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

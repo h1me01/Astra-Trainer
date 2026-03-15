@@ -110,6 +110,8 @@ void adam_optim(
         grad_scale,
         vals.size()
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

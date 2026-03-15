@@ -42,6 +42,8 @@ void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& i
             in_d.dev_address(), out_d.dev_address(), indices.dev_address(), in_d.rows(), out_d.rows(), out_d.cols()
         )
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

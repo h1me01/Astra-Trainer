@@ -70,6 +70,8 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const ActivationType act_ty
             in_d.cols()
         )
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

@@ -33,6 +33,8 @@ void concat_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const int offset, c
             in_d.dev_address(), out_d.dev_address() + offset, out_d.rows(), in_d.rows(), out_d.cols()
         )
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

@@ -3,6 +3,7 @@
 #include "activation/activation.h"
 #include "affine/affine.h"
 #include "concat/concat.h"
+#include "cublas/cublas.h"
 #include "factorizer/factorizer.h"
 #include "loss/loss.h"
 #include "optimizer/optimizer.h"

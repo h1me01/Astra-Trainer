@@ -10,12 +10,9 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stdlib.h>
 #include <string>
 #include <vector>
-
-#include <cublas_v2.h>
-#include <cusparse_v2.h>
-#include <stdlib.h>
 
 using namespace std::filesystem;
 
@@ -30,11 +27,11 @@ using namespace std::filesystem;
         }                                                                                                              \
     } while (0)
 
-#define CUDA_CHECK(expr_to_check)                                                                                      \
+#define CUDA_CHECK(expr)                                                                                               \
     do {                                                                                                               \
-        cudaError_t result = (expr_to_check);                                                                          \
+        cudaError_t result = (expr);                                                                                   \
         if (result != cudaSuccess) {                                                                                   \
-            printf("CUDA_CHECK: %s\n", #expr_to_check);                                                                \
+            printf("CUDA error: error when calling %s\n", #expr);                                                      \
             printf("    file: %s\n", __FILE__);                                                                        \
             printf("    line: %d\n", __LINE__);                                                                        \
             printf("    error: %s\n", cudaGetErrorString(result));                                                     \

@@ -16,7 +16,7 @@ using namespace op;
 class Network {
   public:
     Network(const SPtr<Node> output) {
-        kernel::create_cublas();
+        kernel::cublas::create();
 
         auto graph = Graph(output);
 
@@ -24,7 +24,7 @@ class Network {
         cache_data();
     }
 
-    ~Network() { kernel::destroy_cublas(); }
+    ~Network() { kernel::cublas::destroy(); }
 
     void init(int batch_size) {
         if (operations.empty())

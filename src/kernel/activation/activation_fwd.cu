@@ -29,6 +29,8 @@ void activation_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Activatio
     DISPATCH_ACTIVATION(
         type, activation_fwd_kernel, <<<blocks, num_threads>>>(in_d.dev_address(), out_d.dev_address(), in_d.size())
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

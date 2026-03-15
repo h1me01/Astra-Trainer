@@ -134,6 +134,8 @@ void sparse_affine_fwd(
             )
         );
     }
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

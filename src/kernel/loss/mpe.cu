@@ -56,6 +56,8 @@ void mpe_loss(
             targets.dev_address(), out_d.dev_address(), out_g.dev_address(), loss.dev_address(), power, out_d.size()
         )
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

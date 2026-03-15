@@ -42,6 +42,8 @@ void activation_bwd(Tensor& in, const DenseMatrix& out_g, const ActivationType t
         activation_bwd_kernel,
         <<<blocks, num_threads>>>(in_d.dev_address(), in_g.dev_address(), out_g.dev_address(), in_d.size())
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

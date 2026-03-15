@@ -2,14 +2,10 @@
 
 #include "../../data/include.h"
 #include "../activation/activation.h"
+#include "../cublas/cublas.h"
 #include "../util.h"
 
 namespace kernel {
-
-extern cublasHandle_t CUBLAS_HANDLE;
-
-void create_cublas();
-void destroy_cublas();
 
 void affine_fwd(
     DenseMatrix& weights_d,

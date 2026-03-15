@@ -37,21 +37,20 @@ void affine_fwd(
     );
 
     // compute dot product
-    cublasSgemm(
-        CUBLAS_HANDLE,           // handle
-        CUBLAS_OP_N,             // transa
-        CUBLAS_OP_N,             // transb
-        out_d.rows(),            // m
-        out_d.cols(),            // n
-        inputs_d.rows(),         // k
-        &alpha,                  // alpha
-        weights_d.dev_address(), // A
-        weights_d.rows(),        // lda
-        inputs_d.dev_address(),  // B
-        inputs_d.rows(),         // ldb
-        &beta,                   // beta
-        out_d.dev_address(),     // C
-        out_d.rows()             // ldc
+    cublas::sgemm(
+        CUBLAS_OP_N,
+        CUBLAS_OP_N,
+        out_d.rows(),
+        out_d.cols(),
+        inputs_d.rows(),
+        alpha,
+        weights_d.dev_address(),
+        weights_d.rows(),
+        inputs_d.dev_address(),
+        inputs_d.rows(),
+        beta,
+        out_d.dev_address(),
+        out_d.rows()
     );
 
     // add biases to dot product
@@ -61,6 +60,8 @@ void affine_fwd(
         biases_fwd_kernel,
         <<<blocks, num_threads>>>(biases_d.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols())
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

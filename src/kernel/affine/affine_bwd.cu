@@ -78,6 +78,8 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
             activate_bwd_kernel,
             <<<blocks, num_threads>>>(out_d.dev_address(), out_g.dev_address(), out_g.size())
         );
+
+        CUDA_KERNEL_LAUNCH_CHECK();
     }
 
     // update biases gradients
@@ -86,42 +88,42 @@ void affine_bwd(Tensor& weights, Tensor& biases, Tensor& in, Tensor& out, const 
         biases_bwd_kernel<<<blocks, num_threads>>>(
             biases_g.dev_address(), out_g.dev_address(), out_g.rows(), out_g.cols()
         );
+
+        CUDA_KERNEL_LAUNCH_CHECK();
     }
 
     // update weights gradient
-    cublasSgemm(
-        CUBLAS_HANDLE,           // handle
-        CUBLAS_OP_N,             // transa
-        CUBLAS_OP_T,             // transb
-        weights_g.rows(),        // m
-        weights_g.cols(),        // n
-        out_g.cols(),            // k
-        &alpha,                  // alpha
-        out_g.dev_address(),     // A
-        out_g.rows(),            // lda
-        in_d.dev_address(),      // B
-        in_d.rows(),             // ldb
-        &beta,                   // beta
-        weights_g.dev_address(), // C
-        weights_g.rows()         // ldc
+    cublas::sgemm(
+        CUBLAS_OP_N,
+        CUBLAS_OP_T,
+        weights_g.rows(),
+        weights_g.cols(),
+        out_g.cols(),
+        alpha,
+        out_g.dev_address(),
+        out_g.rows(),
+        in_d.dev_address(),
+        in_d.rows(),
+        beta,
+        weights_g.dev_address(),
+        weights_g.rows()
     );
 
     // calculates delta for the layer before this one as well
-    cublasSgemm(
-        CUBLAS_HANDLE,           // handle
-        CUBLAS_OP_T,             // transa
-        CUBLAS_OP_N,             // transb
-        in_g.rows(),             // m
-        in_g.cols(),             // n
-        weights_d.rows(),        // k
-        &alpha,                  // alpha
-        weights_d.dev_address(), // A
-        weights_d.rows(),        // lda
-        out_g.dev_address(),     // B
-        out_g.rows(),            // ldb
-        &beta,                   // beta
-        in_g.dev_address(),      // C
-        in_g.rows()              // ldc
+    cublas::sgemm(
+        CUBLAS_OP_T,
+        CUBLAS_OP_N,
+        in_g.rows(),
+        in_g.cols(),
+        weights_d.rows(),
+        alpha,
+        weights_d.dev_address(),
+        weights_d.rows(),
+        out_g.dev_address(),
+        out_g.rows(),
+        beta,
+        in_g.dev_address(),
+        in_g.rows()
     );
 }
 

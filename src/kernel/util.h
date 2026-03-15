@@ -4,6 +4,8 @@
 
 namespace kernel {
 
+#define CUDA_KERNEL_LAUNCH_CHECK() CUDA_CHECK(cudaGetLastError())
+
 __device__ __forceinline__ float clamp(float x, float min_val, float max_val) {
     return max(min_val, min(x, max_val));
 }

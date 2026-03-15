@@ -45,6 +45,8 @@ void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Ac
             out_g.cols()
         )
     );
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel

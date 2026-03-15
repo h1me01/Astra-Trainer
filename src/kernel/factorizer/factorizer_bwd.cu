@@ -32,6 +32,8 @@ void factorizer_bwd(DenseMatrix& in_g, const DenseMatrix& out_g) {
 
     const int blocks = cuda::ceil_div(out_g.size(), num_threads * 4);
     factorizer_bwd_kernel<<<blocks, num_threads>>>(in_g.dev_address(), out_g.dev_address(), in_g.size(), out_g.size());
+
+    CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace kernel
