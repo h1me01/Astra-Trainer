@@ -32,7 +32,7 @@ class Model {
     }
 
     void prepare_inputs(const std::vector<TrainingDataEntry>& batch) {
-        for (auto& input : network().get_inputs())
+        for (auto& input : network().inputs())
             input->reset();
         fill_inputs(batch);
     }
@@ -49,7 +49,7 @@ class Model {
             error("Model: File " + file + " does not exist!");
 
         try {
-            for (auto& p : net_->get_params())
+            for (auto& p : net_->params())
                 p->load(f);
             fclose(f);
             std::cout << "Model: Loaded parameters from " << file << std::endl;
@@ -71,19 +71,19 @@ class Model {
 
         forward(ds);
 
-        auto& output = network().get_output().get_data();
+        auto& output = network().output().data();
         output.dev_to_host();
 
         return output(0);
     }
 
     void inputs_to_dev() {
-        for (auto& input : network().get_inputs())
-            input->get_indices().host_to_dev();
+        for (auto& input : network().inputs())
+            input->indices().host_to_dev();
     }
 
-    Tensor& get_output() { return network().get_output(); }
-    std::vector<nn::param::Param*> get_params() { return network().get_params(); }
+    Tensor& output() { return network().output(); }
+    std::vector<nn::param::Param*> params() { return network().params(); }
 
   private:
     GraphBuilder graph_builder_;
@@ -96,7 +96,7 @@ class Model {
         if (!net_) {
             net_ = std::make_unique<nn::Network>(build_graph());
             inputs_.ptrs.clear();
-            for (auto* input : network().get_inputs())
+            for (auto* input : network().inputs())
                 inputs_.ptrs.push_back(input);
         }
         return *net_;
@@ -114,7 +114,7 @@ class Model {
             error("Model: Failed writing weights to " + file);
 
         try {
-            for (auto& p : net_->get_params()) {
+            for (auto& p : net_->params()) {
                 if (quantized)
                     p->save_quantized(f);
                 else

@@ -19,11 +19,11 @@ class Factorizer {
         weights_ = DenseMatrix(rows, cols);
     }
 
-    void forward() { kernel::factorizer_fwd(base_.get_data(), param_weights_->get_data(), weights_); }
-    void backward() { kernel::factorizer_bwd(base_.get_grads(), param_weights_->get_grads()); }
+    void forward() { kernel::factorizer_fwd(base_.data(), param_weights_->data(), weights_); }
+    void backward() { kernel::factorizer_bwd(base_.grads(), param_weights_->grads()); }
 
-    Tensor& get_base() { return base_; }
-    DenseMatrix& get_weights() { return weights_; }
+    Tensor& base() { return base_; }
+    DenseMatrix& weights() { return weights_; }
 
   private:
     Tensor* param_weights_;

@@ -52,27 +52,27 @@ class Operation {
     virtual void forward() = 0;
     virtual void backward() = 0;
 
-    void zero_grads() { output_.get_grads().clear_dev(); }
+    void zero_grads() { output_.grads().clear_dev(); }
 
-    int get_input_dim() const { return input_dim_; }
-    int get_output_dim() const { return output_dim_; }
+    int input_dim() const { return input_dim_; }
+    int output_dim() const { return output_dim_; }
 
-    Tensor& get_output() { return output_; }
-    const Tensor& get_output() const { return output_; }
+    Tensor& output() { return output_; }
+    const Tensor& output() const { return output_; }
 
-    DenseMatrix& get_data() { return output_.get_data(); }
-    const DenseMatrix& get_data() const { return output_.get_data(); }
+    DenseMatrix& data() { return output_.data(); }
+    const DenseMatrix& data() const { return output_.data(); }
 
-    DenseMatrix& get_grads() { return output_.get_grads(); }
+    DenseMatrix& grads() { return output_.grads(); }
 
-    virtual std::vector<Operation*> get_inputs() const { return {}; }
+    virtual std::vector<Operation*> inputs() const { return {}; }
 
-    virtual Param* get_param() { return nullptr; }
+    virtual Param* param() { return nullptr; }
 
-    std::string get_name() const { return name_; }
+    std::string name() const { return name_; }
 
     void set_activation(ActivationType act_type) { this->act_type_ = act_type; }
-    ActivationType get_activation() const { return act_type_; }
+    ActivationType activation() const { return act_type_; }
 
   protected:
     std::string name_ = "";

@@ -13,7 +13,7 @@ struct Constant : public LRScheduler {
 
     void step([[maybe_unused]] int epoch) override {}
 
-    std::string get_info() const override { return "Constant(lr=" + format_number(lr_) + ")"; }
+    std::string info() const override { return "Constant(lr=" + format_number(lr_) + ")"; }
 };
 
 } // namespace nn::lr_sched

@@ -34,8 +34,8 @@ __global__ void select_bwd_kernel(
 }
 
 void select_bwd(DenseMatrix& in_g, const Tensor& out, const Array<int>& indices, const ActivationType act_type) {
-    auto& out_d = out.get_data();
-    auto& out_g = out.get_grads();
+    auto& out_d = out.data();
+    auto& out_g = out.grads();
 
     CHECK(in_g.cols() == out_g.cols() && out_g.cols() == indices.size());
 

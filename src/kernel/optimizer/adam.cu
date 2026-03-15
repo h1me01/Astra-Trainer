@@ -83,8 +83,8 @@ void adam_optim(
     const float min_val = param.lower_bound();
     const float max_val = param.upper_bound();
 
-    auto& vals = param.get_data();
-    auto& grads = param.get_grads();
+    auto& vals = param.data();
+    auto& grads = param.grads();
 
     CHECK(moms.size() == vals.size() && vels.size() == vals.size());
 

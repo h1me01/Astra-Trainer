@@ -38,8 +38,8 @@ mpe_kernel(const float* targets, const float* out_d, float* out_g, float* loss, 
 void mpe_loss(
     const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, const ActivationType act_type
 ) {
-    const auto& out_d = out.get_data();
-    auto& out_g = out.get_grads();
+    const auto& out_d = out.data();
+    auto& out_g = out.grads();
 
     CHECK(
         out_d.is_dev_allocated() &&   //

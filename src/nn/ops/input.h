@@ -21,8 +21,8 @@ class Input : public Operation {
     void forward() override {}
     void backward() override {}
 
-    SparseMatrix& get_indices() { return indices_; }
-    const SparseMatrix& get_indices() const { return indices_; }
+    SparseMatrix& indices() { return indices_; }
+    const SparseMatrix& indices() const { return indices_; }
 
     int& operator()(int r, int c) { return indices_(r, c); }
 

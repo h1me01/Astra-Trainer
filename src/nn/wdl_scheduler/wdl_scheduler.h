@@ -13,7 +13,7 @@ class WDLScheduler {
 
     float get() const { return val_; }
 
-    virtual std::string get_info() const = 0;
+    virtual std::string info() const = 0;
 
   protected:
     float val_;

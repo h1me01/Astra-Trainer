@@ -32,7 +32,7 @@ class Optimizer {
 
     void zero_grads() {
         for (auto* t : params_)
-            t->get_grads().clear_dev();
+            t->grads().clear_dev();
     }
 
     void load(const std::string& path);
@@ -48,7 +48,7 @@ class Optimizer {
 
     virtual void init_buffers() {
         for (const auto* t : params_) {
-            int size = t->get_data().size();
+            int size = t->data().size();
             momentum_.emplace_back(size);
             velocity_.emplace_back(size);
         }

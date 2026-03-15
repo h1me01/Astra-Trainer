@@ -15,8 +15,8 @@ class SparseAffineBase : public Operation {
         CHECK(param && input);
         name_ = op_name;
 
-        input_dim_ = param->get_input_dim();
-        output_dim_ = param->get_output_dim() / out_dim_divisor;
+        input_dim_ = param->input_dim();
+        output_dim_ = param->output_dim() / out_dim_divisor;
     }
 
     void init(int batch_size) override {
@@ -29,8 +29,8 @@ class SparseAffineBase : public Operation {
         out_offset_ = concat_->fuse(this);
     }
 
-    Param* get_param() override { return param_.get(); }
-    Input* get_input() const { return input_; }
+    Param* param() override { return param_.get(); }
+    Input* input() const { return input_; }
 
   protected:
     int out_offset_ = 0;
@@ -40,10 +40,10 @@ class SparseAffineBase : public Operation {
     Input* input_;
 
     DenseMatrix& effective_weights() {
-        return param_->has_factorizer() ? param_->get_factorizer().get_weights() : param_->get_weights().get_data();
+        return param_->has_factorizer() ? param_->factorizer().weights() : param_->weights().data();
     }
 
-    Tensor& effective_output() { return concat_ ? concat_->get_output() : output_; }
+    Tensor& effective_output() { return concat_ ? concat_->output() : output_; }
 };
 
 struct SparseAffine : public SparseAffineBase {
@@ -53,9 +53,9 @@ struct SparseAffine : public SparseAffineBase {
     void forward() override {
         kernel::sparse_affine_fwd(
             effective_weights(),
-            param_->get_biases().get_data(),
-            effective_output().get_data(),
-            input_->get_indices(),
+            param_->biases().data(),
+            effective_output().data(),
+            input_->indices(),
             out_offset_,
             act_type_
         );
@@ -63,10 +63,10 @@ struct SparseAffine : public SparseAffineBase {
 
     void backward() override {
         kernel::sparse_affine_bwd(
-            param_->get_weights().get_grads(),
-            param_->get_biases().get_grads(),
+            param_->weights().grads(),
+            param_->biases().grads(),
             effective_output(),
-            input_->get_indices(),
+            input_->indices(),
             out_offset_,
             act_type_
         );
@@ -80,9 +80,9 @@ struct SparseAffinePairwiseMul : public SparseAffineBase {
     void forward() override {
         kernel::sparse_affine_pairwise_mul_fwd(
             effective_weights(),
-            param_->get_biases().get_data(),
-            effective_output().get_data(),
-            input_->get_indices(),
+            param_->biases().data(),
+            effective_output().data(),
+            input_->indices(),
             out_offset_,
             act_type_
         );
@@ -91,10 +91,10 @@ struct SparseAffinePairwiseMul : public SparseAffineBase {
     void backward() override {
         kernel::sparse_affine_pairwise_mul_bwd(
             effective_weights(),
-            param_->get_weights().get_grads(),
-            param_->get_biases(),
-            effective_output().get_grads(),
-            input_->get_indices(),
+            param_->weights().grads(),
+            param_->biases(),
+            effective_output().grads(),
+            input_->indices(),
             out_offset_,
             act_type_
         );

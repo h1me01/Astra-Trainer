@@ -14,11 +14,11 @@ class ConcatBase : public Operation {
             CHECK(input);
         name_ = std::move(op_name);
         for (const auto& input : inputs)
-            output_dim_ += input->get_output_dim();
+            output_dim_ += input->output_dim();
         input_dim_ = output_dim_;
     }
 
-    std::vector<Operation*> get_inputs() const override { return inputs_; }
+    std::vector<Operation*> inputs() const override { return inputs_; }
 
   protected:
     std::vector<Operation*> inputs_;
@@ -31,16 +31,16 @@ struct Concat : public ConcatBase {
     void forward() override {
         int offset = 0;
         for (const auto& input : inputs_) {
-            kernel::concat_fwd(input->get_data(), output_.get_data(), offset, act_type_);
-            offset += input->get_output_dim();
+            kernel::concat_fwd(input->data(), output_.data(), offset, act_type_);
+            offset += input->output_dim();
         }
     }
 
     void backward() override {
         int offset = 0;
         for (const auto& input : inputs_) {
-            kernel::concat_bwd(input->get_grads(), output_, offset, act_type_);
-            offset += input->get_output_dim();
+            kernel::concat_bwd(input->grads(), output_, offset, act_type_);
+            offset += input->output_dim();
         }
     }
 };
@@ -57,7 +57,7 @@ struct FusedConcat : public ConcatBase {
         for (const auto& input : inputs_) {
             if (input == op)
                 return offset;
-            offset += input->get_output_dim();
+            offset += input->output_dim();
         }
         CHECK(false);
         return -1;

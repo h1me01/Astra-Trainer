@@ -32,7 +32,7 @@ class CosineAnnealing : public LRScheduler {
         lr_ = start_ + lambda * (final_ - start_);
     }
 
-    std::string get_info() const override {
+    std::string info() const override {
         return "CosineAnnealing(start=" + format_number(start_) + //
                ", final=" + format_number(final_) +               //
                ", max_epochs=" + std::to_string(max_epochs_ + 1) + ")";

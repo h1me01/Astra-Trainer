@@ -22,7 +22,7 @@ class StepDecay : public LRScheduler {
 
     void step(int epoch) override { lr_ = base_lr_ * std::pow(gamma_, (epoch + 1) / step_size_); }
 
-    std::string get_info() const override {
+    std::string info() const override {
         return "StepDecay(lr=" + std::to_string(lr_) + //
                ", gamma=" + format_number(gamma_) +    //
                ", step_size=" + std::to_string(step_size_) + ")";

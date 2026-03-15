@@ -66,8 +66,8 @@ class SparseAffineBuilder {
         return NodeHandle(std::make_shared<ng::SparseAffineNode>(param_, a));
     }
 
-    Tensor& get_weights() { return param_->get_weights(); }
-    Tensor& get_biases() { return param_->get_biases(); }
+    Tensor& weights() { return param_->weights(); }
+    Tensor& biases() { return param_->biases(); }
 
     np::SaveFormat& weights_format() { return param_->weights_format(); }
     np::SaveFormat& biases_format() { return param_->biases_format(); }
@@ -83,8 +83,8 @@ class AffineBuilder {
 
     NodeHandle operator()(SPtr<ng::Node> a) { return NodeHandle(std::make_shared<ng::AffineNode>(param_, a)); }
 
-    Tensor& get_weights() { return param_->get_weights(); }
-    Tensor& get_biases() { return param_->get_biases(); }
+    Tensor& weights() { return param_->weights(); }
+    Tensor& biases() { return param_->biases(); }
 
     np::SaveFormat& weights_format() { return param_->weights_format(); }
     np::SaveFormat& biases_format() { return param_->biases_format(); }

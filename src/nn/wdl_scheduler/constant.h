@@ -11,7 +11,7 @@ struct Constant : public WDLScheduler {
             error("Constant WDL Scheduler: value must be between 0 and 1!");
     }
 
-    std::string get_info() const override { return "Constant(val=" + format_number(val_) + ")"; }
+    std::string info() const override { return "Constant(val=" + format_number(val_) + ")"; }
 };
 
 } // namespace nn::wdl_sched

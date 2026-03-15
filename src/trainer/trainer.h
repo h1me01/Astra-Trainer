@@ -41,25 +41,25 @@ class Trainer {
 
     void print_info(int epoch, const std::string output_path) const {
         std::cout << "\n=============================== Training Data ==============================\n\n";
-        for (const auto f : dataloader->get_filenames())
+        for (const auto f : dataloader->filenames())
             std::cout << f << std::endl;
 
         std::cout << "\n=============================== Trainer Info ===============================\n\n";
         std::cout << "Name          : " << config.name << std::endl;
-        std::cout << "Device        : " << get_device_Info() << std::endl;
+        std::cout << "Device        : " << device_Info() << std::endl;
         std::cout << "Epochs        : " << config.epochs << std::endl;
         std::cout << "Batch Size    : " << config.batch_size << std::endl;
         std::cout << "Batches/Epoch : " << config.batches_per_epoch << std::endl;
         std::cout << "Save Rate     : " << config.save_rate << std::endl;
-        std::cout << "LR Scheduler  : " << lr_sched->get_info() << std::endl;
-        std::cout << "WDL Scheduler : " << wdl_sched->get_info() << std::endl;
+        std::cout << "LR Scheduler  : " << lr_sched->info() << std::endl;
+        std::cout << "WDL Scheduler : " << wdl_sched->info() << std::endl;
         std::cout << "Output Path   : " << output_path << std::endl;
 
         if (epoch > 0)
             std::cout << "\nResuming from epoch " << epoch << " with learning rate " << lr_sched->get() << std::endl;
     }
 
-    std::string get_device_Info() const {
+    std::string device_Info() const {
         int device = -1;
         CUDA_CHECK(cudaGetDevice(&device));
 

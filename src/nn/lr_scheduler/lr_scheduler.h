@@ -15,7 +15,7 @@ class LRScheduler {
 
     float get() const { return lr_; }
 
-    virtual std::string get_info() const = 0;
+    virtual std::string info() const = 0;
 
   protected:
     float lr_;

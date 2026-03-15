@@ -28,7 +28,7 @@ class Linear : public WDLScheduler {
         val_ = start_ + (final_ - start_) * t;
     }
 
-    std::string get_info() const override {
+    std::string info() const override {
         return "Linear(start=" + format_number(start_) + //
                ", final=" + format_number(final_) +      //
                ", max_epochs=" + std::to_string(max_epochs_ + 1) + ")";

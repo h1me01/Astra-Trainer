@@ -27,14 +27,14 @@ class Param {
 
     void save(FILE* f) {
         if (has_factorizer())
-            write_tensor(f, (*factorizer_).get_base());
+            write_tensor(f, (*factorizer_).base());
         write_tensor(f, weights_);
         write_tensor(f, biases_);
     }
 
     void load(FILE* f) {
         if (has_factorizer())
-            load_tensor(f, (*factorizer_).get_base());
+            load_tensor(f, (*factorizer_).base());
         load_tensor(f, weights_);
         load_tensor(f, biases_);
     }
@@ -49,8 +49,8 @@ class Param {
         biases_.set_bounds(min_val, max_val);
     }
 
-    int get_input_dim() const { return weights_.get_data().cols(); }
-    int get_output_dim() const { return weights_.get_data().rows(); }
+    int input_dim() const { return weights_.data().cols(); }
+    int output_dim() const { return weights_.data().rows(); }
 
     SaveFormat& weights_format() { return weights_save_format_; }
     SaveFormat& biases_format() { return biases_save_format_; }
@@ -58,17 +58,17 @@ class Param {
     const SaveFormat& weights_format() const { return weights_save_format_; }
     const SaveFormat& biases_format() const { return biases_save_format_; }
 
-    Tensor& get_weights() { return weights_; }
-    Tensor& get_biases() { return biases_; }
-    Factorizer& get_factorizer() { return *factorizer_; }
+    Tensor& weights() { return weights_; }
+    Tensor& biases() { return biases_; }
+    Factorizer& factorizer() { return *factorizer_; }
 
-    const Tensor& get_weights() const { return weights_; }
-    const Tensor& get_biases() const { return biases_; }
-    const Factorizer& get_factorizer() const { return *factorizer_; }
+    const Tensor& weights() const { return weights_; }
+    const Tensor& biases() const { return biases_; }
+    const Factorizer& factorizer() const { return *factorizer_; }
 
     std::vector<Tensor*> get() {
         if (has_factorizer())
-            return {&(*factorizer_).get_base(), &weights_, &biases_};
+            return {&(*factorizer_).base(), &weights_, &biases_};
         return {&weights_, &biases_};
     }
 
@@ -80,14 +80,14 @@ class Param {
     SaveFormat biases_save_format_;
 
     void load_tensor(FILE* f, Tensor& tensor) {
-        auto& data = tensor.get_data();
+        auto& data = tensor.data();
         if ((int)fread(data.host_address(), sizeof(float), data.size(), f) != data.size())
             error("Param: Failed reading tensor data from file!");
         data.host_to_dev();
     }
 
     void write_tensor(FILE* f, Tensor& tensor) {
-        auto& data = tensor.get_data();
+        auto& data = tensor.data();
 
         data.dev_to_host();
         if ((int)fwrite(data.host_address(), sizeof(float), data.size(), f) != data.size())
@@ -96,11 +96,11 @@ class Param {
 
     template <typename T>
     void write_quantized(FILE* f, Tensor& tensor, const SaveFormat& format, bool add_factorizer = false) {
-        auto& data = tensor.get_data();
+        auto& data = tensor.data();
 
         DenseMatrix facto;
         if (add_factorizer) {
-            auto& facto_data = factorizer_->get_base().get_data();
+            auto& facto_data = factorizer_->base().data();
             facto_data.dev_to_host();
             facto = facto_data.repeat(data.cols() / facto_data.cols());
         }
@@ -137,7 +137,7 @@ class Param {
     }
 
     void save_tensor_quantized(FILE* f, Tensor& tensor, const SaveFormat& format, bool add_factorizer = false) {
-        tensor.get_data().dev_to_host();
+        tensor.data().dev_to_host();
         switch (format.get_type()) {
         case SaveFormat::Type::int8:
             write_quantized<int8_t>(f, tensor, format, add_factorizer);

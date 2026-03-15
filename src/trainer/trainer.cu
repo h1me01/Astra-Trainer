@@ -58,7 +58,7 @@ void Trainer::init() {
 
     model.init(config.batch_size);
     targets_ = Array<float>(config.batch_size, true);
-    optimiser->init(model.get_params());
+    optimiser->init(model.params());
     dataloader->init(config.batch_size);
 
     initialized_ = true;
@@ -136,7 +136,7 @@ void Trainer::fit(const std::string output_path) {
 
             optimiser->zero_grads();
             model.forward(current_data);
-            loss->compute(model.get_output(), targets_);
+            loss->compute(model.output(), targets_);
             model.backward();
             optimiser->step(lr_sched->get(), current_data.size());
 

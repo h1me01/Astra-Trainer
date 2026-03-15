@@ -14,7 +14,7 @@ class Select : public Operation {
 
         name_ = "select";
 
-        input_dim_ = input->get_output_dim();
+        input_dim_ = input->output_dim();
         output_dim_ = input_dim_ / indices->partitions_size();
 
         if (input_dim_ % indices->partitions_size() != 0)
@@ -23,12 +23,12 @@ class Select : public Operation {
 
     void init(int batch_size) override { Operation::init(batch_size); }
 
-    void forward() override { kernel::select_fwd(input_->get_data(), output_.get_data(), *indices_, act_type_); }
-    void backward() override { kernel::select_bwd(input_->get_grads(), output_, *indices_, act_type_); }
+    void forward() override { kernel::select_fwd(input_->data(), output_.data(), *indices_, act_type_); }
+    void backward() override { kernel::select_bwd(input_->grads(), output_, *indices_, act_type_); }
 
-    SelectIndices* get_indices() const { return indices_.get(); }
+    SelectIndices* indices() const { return indices_.get(); }
 
-    std::vector<Operation*> get_inputs() const override { return {input_}; }
+    std::vector<Operation*> inputs() const override { return {input_}; }
 
   private:
     int max_indices_;

@@ -62,11 +62,11 @@ class Tensor {
     float lower_bound() const { return lower_bound_; }
     float upper_bound() const { return upper_bound_; }
 
-    DenseMatrix& get_data() { return data_; }
-    const DenseMatrix& get_data() const { return data_; }
+    DenseMatrix& data() { return data_; }
+    const DenseMatrix& data() const { return data_; }
 
-    DenseMatrix& get_grads() { return grads_; }
-    const DenseMatrix& get_grads() const { return grads_; }
+    DenseMatrix& grads() { return grads_; }
+    const DenseMatrix& grads() const { return grads_; }
 
     int rows() const { return data_.rows(); }
     int cols() const { return data_.cols(); }

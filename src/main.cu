@@ -67,7 +67,7 @@ int main() {
         }
     });
 
-    for (auto& p : model.get_params())
+    for (auto& p : model.params())
         p->set_bounds(-0.99f, 0.99f);
 
     TrainingConfig cfg{
