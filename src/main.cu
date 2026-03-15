@@ -85,15 +85,15 @@ int main() {
                || e.move.type != MoveType::Normal;
     });
 
-    Trainer trainer{
+    Trainer trainer({
         .model = model,
         .config = cfg,
         .loss = loss::mse(ActivationType::Sigmoid),
-        .optimiser = optim::adamw(0.9f, 0.999f, 0.01f),
+        .optim = optim::adamw(0.9f, 0.999f, 0.01f),
         .lr_sched = lr_sched::cosine_annealing(lr, lr * std::pow(0.3f, 3), epochs),
         .wdl_sched = wdl_sched::constant(0.7f),
         .dataloader = dataloader,
-    };
+    });
 
     trainer.fit();
 

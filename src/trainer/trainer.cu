@@ -49,31 +49,13 @@ int epoch_from_checkpoint(const std::string checkpoint) {
 
 // Trainer
 
-void Trainer::init() {
-    if (initialized_)
-        return;
-
-    if (!loss || !optimiser || !lr_sched || !wdl_sched || !dataloader)
-        error("Trainer: All components must be non-null");
-
-    model.init(config.batch_size);
-    targets_ = Array<float>(config.batch_size, true);
-    optimiser->init(model.params());
-    dataloader->init(config.batch_size);
-
-    initialized_ = true;
-}
-
 void Trainer::load_checkpoint(const std::string& path) {
-    init();
-
     if (!exists(path))
         error("Trainer: Checkpoint path does not exist: " + path);
 
     try {
-        model.load_params(path + "/model.bin");
-        optimiser->load(path);
-
+        model_.load_params(path + "/model.bin");
+        optim_->load(path);
         current_epoch_ = epoch_from_checkpoint(path);
 
         std::cout << "Trainer: Loaded checkpoint from " << path << std::endl;
@@ -89,20 +71,17 @@ void Trainer::save_checkpoint(const std::string& path) {
         error("Trainer: Failed creating directory " + path + ": " + e.what());
     }
 
-    model.save_params(path + "/model.bin");
-    model.save_quantized_params(path + "/quantized_model.nnue");
-
-    if (optimiser)
-        optimiser->save(path);
+    model_.save_params(path + "/model.bin");
+    model_.save_quantized_params(path + "/quantized_model.nnue");
+    optim_->save(path);
 
     std::cout << "Trainer: Saved checkpoint to " << path << std::endl;
 }
 
 void Trainer::fit(const std::string output_path) {
-    init();
-    std::string training_folder = output_path.empty() ? config.name : output_path + "/" + config.name;
+    std::string training_folder = output_path.empty() ? config_.name : output_path + "/" + config_.name;
 
-    if (!exists(training_folder)) {
+    if (!exists(training_folder) || true) {
         try {
             create_directory(training_folder);
         } catch (const filesystem_error& e) {
@@ -120,61 +99,62 @@ void Trainer::fit(const std::string output_path) {
 
     std::cout << "\n================================= Training =================================\n\n";
 
-    for (; current_epoch_ < config.epochs; current_epoch_++) {
+    for (; current_epoch_ < config_.epochs; current_epoch_++) {
         Timer timer;
 
-        lr_sched->step(current_epoch_);
-        wdl_sched->step(current_epoch_);
+        lr_sched_->step(current_epoch_);
+        wdl_sched_->step(current_epoch_);
 
-        loss->clear();
+        loss_->clear();
 
         const int display_epoch = current_epoch_ + 1;
 
-        for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
-            auto current_data = dataloader->next();
+        for (int batch = 1; batch <= config_.batches_per_epoch; batch++) {
+            auto current_data = dataloader_->next();
             prepare_batch(current_data);
 
-            optimiser->zero_grads();
-            model.forward(current_data);
-            loss->compute(model.output(), targets_);
-            model.backward();
-            optimiser->step(lr_sched->get(), current_data.size());
+            optim_->zero_grads();
+            model_.forward(current_data);
+            loss_->compute(model_.output(), targets_);
+            model_.backward();
+            optim_->step(lr_sched_->get(), current_data.size());
 
             if (batch % 100 == 0) {
-                print_progress(display_epoch, batch, loss->get(), config.batch_size * batch, timer.elapsed_time());
+                print_progress(display_epoch, batch, loss_->get(), config_.batch_size * batch, timer.elapsed_time());
             }
         }
 
-        float epoch_loss = loss->get();
+        float epoch_loss = loss_->get();
 
         print_progress(
             display_epoch,
-            config.batches_per_epoch,
+            config_.batches_per_epoch,
             epoch_loss,
-            config.batch_size * config.batches_per_epoch,
+            config_.batch_size * config_.batches_per_epoch,
             timer.elapsed_time(),
             true
         );
 
         log.write(
-            {std::to_string(display_epoch), std::to_string(epoch_loss / (config.batch_size * config.batches_per_epoch))}
+            {std::to_string(display_epoch),
+             std::to_string(epoch_loss / (config_.batch_size * config_.batches_per_epoch))}
         );
 
-        if (display_epoch % std::max(config.save_rate, 1) == 0 || display_epoch == config.epochs)
+        if (display_epoch % std::max(config_.save_rate, 1) == 0 || display_epoch == config_.epochs)
             save_checkpoint(training_folder + "/checkpoint_" + std::to_string(display_epoch));
     }
 }
 
 void Trainer::prepare_batch(const std::vector<TrainingDataEntry>& batch) {
-    model.prepare_inputs(batch);
+    model_.prepare_inputs(batch);
 
     for (size_t i = 0; i < batch.size(); i++) {
-        float score_target = sigmoid(batch[i].score / config.eval_scale);
+        float score_target = sigmoid(batch[i].score / config_.eval_scale);
         float wdl_target = (batch[i].result + 1) / 2.0f;
-        targets_(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
+        targets_(i) = wdl_sched_->get() * wdl_target + (1.0f - wdl_sched_->get()) * score_target;
     }
 
-    model.inputs_to_dev();
+    model_.inputs_to_dev();
     targets_.host_to_dev();
 }
 
