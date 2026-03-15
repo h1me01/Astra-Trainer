@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
 __global__ void pairwise_mul_bwd_kernel(
     const float* in_d,
     float* in_g,
@@ -27,14 +26,11 @@ __global__ void pairwise_mul_bwd_kernel(
     const int out_idx = batch_idx * out_r + feature_idx;
 
     float grad = out_g[out_idx];
-    if constexpr (act_type != ActivationType::Linear)
-        grad *= activate_bwd<act_type, true>(out_d[out_idx]);
-
     in_g[in_offset_a] += grad * in_d[in_offset_b];
     in_g[in_offset_b] += grad * in_d[in_offset_a];
 }
 
-void pairwise_mul_bwd(Tensor& in, const Tensor& out, const ActivationType act_type) {
+void pairwise_mul_bwd(Tensor& in, const Tensor& out) {
     const auto& in_d = in.data();
     auto& in_g = in.grad();
 
@@ -57,18 +53,14 @@ void pairwise_mul_bwd(Tensor& in, const Tensor& out, const ActivationType act_ty
     );
 
     const int blocks = cuda::ceil_div(feature_size * in_d.cols(), num_threads);
-    DISPATCH_ACTIVATION(
-        act_type,
-        pairwise_mul_bwd_kernel,
-        <<<blocks, num_threads>>>(
-            in_d.dev_address(),
-            in_g.dev_address(),
-            out_d.dev_address(),
-            out_g.dev_address(),
-            feature_size,
-            out_g.rows(),
-            in_d.cols()
-        )
+    pairwise_mul_bwd_kernel<<<blocks, num_threads>>>(
+        in_d.dev_address(),
+        in_g.dev_address(),
+        out_d.dev_address(),
+        out_g.dev_address(),
+        feature_size,
+        out_g.rows(),
+        in_d.cols()
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

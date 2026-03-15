@@ -83,15 +83,6 @@ class Graph {
         build_consumer_map();
     }
 
-    bool try_fuse_activation(SPtr<Node> node) {
-        auto c = sole_consumer(node);
-        if (!c || !is_activation(c->op_type()))
-            return false;
-        node->set_activation(c->op_type());
-        absorb_node(c, node);
-        return true;
-    }
-
     template <typename T>
     void fixed_point(std::function<bool(SPtr<Node>)> action) {
         bool changed = true;
@@ -112,9 +103,6 @@ class Graph {
 
     void optimize() {
         fuse_sparse_affine();
-        fixed_point<AffineNode>([this](auto n) { return try_fuse_activation(n); });
-        fixed_point<SelectNode>([this](auto n) { return try_fuse_activation(n); });
-        fixed_point<PairwiseMulNode>([this](auto n) { return try_fuse_activation(n); });
         fuse_concat();
     }
 

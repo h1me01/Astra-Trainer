@@ -8,6 +8,8 @@ namespace trainer {
 namespace ng = nn::graph;
 namespace np = nn::param;
 
+using OpType = ng::OpType;
+
 namespace save_format {
 
 using Type = nn::SaveFormat::Type;
@@ -31,12 +33,17 @@ class NodeHandle {
     NodeHandle(SPtr<ng::Node> node)
         : node_(node) {}
 
-    NodeHandle relu() { return make_activation(ng::OpType::ReLU); }
-    NodeHandle clipped_relu() { return make_activation(ng::OpType::ClippedReLU); }
-    NodeHandle sqr_clipped_relu() { return make_activation(ng::OpType::SqrClippedReLU); }
-    NodeHandle sigmoid() { return make_activation(ng::OpType::Sigmoid); }
+    NodeHandle relu() { return make_unary_op(OpType::ReLU); }
+    NodeHandle clipped_relu() { return make_unary_op(OpType::ClippedReLU); }
+    NodeHandle sqr_clipped_relu() { return make_unary_op(OpType::SqrClippedReLU); }
+    NodeHandle sigmoid() { return make_unary_op(OpType::Sigmoid); }
     NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node_, indices)); }
     NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node_)); }
+
+    NodeHandle operator+(NodeHandle other) { return make_binary_op(OpType::Add, other); }
+    NodeHandle operator-(NodeHandle other) { return make_binary_op(OpType::Sub, other); }
+    NodeHandle operator*(NodeHandle other) { return make_binary_op(OpType::Mul, other); }
+    NodeHandle operator/(NodeHandle other) { return make_binary_op(OpType::Div, other); }
 
     operator SPtr<ng::Node>() const { return node_; }
     SPtr<ng::Node> get() const { return node_; }
@@ -44,8 +51,10 @@ class NodeHandle {
   private:
     SPtr<ng::Node> node_;
 
-    NodeHandle make_activation(ng::OpType op_type) {
-        return NodeHandle(std::make_shared<ng::ActivationNode>(op_type, node_));
+    NodeHandle make_unary_op(OpType op_type) { return NodeHandle(std::make_shared<ng::UnaryNode>(op_type, node_)); }
+
+    NodeHandle make_binary_op(OpType op_type, NodeHandle other) {
+        return NodeHandle(std::make_shared<ng::BinaryNode>(op_type, node_, other.get()));
     }
 };
 
@@ -119,22 +128,6 @@ inline NodeHandle concat(std::vector<NodeHandle> inputs) {
     return NodeHandle(std::make_shared<ng::ConcatNode>(nodes));
 }
 
-inline NodeHandle operator+(NodeHandle a, NodeHandle b) {
-    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Add, a.get(), b.get()));
-}
-
-inline NodeHandle operator-(NodeHandle a, NodeHandle b) {
-    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Sub, a.get(), b.get()));
-}
-
-inline NodeHandle operator*(NodeHandle a, NodeHandle b) {
-    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Mul, a.get(), b.get()));
-}
-
-inline NodeHandle operator/(NodeHandle a, NodeHandle b) {
-    return NodeHandle(std::make_shared<ng::ElemwiseNode>(ng::OpType::Div, a.get(), b.get()));
-}
-
 } // namespace graph
 
 namespace lr_sched {
@@ -179,11 +172,11 @@ inline Optimizer adamw(float beta1, float beta2, float decay) {
 
 namespace loss {
 
-inline Loss mse(ActivationType act = ActivationType::Linear) {
+inline Loss mse(OpType act = OpType::None) {
     return std::make_shared<nn::loss::MPE>(2.0, act);
 }
 
-inline Loss mpe(float power, ActivationType act = ActivationType::Linear) {
+inline Loss mpe(float power, OpType act = OpType::None) {
     return std::make_shared<nn::loss::MPE>(power, act);
 }
 

@@ -12,8 +12,6 @@ class Select : public Operation {
 
         CHECK(input && indices);
 
-        name_ = "select";
-
         input_dim_ = input->output_dim();
         output_dim_ = input_dim_ / indices->partitions_size();
 
@@ -23,8 +21,8 @@ class Select : public Operation {
 
     void init(int batch_size) override { Operation::init(batch_size); }
 
-    void forward() override { kernel::select_fwd(input_->data(), data(), *indices_, act_type_); }
-    void backward() override { kernel::select_bwd(input_->grad(), output_, *indices_, act_type_); }
+    void forward() override { kernel::select_fwd(input_->data(), data(), *indices_); }
+    void backward() override { kernel::select_bwd(input_->grad(), output_, *indices_); }
 
     SelectIndices* indices() const { return indices_.get(); }
 

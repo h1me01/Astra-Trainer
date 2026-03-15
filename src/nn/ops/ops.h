@@ -69,17 +69,9 @@ class Operation {
 
     virtual Param* param() { return nullptr; }
 
-    std::string name() const { return name_; }
-
-    void set_activation(ActivationType act_type) { this->act_type_ = act_type; }
-    ActivationType activation() const { return act_type_; }
-
   protected:
-    std::string name_ = "";
-
     int input_dim_ = 0;
     int output_dim_ = 0;
-    ActivationType act_type_ = ActivationType::Linear;
 
     Tensor output_;
 };

@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
 __global__ void pairwise_mul_fwd_kernel(
     const float* in_d, float* out_d, const int feature_size, const int out_r, const int batch_size
 ) {
@@ -20,11 +19,10 @@ __global__ void pairwise_mul_fwd_kernel(
 
     const int out_idx = batch_idx * out_r + feature_idx;
 
-    const float val = in_d[in_offset_a] * in_d[in_offset_b];
-    out_d[out_idx] = activate_fwd<act_type>(val);
+    out_d[out_idx] = in_d[in_offset_a] * in_d[in_offset_b];
 }
 
-void pairwise_mul_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const ActivationType act_type) {
+void pairwise_mul_fwd(const DenseMatrix& in_d, DenseMatrix& out_d) {
     const int feature_size = in_d.rows() / 2;
 
     CHECK(
@@ -36,10 +34,8 @@ void pairwise_mul_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Activat
     CHECK(in_d.is_dev_allocated() && out_d.is_dev_allocated());
 
     const int blocks = cuda::ceil_div(feature_size * in_d.cols(), num_threads);
-    DISPATCH_ACTIVATION(
-        act_type,
-        pairwise_mul_fwd_kernel,
-        <<<blocks, num_threads>>>(in_d.dev_address(), out_d.dev_address(), feature_size, out_d.rows(), in_d.cols())
+    pairwise_mul_fwd_kernel<<<blocks, num_threads>>>(
+        in_d.dev_address(), out_d.dev_address(), feature_size, out_d.rows(), in_d.cols()
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

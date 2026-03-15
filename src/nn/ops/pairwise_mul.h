@@ -12,8 +12,6 @@ class PairwiseMul : public Operation {
 
         CHECK(input);
 
-        name_ = "pairwise_mul";
-
         input_dim_ = input->output_dim();
         output_dim_ = input_dim_ / 2;
 
@@ -21,8 +19,8 @@ class PairwiseMul : public Operation {
             error("PairwiseMul: Input dimension must be even!");
     }
 
-    void forward() override { kernel::pairwise_mul_fwd(input_->data(), data(), act_type_); }
-    void backward() override { kernel::pairwise_mul_bwd(input_->output(), output_, act_type_); }
+    void forward() override { kernel::pairwise_mul_fwd(input_->data(), data()); }
+    void backward() override { kernel::pairwise_mul_bwd(input_->output(), output_); }
 
     std::vector<Operation*> inputs() const override { return {input_}; }
 

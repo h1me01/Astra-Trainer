@@ -36,11 +36,6 @@ void Network::cache_data() {
 }
 
 UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inputs) {
-    auto maybe_set_act = [&](auto* op, OpType act) {
-        if (act != OpType::None)
-            op->set_activation(to_activation(act));
-    };
-
     switch (node->op_type()) {
     case OpType::Input:
         return std::make_unique<op::Input>(node->output_dim());
@@ -56,16 +51,16 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
         else
             op = std::make_unique<op::SparseAffine>(sn->param(), input);
 
-        maybe_set_act(op.get(), sn->activation());
+        auto act = sn->activation();
+        if (act != OpType::None)
+            op->set_activation(act);
+
         return op;
     }
     case OpType::Affine: {
         auto* an = dynamic_cast<AffineNode*>(node);
         CHECK(an);
-
-        auto op = std::make_unique<op::Affine>(an->param(), inputs[0]);
-        maybe_set_act(op.get(), an->activation());
-        return op;
+        return std::make_unique<op::Affine>(an->param(), inputs[0]);
     }
     case OpType::Concat: {
         auto* cn = dynamic_cast<ConcatNode*>(node);
@@ -82,7 +77,6 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
             }
         } else {
             op = std::make_unique<op::Concat>(inputs);
-            maybe_set_act(op.get(), cn->activation());
         }
 
         return op;
@@ -90,32 +84,29 @@ UPtr<Operation> Network::make_operation(Node* node, std::vector<Operation*> inpu
     case OpType::Select: {
         auto* sn = dynamic_cast<SelectNode*>(node);
         CHECK(sn);
-
-        auto op = std::make_unique<op::Select>(inputs[0], sn->indices());
-        maybe_set_act(op.get(), sn->activation());
-        return op;
+        return std::make_unique<op::Select>(inputs[0], sn->indices());
     }
     case OpType::PairwiseMul: {
         auto* pmn = dynamic_cast<PairwiseMulNode*>(node);
         CHECK(pmn);
-
-        auto op = std::make_unique<op::PairwiseMul>(inputs[0]);
-        maybe_set_act(op.get(), pmn->activation());
-        return op;
+        return std::make_unique<op::PairwiseMul>(inputs[0]);
     }
     case OpType::ReLU:
+        return std::make_unique<op::Unary<kernel::ReLU>>(inputs[0]);
     case OpType::ClippedReLU:
+        return std::make_unique<op::Unary<kernel::ClippedReLU>>(inputs[0]);
     case OpType::SqrClippedReLU:
+        return std::make_unique<op::Unary<kernel::SqrClippedReLU>>(inputs[0]);
     case OpType::Sigmoid:
-        return std::make_unique<op::Activation>(inputs[0], to_activation(node->op_type()));
+        return std::make_unique<op::Unary<kernel::Sigmoid>>(inputs[0]);
     case OpType::Add:
-        return std::make_unique<op::Elemwise<kernel::Add>>(inputs[0], inputs[1]);
+        return std::make_unique<op::Binary<kernel::Add>>(inputs[0], inputs[1]);
     case OpType::Sub:
-        return std::make_unique<op::Elemwise<kernel::Sub>>(inputs[0], inputs[1]);
+        return std::make_unique<op::Binary<kernel::Sub>>(inputs[0], inputs[1]);
     case OpType::Mul:
-        return std::make_unique<op::Elemwise<kernel::Mul>>(inputs[0], inputs[1]);
+        return std::make_unique<op::Binary<kernel::Mul>>(inputs[0], inputs[1]);
     case OpType::Div:
-        return std::make_unique<op::Elemwise<kernel::Div>>(inputs[0], inputs[1]);
+        return std::make_unique<op::Binary<kernel::Div>>(inputs[0], inputs[1]);
     default:
         CHECK(false);
         return nullptr;

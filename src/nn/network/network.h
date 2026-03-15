@@ -71,22 +71,6 @@ class Network {
     void init_operations(const Graph& graph);
     void cache_data();
 
-    static ActivationType to_activation(OpType op_type) {
-        switch (op_type) {
-        case OpType::ReLU:
-            return ActivationType::ReLU;
-        case OpType::ClippedReLU:
-            return ActivationType::ClippedReLU;
-        case OpType::SqrClippedReLU:
-            return ActivationType::SqrClippedReLU;
-        case OpType::Sigmoid:
-            return ActivationType::Sigmoid;
-        default:
-            CHECK(false);
-            return ActivationType::Linear;
-        }
-    }
-
     UPtr<Operation> make_operation(Node* node, std::vector<Operation*> inputs);
 };
 

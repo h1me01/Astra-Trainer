@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
 __global__ void concat_bwd_kernel(
     const float* out_d, const float* out_g, float* in_g, const int in_r, const int out_r, const int batch_size
 ) {
@@ -18,14 +17,10 @@ __global__ void concat_bwd_kernel(
     const int in_idx = curr_in_r + batch_idx * in_r;
     const int out_idx = curr_in_r + batch_idx * out_r;
 
-    float grad = out_g[out_idx];
-    if constexpr (act_type != ActivationType::Linear)
-        grad *= activate_bwd<act_type, true>(out_d[out_idx]);
-
-    in_g[in_idx] += grad;
+    in_g[in_idx] += out_g[out_idx];
 }
 
-void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const ActivationType act_type) {
+void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset) {
     auto& out_g = out.grad();
     auto& out_d = out.data();
 
@@ -33,17 +28,13 @@ void concat_bwd(DenseMatrix& in_g, const Tensor& out, const int offset, const Ac
     CHECK(in_g.is_dev_allocated() && out_d.is_dev_allocated() && out_g.is_dev_allocated());
 
     const int blocks = cuda::ceil_div(in_g.size(), num_threads);
-    DISPATCH_ACTIVATION(
-        act_type,
-        concat_bwd_kernel,
-        <<<blocks, num_threads>>>(
-            out_d.dev_address() + offset,
-            out_g.dev_address() + offset,
-            in_g.dev_address(),
-            in_g.rows(),
-            out_g.rows(),
-            out_g.cols()
-        )
+    concat_bwd_kernel<<<blocks, num_threads>>>(
+        out_d.dev_address() + offset,
+        out_g.dev_address() + offset,
+        in_g.dev_address(),
+        in_g.rows(),
+        out_g.rows(),
+        out_g.cols()
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

@@ -89,9 +89,9 @@ void adam_optim(
     CHECK(moms.size() == data.size() && vels.size() == data.size());
 
     CHECK(
-        data.is_dev_allocated() &&  //
+        data.is_dev_allocated() && //
         grad.is_dev_allocated() && //
-        moms.is_dev_allocated() &&  //
+        moms.is_dev_allocated() && //
         vels.is_dev_allocated()
     );
 

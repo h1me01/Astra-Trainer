@@ -5,7 +5,7 @@ namespace kernel {
 constexpr int num_threads = 512;
 constexpr dim3 block_size(num_threads, 1);
 
-template <ActivationType act_type>
+template <typename Op>
 __global__ void sparse_affine_bwd_kernel(
     float* weights_g,
     float* biases_g,
@@ -15,7 +15,8 @@ __global__ void sparse_affine_bwd_kernel(
     const int weights_r,
     const int out_r,
     const int batch_size,
-    const int max_entries
+    const int max_entries,
+    Op op
 ) {
     const int row = blockIdx.y * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.x;
@@ -26,12 +27,9 @@ __global__ void sparse_affine_bwd_kernel(
     const int* sample_indices = features + batch_idx * max_entries;
     const int out_idx = batch_idx * out_r + row;
 
-    float grad = out_g[out_idx];
-    if constexpr (act_type != ActivationType::Linear) {
-        grad *= activate_bwd<act_type, true>(out_d[out_idx]);
-        if (grad == 0.0f)
-            return;
-    }
+    float grad = out_g[out_idx] * op.backward<true>(out_d[out_idx]);
+    if (grad == 0.0f)
+        return;
 
     atomicAdd(&biases_g[row], grad);
 
@@ -49,7 +47,7 @@ void sparse_affine_bwd(
     const Tensor& out,
     const SparseMatrix& indices,
     const int out_offset,
-    const ActivationType act_type
+    ActOp op
 ) {
     const auto& out_d = out.data();
     const auto& out_g = out.grad();
@@ -72,20 +70,22 @@ void sparse_affine_bwd(
 
     dim3 grid(batch_size, row_tiles);
 
-    DISPATCH_ACTIVATION(
-        act_type,
-        sparse_affine_bwd_kernel,
-        <<<grid, block_size>>>(
-            weights_g.dev_address(),
-            biases_g.dev_address(),
-            out_d.dev_address() + out_offset,
-            out_g.dev_address() + out_offset,
-            indices.dev_address(),
-            weights_g.rows(),
-            out_g.rows(),
-            batch_size,
-            max_entries
-        )
+    std::visit(
+        [&](auto op) {
+            sparse_affine_bwd_kernel<<<grid, block_size>>>(
+                weights_g.dev_address(),
+                biases_g.dev_address(),
+                out_d.dev_address() + out_offset,
+                out_g.dev_address() + out_offset,
+                indices.dev_address(),
+                weights_g.rows(),
+                out_g.rows(),
+                batch_size,
+                max_entries,
+                op
+            );
+        },
+        op
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

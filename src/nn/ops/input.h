@@ -10,7 +10,6 @@ class Input : public Operation {
         if (size <= 0)
             error("Input: Size must be positive!");
         output_dim_ = size;
-        name_ = "Input";
     }
 
     void init(int batch_size) override {

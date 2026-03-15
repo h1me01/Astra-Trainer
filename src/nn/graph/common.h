@@ -35,6 +35,17 @@ inline bool is_activation(OpType t) {
            t == OpType::Sigmoid;
 }
 
+inline bool is_unary(OpType t) {
+    return is_activation(t);
+}
+
+inline bool is_elemwise(OpType t) {
+    return t == OpType::Add || //
+           t == OpType::Sub || //
+           t == OpType::Mul || //
+           t == OpType::Div;
+}
+
 inline std::string op_type_str(OpType op_type) {
     switch (op_type) {
     case OpType::None:

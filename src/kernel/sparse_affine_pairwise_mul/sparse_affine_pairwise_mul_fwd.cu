@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
+template <typename Op>
 __global__ void sparse_affine_pairwise_mul_fwd_vec_kernel(
     const float* weights_d,
     const float* biases_d,
@@ -13,7 +13,8 @@ __global__ void sparse_affine_pairwise_mul_fwd_vec_kernel(
     const int weights_r4,
     const int out_r4,
     const int batch_size,
-    const int max_entries
+    const int max_entries,
+    Op op
 ) {
     extern __shared__ int shared_indices[];
 
@@ -46,13 +47,20 @@ __global__ void sparse_affine_pairwise_mul_fwd_vec_kernel(
         sum_b = add_t4(sum_b, w4[base + half4]);
     }
 
-    sum_a = activate_fwd_f4<act_type>(sum_a);
-    sum_b = activate_fwd_f4<act_type>(sum_b);
+    sum_a.x = op.forward(sum_a.x);
+    sum_a.y = op.forward(sum_a.y);
+    sum_a.z = op.forward(sum_a.z);
+    sum_a.w = op.forward(sum_a.w);
+
+    sum_b.x = op.forward(sum_b.x);
+    sum_b.y = op.forward(sum_b.y);
+    sum_b.z = op.forward(sum_b.z);
+    sum_b.w = op.forward(sum_b.w);
 
     as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = mul_t4(sum_a, sum_b);
 }
 
-template <ActivationType act_type>
+template <typename Op>
 __global__ void sparse_affine_pairwise_mul_fwd_kernel(
     const float* weights_d,
     const float* biases_d,
@@ -61,7 +69,8 @@ __global__ void sparse_affine_pairwise_mul_fwd_kernel(
     const int weights_r,
     const int out_r,
     const int batch_size,
-    const int max_entries
+    const int max_entries,
+    Op op
 ) {
     extern __shared__ int shared_indices[];
 
@@ -90,7 +99,7 @@ __global__ void sparse_affine_pairwise_mul_fwd_kernel(
         sum_b += weights_d[base + half];
     }
 
-    out_d[out_r * batch_idx + row] = activate_fwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
+    out_d[out_r * batch_idx + row] = op.forward(sum_a) * op.forward(sum_b);
 }
 
 void sparse_affine_pairwise_mul_fwd(
@@ -99,7 +108,7 @@ void sparse_affine_pairwise_mul_fwd(
     DenseMatrix& out_d,
     const SparseMatrix& indices,
     const int out_offset,
-    const ActivationType act_type
+    ActOp op
 ) {
     CHECK(
         weights_d.is_dev_allocated() && //
@@ -124,37 +133,36 @@ void sparse_affine_pairwise_mul_fwd(
 
     dim3 grid(row_blocks, batch_size);
 
-    if (use_vec) {
-        DISPATCH_ACTIVATION(
-            act_type,
-            sparse_affine_pairwise_mul_fwd_vec_kernel,
-            <<<grid, dim3(threads), shared_mem_size>>>(
-                weights_d.dev_address(),
-                biases_d.dev_address(),
-                indices.dev_address(),
-                out_d.dev_address() + out_offset,
-                weights_r / 4,
-                out_d.rows() / 4,
-                batch_size,
-                max_entries
-            )
-        );
-    } else {
-        DISPATCH_ACTIVATION(
-            act_type,
-            sparse_affine_pairwise_mul_fwd_kernel,
-            <<<grid, dim3(threads), shared_mem_size>>>(
-                weights_d.dev_address(),
-                biases_d.dev_address(),
-                indices.dev_address(),
-                out_d.dev_address() + out_offset,
-                weights_r,
-                out_d.rows(),
-                batch_size,
-                max_entries
-            )
-        );
-    }
+    std::visit(
+        [&](auto op) {
+            if (use_vec) {
+                sparse_affine_pairwise_mul_fwd_vec_kernel<<<grid, dim3(threads), shared_mem_size>>>(
+                    weights_d.dev_address(),
+                    biases_d.dev_address(),
+                    indices.dev_address(),
+                    out_d.dev_address() + out_offset,
+                    weights_r / 4,
+                    out_d.rows() / 4,
+                    batch_size,
+                    max_entries,
+                    op
+                );
+            } else {
+                sparse_affine_pairwise_mul_fwd_kernel<<<grid, dim3(threads), shared_mem_size>>>(
+                    weights_d.dev_address(),
+                    biases_d.dev_address(),
+                    indices.dev_address(),
+                    out_d.dev_address() + out_offset,
+                    weights_r,
+                    out_d.rows(),
+                    batch_size,
+                    max_entries,
+                    op
+                );
+            }
+        },
+        op
+    );
 
     CUDA_KERNEL_LAUNCH_CHECK();
 }

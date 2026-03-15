@@ -4,7 +4,7 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
+template <typename Op>
 __global__ void sparse_affine_fwd_vec_kernel(
     const float* weights_d,
     const float* biases_d,
@@ -13,7 +13,8 @@ __global__ void sparse_affine_fwd_vec_kernel(
     const int weights_r4,
     const int out_r4,
     const int batch_size,
-    const int max_entries
+    const int max_entries,
+    Op op
 ) {
     extern __shared__ int shared_indices[];
 
@@ -38,10 +39,15 @@ __global__ void sparse_affine_fwd_vec_kernel(
         val = add_t4(val, w4[f_idx * weights_r4 + row4]);
     }
 
-    as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = activate_fwd_f4<act_type>(val);
+    val.x = op.forward(val.x);
+    val.y = op.forward(val.y);
+    val.z = op.forward(val.z);
+    val.w = op.forward(val.w);
+
+    as_vec<float4>(out_d)[out_r4 * batch_idx + row4] = val;
 }
 
-template <ActivationType act_type>
+template <typename Op>
 __global__ void sparse_affine_fwd_kernel(
     const float* weights_d,
     const float* biases_d,
@@ -50,7 +56,8 @@ __global__ void sparse_affine_fwd_kernel(
     const int weights_r,
     const int out_r,
     const int batch_size,
-    const int max_entries
+    const int max_entries,
+    Op op
 ) {
     const int row = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.y;
@@ -68,7 +75,7 @@ __global__ void sparse_affine_fwd_kernel(
         sum += weights_d[f_idx * weights_r + row];
     }
 
-    out_d[out_r * batch_idx + row] = activate_fwd<act_type>(sum);
+    out_d[out_r * batch_idx + row] = op.forward(sum);
 }
 
 void sparse_affine_fwd(
@@ -77,7 +84,7 @@ void sparse_affine_fwd(
     DenseMatrix& out_d,
     const SparseMatrix& indices,
     const int out_offset,
-    const ActivationType act_type
+    ActOp op
 ) {
     CHECK(
         weights_d.is_dev_allocated() && //
@@ -101,39 +108,38 @@ void sparse_affine_fwd(
 
     dim3 grid(row_blocks, batch_size);
 
-    if (use_vec) {
-        const int shared_mem_size = max_entries * sizeof(int);
+    std::visit(
+        [&](auto op) {
+            if (use_vec) {
+                const int shared_mem_size = max_entries * sizeof(int);
 
-        DISPATCH_ACTIVATION(
-            act_type,
-            sparse_affine_fwd_vec_kernel,
-            <<<grid, dim3(threads), shared_mem_size>>>(
-                weights_d.dev_address(),
-                biases_d.dev_address(),
-                indices.dev_address(),
-                out_d.dev_address() + out_offset,
-                weights_r / 4,
-                out_r / 4,
-                batch_size,
-                max_entries
-            )
-        );
-    } else {
-        DISPATCH_ACTIVATION(
-            act_type,
-            sparse_affine_fwd_kernel,
-            <<<grid, dim3(threads)>>>(
-                weights_d.dev_address(),
-                biases_d.dev_address(),
-                indices.dev_address(),
-                out_d.dev_address() + out_offset,
-                weights_r,
-                out_r,
-                batch_size,
-                max_entries
-            )
-        );
-    }
+                sparse_affine_fwd_vec_kernel<<<grid, dim3(threads), shared_mem_size>>>(
+                    weights_d.dev_address(),
+                    biases_d.dev_address(),
+                    indices.dev_address(),
+                    out_d.dev_address() + out_offset,
+                    weights_r / 4,
+                    out_r / 4,
+                    batch_size,
+                    max_entries,
+                    op
+                );
+            } else {
+                sparse_affine_fwd_kernel<<<grid, dim3(threads)>>>(
+                    weights_d.dev_address(),
+                    biases_d.dev_address(),
+                    indices.dev_address(),
+                    out_d.dev_address() + out_offset,
+                    weights_r,
+                    out_r,
+                    batch_size,
+                    max_entries,
+                    op
+                );
+            }
+        },
+        op
+    );
 
     CUDA_KERNEL_LAUNCH_CHECK();
 }

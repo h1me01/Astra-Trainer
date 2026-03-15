@@ -12,8 +12,6 @@ class Affine : public Operation {
 
         CHECK(param && input);
 
-        name_ = "affine";
-
         input_dim_ = param->input_dim();
         output_dim_ = param->output_dim();
 
@@ -22,14 +20,10 @@ class Affine : public Operation {
     }
 
     void forward() override {
-        kernel::affine_fwd(
-            param_->weights().data(), param_->biases().data(), input_->data(), data(), act_type_
-        );
+        kernel::affine_fwd(param_->weights().data(), param_->biases().data(), input_->data(), data());
     }
 
-    void backward() override {
-        kernel::affine_bwd(param_->weights(), param_->biases(), input_->output(), output_, act_type_);
-    }
+    void backward() override { kernel::affine_bwd(param_->weights(), param_->biases(), input_->output(), output_); }
 
     std::vector<Operation*> inputs() const override { return {input_}; }
 

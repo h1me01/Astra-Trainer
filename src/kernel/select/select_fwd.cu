@@ -4,7 +4,6 @@ namespace kernel {
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
 __global__ void select_fwd_kernel(
     const float* in_d, float* out_d, const int* indices, const int in_r, const int out_r, const int batch_size
 ) {
@@ -21,10 +20,10 @@ __global__ void select_fwd_kernel(
     const float in_value = in_d[in_offset];
 
     const int out_offset = out_r * batch_idx + out_idx;
-    out_d[out_offset] = activate_fwd<act_type>(in_value);
+    out_d[out_offset] = in_value;
 }
 
-void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& indices, const ActivationType act_type) {
+void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& indices) {
     CHECK(in_d.cols() == out_d.cols());
     CHECK(out_d.cols() == indices.size());
 
@@ -35,12 +34,8 @@ void select_fwd(const DenseMatrix& in_d, DenseMatrix& out_d, const Array<int>& i
     );
 
     const int blocks = cuda::ceil_div(out_d.size(), num_threads);
-    DISPATCH_ACTIVATION(
-        act_type,
-        select_fwd_kernel,
-        <<<blocks, num_threads>>>(
-            in_d.dev_address(), out_d.dev_address(), indices.dev_address(), in_d.rows(), out_d.rows(), out_d.cols()
-        )
+    select_fwd_kernel<<<blocks, num_threads>>>(
+        in_d.dev_address(), out_d.dev_address(), indices.dev_address(), in_d.rows(), out_d.rows(), out_d.cols()
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

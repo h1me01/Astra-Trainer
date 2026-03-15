@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../graph/common.h"
+
+#include "../util.h"
 #include "concat.h"
 #include "input.h"
 #include "ops.h"
@@ -8,12 +11,11 @@ namespace nn::op {
 
 class SparseAffineBase : public Operation {
   public:
-    SparseAffineBase(std::string op_name, SPtr<Param> param, Input* input, int out_dim_divisor = 1)
+    SparseAffineBase(SPtr<Param> param, Input* input, int out_dim_divisor = 1)
         : param_(param),
           input_(input) {
 
         CHECK(param && input);
-        name_ = op_name;
 
         input_dim_ = param->input_dim();
         output_dim_ = param->output_dim() / out_dim_divisor;
@@ -29,12 +31,15 @@ class SparseAffineBase : public Operation {
         out_offset_ = concat_->fuse(this);
     }
 
+    void set_activation(graph::OpType act_type) { act_op_ = nn::util::get_activation_op(act_type); }
+
     Param* param() override { return param_.get(); }
     Input* input() const { return input_; }
 
   protected:
     int out_offset_ = 0;
     FusedConcat* concat_ = nullptr;
+    kernel::ActOp act_op_ = kernel::Linear{};
 
     SPtr<Param> param_;
     Input* input_;
@@ -48,7 +53,7 @@ class SparseAffineBase : public Operation {
 
 struct SparseAffine : public SparseAffineBase {
     SparseAffine(SPtr<Param> param, Input* input)
-        : SparseAffineBase("sparse_affine", param, input) {}
+        : SparseAffineBase(param, input) {}
 
     void forward() override {
         kernel::sparse_affine_fwd(
@@ -57,7 +62,7 @@ struct SparseAffine : public SparseAffineBase {
             effective_output().data(),
             input_->indices(),
             out_offset_,
-            act_type_
+            act_op_
         );
     }
 
@@ -68,14 +73,14 @@ struct SparseAffine : public SparseAffineBase {
             effective_output(),
             input_->indices(),
             out_offset_,
-            act_type_
+            act_op_
         );
     }
 };
 
 struct SparseAffinePairwiseMul : public SparseAffineBase {
     SparseAffinePairwiseMul(SPtr<Param> param, Input* input)
-        : SparseAffineBase("sparse_affine_pairwise_mul", param, input, 2) {}
+        : SparseAffineBase(param, input, 2) {}
 
     void forward() override {
         kernel::sparse_affine_pairwise_mul_fwd(
@@ -84,7 +89,7 @@ struct SparseAffinePairwiseMul : public SparseAffineBase {
             effective_output().data(),
             input_->indices(),
             out_offset_,
-            act_type_
+            act_op_
         );
     }
 
@@ -96,7 +101,7 @@ struct SparseAffinePairwiseMul : public SparseAffineBase {
             effective_output().grad(),
             input_->indices(),
             out_offset_,
-            act_type_
+            act_op_
         );
     }
 };

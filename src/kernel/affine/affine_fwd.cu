@@ -7,20 +7,13 @@ constexpr float beta = 0.0f;
 
 constexpr int num_threads = 256;
 
-template <ActivationType act_type>
 __global__ void biases_fwd_kernel(const float* biases_d, float* out_d, const int r, const int c) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < r * c)
-        out_d[idx] = activate_fwd<act_type>(out_d[idx] + biases_d[idx % r]);
+        out_d[idx] = out_d[idx] + biases_d[idx % r];
 }
 
-void affine_fwd(
-    DenseMatrix& weights_d,
-    DenseMatrix& biases_d,
-    const DenseMatrix& inputs_d,
-    DenseMatrix& out_d,
-    const ActivationType act_type
-) {
+void affine_fwd(DenseMatrix& weights_d, DenseMatrix& biases_d, const DenseMatrix& inputs_d, DenseMatrix& out_d) {
     CHECK(
         biases_d.cols() == 1 &&             //
         out_d.rows() == biases_d.rows() &&  //
@@ -55,11 +48,7 @@ void affine_fwd(
 
     // add biases to dot product
     const int blocks = cuda::ceil_div(out_d.size(), num_threads);
-    DISPATCH_ACTIVATION(
-        act_type,
-        biases_fwd_kernel,
-        <<<blocks, num_threads>>>(biases_d.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols())
-    );
+    biases_fwd_kernel<<<blocks, num_threads>>>(biases_d.dev_address(), out_d.dev_address(), out_d.rows(), out_d.cols());
 
     CUDA_KERNEL_LAUNCH_CHECK();
 }

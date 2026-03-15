@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../data/include.h"
-#include "../activation/activation.h"
+#include "../elemwise/unary/unary.h"
 #include "../util.h"
 
 namespace kernel {
@@ -12,7 +12,7 @@ void sparse_affine_fwd(
     DenseMatrix& out_d,
     const SparseMatrix& indices,
     const int out_offset,
-    const ActivationType act_type
+    ActOp op
 );
 
 void sparse_affine_bwd(
@@ -21,7 +21,7 @@ void sparse_affine_bwd(
     const Tensor& out,
     const SparseMatrix& indices,
     const int out_offset,
-    const ActivationType act_type
+    ActOp op
 );
 
 } // namespace kernel

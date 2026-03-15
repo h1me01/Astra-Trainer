@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../data/include.h"
-#include "../util.h"
+#include "../../../data/include.h"
+#include "../../util.h"
 
 namespace kernel {
 
@@ -38,7 +38,7 @@ struct Div {
 };
 
 template <typename Op>
-struct Elemwise {
+struct ElemwiseBinary {
     static constexpr int BLOCK_SIZE = 256;
 
     static void forward(const DenseMatrix& a, const DenseMatrix& b, DenseMatrix& c);

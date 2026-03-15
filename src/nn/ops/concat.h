@@ -6,13 +6,13 @@ namespace nn::op {
 
 class ConcatBase : public Operation {
   public:
-    ConcatBase(std::string op_name, std::vector<Operation*>& inputs)
+    ConcatBase(std::vector<Operation*>& inputs)
         : inputs_(inputs) {
+
         if (inputs.size() < 2)
             error("Concat: requires at least 2 inputs!");
         for (const auto& input : inputs)
             CHECK(input);
-        name_ = std::move(op_name);
         for (const auto& input : inputs)
             output_dim_ += input->output_dim();
         input_dim_ = output_dim_;
@@ -26,12 +26,12 @@ class ConcatBase : public Operation {
 
 struct Concat : public ConcatBase {
     Concat(std::vector<Operation*>& inputs)
-        : ConcatBase("concat", inputs) {}
+        : ConcatBase(inputs) {}
 
     void forward() override {
         int offset = 0;
         for (const auto& input : inputs_) {
-            kernel::concat_fwd(input->data(), data(), offset, act_type_);
+            kernel::concat_fwd(input->data(), data(), offset);
             offset += input->output_dim();
         }
     }
@@ -39,7 +39,7 @@ struct Concat : public ConcatBase {
     void backward() override {
         int offset = 0;
         for (const auto& input : inputs_) {
-            kernel::concat_bwd(input->grad(), output_, offset, act_type_);
+            kernel::concat_bwd(input->grad(), output_, offset);
             offset += input->output_dim();
         }
     }
@@ -47,7 +47,7 @@ struct Concat : public ConcatBase {
 
 struct FusedConcat : public ConcatBase {
     FusedConcat(std::vector<Operation*>& inputs)
-        : ConcatBase("fused_concat", inputs) {}
+        : ConcatBase(inputs) {}
 
     void forward() override {}
     void backward() override {}

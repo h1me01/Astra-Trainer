@@ -31,17 +31,9 @@ class Node {
     std::vector<SPtr<Node>>& inputs() { return inputs_; }
     const std::vector<SPtr<Node>>& inputs() const { return inputs_; }
 
-    void set_activation(OpType act_type) {
-        CHECK(is_activation(act_type));
-        this->act_type_ = act_type;
-    }
-
-    OpType activation() const { return act_type_; }
-
   protected:
     OpType op_type_;
     int output_dim_;
-    OpType act_type_ = OpType::None;
     std::vector<SPtr<Node>> inputs_;
 };
 
@@ -61,8 +53,13 @@ class SparseAffineNode : public Node {
     void set_pairwise_fused() { pairwise_fused_ = true; }
     bool is_pairwise_fused() const { return pairwise_fused_; }
 
+    void set_activation(OpType act_type) { this->act_type = act_type; }
+    OpType activation() const { return act_type; }
+
   private:
     bool pairwise_fused_ = false;
+    OpType act_type = OpType::None;
+
     SPtr<Param> param_;
 };
 
@@ -132,14 +129,19 @@ struct PairwiseMulNode : public Node {
     }
 };
 
-struct ActivationNode : public Node {
-    ActivationNode(OpType op_type, SPtr<Node> input)
-        : Node(op_type, input->output_dim(), {input}) {}
+struct UnaryNode : public Node {
+    UnaryNode(OpType op_type, SPtr<Node> input)
+        : Node(op_type, input->output_dim(), {input}) {
+        if (!is_unary(op_type))
+            error("Graph: invalid unary type!");
+    }
 };
 
-struct ElemwiseNode : public Node {
-    ElemwiseNode(OpType op_type, SPtr<Node> input1, SPtr<Node> input2)
+struct BinaryNode : public Node {
+    BinaryNode(OpType op_type, SPtr<Node> input1, SPtr<Node> input2)
         : Node(op_type, input1->output_dim(), {input1, input2}) {
+        if (!is_elemwise(op_type))
+            error("Graph: invalid elemwise type!");
         if (input1->output_dim() != input2->output_dim())
             error("Graph: Elemwise inputs must have the same output dimension!");
     }

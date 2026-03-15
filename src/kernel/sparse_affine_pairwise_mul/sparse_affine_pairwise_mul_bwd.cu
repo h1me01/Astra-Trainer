@@ -5,7 +5,7 @@ namespace kernel {
 constexpr int num_threads = 512;
 constexpr dim3 block_size(num_threads, 1);
 
-template <ActivationType act_type>
+template <typename Op>
 __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     float* weights_g,
     float* biases_g,
@@ -16,7 +16,8 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
     const int weights_r,
     const int out_r,
     const int batch_size,
-    const int max_entries
+    const int max_entries,
+    Op op
 ) {
     const int row = blockIdx.y * blockDim.x + threadIdx.x;
     const int batch_idx = blockIdx.x;
@@ -47,8 +48,8 @@ __global__ void sparse_affine_pairwise_mul_bwd_kernel(
         sum_b += weights_d[base + half];
     }
 
-    const float grad_a = grad * activate_bwd<act_type>(sum_a) * activate_fwd<act_type>(sum_b);
-    const float grad_b = grad * activate_bwd<act_type>(sum_b) * activate_fwd<act_type>(sum_a);
+    const float grad_a = grad * op.backward(sum_a) * op.forward(sum_b);
+    const float grad_b = grad * op.backward(sum_b) * op.forward(sum_a);
 
     if (grad_a != 0.0f)
         atomicAdd(&biases_g[row], grad_a);
@@ -74,7 +75,7 @@ void sparse_affine_pairwise_mul_bwd(
     const DenseMatrix& out_g,
     const SparseMatrix& indices,
     const int out_offset,
-    const ActivationType act_type
+    ActOp op
 ) {
     const auto& biases_d = biases.data();
     auto& biases_g = biases.grad();
@@ -98,21 +99,23 @@ void sparse_affine_pairwise_mul_bwd(
 
     dim3 grid(out_g.cols(), row_tiles);
 
-    DISPATCH_ACTIVATION(
-        act_type,
-        sparse_affine_pairwise_mul_bwd_kernel,
-        <<<grid, block_size, shared_mem>>>(
-            weights_g.dev_address(),
-            biases_g.dev_address(),
-            weights_d.dev_address(),
-            biases_d.dev_address(),
-            out_g.dev_address() + out_offset,
-            indices.dev_address(),
-            weights_g.rows(),
-            out_g.rows(),
-            out_g.cols(),
-            max_entries
-        )
+    std::visit(
+        [&](auto op) {
+            sparse_affine_pairwise_mul_bwd_kernel<<<grid, block_size, shared_mem>>>(
+                weights_g.dev_address(),
+                biases_g.dev_address(),
+                weights_d.dev_address(),
+                biases_d.dev_address(),
+                out_g.dev_address() + out_offset,
+                indices.dev_address(),
+                weights_g.rows(),
+                out_g.rows(),
+                out_g.cols(),
+                max_entries,
+                op
+            );
+        },
+        op
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();

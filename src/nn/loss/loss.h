@@ -1,13 +1,14 @@
 #pragma once
 
+#include "../graph/common.h"
 #include "../ops/include.h"
+#include "../util.h"
 
 namespace nn::loss {
 
 class Loss {
   public:
-    Loss(ActivationType act)
-        : act_type_(act) {}
+    Loss(graph::OpType act_type) { act_op_ = nn::util::get_activation_op(act_type); }
 
     virtual ~Loss() = default;
 
@@ -21,7 +22,7 @@ class Loss {
     void clear() { loss_.clear_dev(); }
 
   protected:
-    ActivationType act_type_;
+    kernel::ActOp act_op_;
     Array<float> loss_{1, true};
 };
 

@@ -18,10 +18,13 @@ void Graph::print() const {
         }
 
         std::string extra;
-        if (n->activation() != OpType::None)
-            extra += " [+" + op_type_str(n->activation()) + "]";
-        if (auto* sa = dynamic_cast<SparseAffineNode*>(n); sa && sa->is_pairwise_fused())
-            extra += " [+PairwiseMul]";
+        if (auto* sa = dynamic_cast<SparseAffineNode*>(n)) {
+            if (sa->is_pairwise_fused())
+                extra += " [+PairwiseMul]";
+            if (is_activation(sa->activation()))
+                extra += " [+" + sa->op_type_as_str() + "]";
+        }
+
         if (auto* cn = dynamic_cast<ConcatNode*>(n); cn && cn->is_fused())
             extra += " [Fused]";
 
@@ -105,26 +108,28 @@ void Graph::fuse_concat() {
     // Pass 2: try fusing activation into fused-concat inputs, or into unfused concat directly
     fixed_point<ConcatNode>([this](auto node) -> bool {
         auto* cn = dynamic_cast<ConcatNode*>(node.get());
-        if (cn->is_fused()) {
-            auto c = sole_consumer(node);
-            if (!c || !is_activation(c->op_type()))
-                return false;
+        if (!cn->is_fused())
+            return false;
 
-            bool valid = std::ranges::all_of(node->inputs(), [&](auto& in) {
-                return sole_consumer(in) == node && !is_activation(in->activation());
-            });
+        auto c = sole_consumer(node);
+        if (!c || !is_activation(c->op_type()))
+            return false;
 
-            if (!valid)
-                return false;
+        bool valid = std::ranges::all_of(node->inputs(), [&](auto& in) {
+            auto* sa = dynamic_cast<SparseAffineNode*>(in.get());
+            return sole_consumer(in) == node && sa && !is_activation(sa->activation());
+        });
 
-            for (auto& in : node->inputs())
-                in->set_activation(c->op_type());
+        if (!valid)
+            return false;
 
-            absorb_node(c, node);
-            return true;
+        for (auto& in : node->inputs()) {
+            auto* sa = dynamic_cast<SparseAffineNode*>(in.get());
+            sa->set_activation(c->op_type());
         }
 
-        return try_fuse_activation(node);
+        absorb_node(c, node);
+        return true;
     });
 }
 
