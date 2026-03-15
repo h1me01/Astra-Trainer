@@ -6,7 +6,14 @@ constexpr int BLOCK_SIZE = 1024;
 
 template <typename Op>
 __global__ void mpe_kernel(
-    const float* targets, const float* out_d, float* out_g, float* loss, const float power, const int size, Op op
+    const float* targets,
+    const float* out_d,
+    float* out_g,
+    float* loss,
+    const float power,
+    const float norm_factor,
+    const int size,
+    Op op
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -18,8 +25,8 @@ __global__ void mpe_kernel(
         const float abs_diff = abs(diff);
         const float sign = (diff > 0.0f) ? 1.0f : -1.0f;
 
-        out_g[idx] = sign * power * powf(abs_diff, power - 1.0f) * op.backward<true>(act);
-        local_loss = powf(abs_diff, power);
+        out_g[idx] = sign * power * powf(abs_diff, power - 1.0f) * op.backward<true>(act) * norm_factor;
+        local_loss = powf(abs_diff, power) * norm_factor;
     }
 
     __shared__ float smem[BLOCK_SIZE];
@@ -36,8 +43,7 @@ __global__ void mpe_kernel(
         atomicAdd(loss, smem[0]);
 }
 
-template <typename Op>
-void mpe_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, Op op) {
+void mpe_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, ActOp op) {
     const auto& out_d = out.data();
     auto& out_g = out.grad();
 
@@ -48,16 +54,27 @@ void mpe_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, cons
         loss.is_dev_allocated()
     );
 
+    const float norm_factor = 1.0f / out_d.size();
+
     const int blocks = cuda::ceil_div(out_d.size(), BLOCK_SIZE);
-    mpe_kernel<<<blocks, BLOCK_SIZE>>>(
-        targets.dev_address(), out_d.dev_address(), out_g.dev_address(), loss.dev_address(), power, out_d.size(), op
+
+    std::visit(
+        [&](auto op) {
+            mpe_kernel<<<blocks, BLOCK_SIZE>>>(
+                targets.dev_address(),
+                out_d.dev_address(),
+                out_g.dev_address(),
+                loss.dev_address(),
+                power,
+                norm_factor,
+                out_d.size(),
+                op
+            );
+        },
+        op
     );
 
     CUDA_KERNEL_LAUNCH_CHECK();
-}
-
-void mpe_loss(const Array<float>& targets, Array<float>& loss, Tensor& out, const float power, ActOp op) {
-    std::visit([&](const auto& concrete_op) { mpe_loss(targets, loss, out, power, concrete_op); }, op);
 }
 
 } // namespace kernel

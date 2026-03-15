@@ -14,7 +14,7 @@ void print_progress(int epoch, int batch, float loss, int pos_count, int time_ms
         "\repoch/batch = %3d/%4d | loss = %1.6f | pos/sec = %7d | time = %3ds%s",
         epoch,
         batch,
-        loss / pos_count,
+        loss / batch,
         (int)round(pos_count / time_sec),
         (int)round(time_sec),
         new_line ? "\n" : ""
@@ -137,7 +137,7 @@ void Trainer::fit(const std::string output_path) {
 
         log.write(
             {std::to_string(display_epoch),
-             std::to_string(epoch_loss / (config_.batch_size * config_.batches_per_epoch))}
+             std::to_string(epoch_loss / config_.batches_per_epoch)}
         );
 
         if (display_epoch % std::max(config_.save_rate, 1) == 0 || display_epoch == config_.epochs)

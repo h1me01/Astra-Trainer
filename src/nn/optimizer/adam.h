@@ -20,9 +20,8 @@ class Adam : public Optimizer {
     }
 
     void step(float lr, int batch_size) override {
-        const float grad_scale = 1.0f / batch_size;
         for (size_t i = 0; i < params_.size(); i++)
-            kernel::adam_optim(*params_[i], momentum_[i], velocity_[i], lr, beta1_, beta2_, decay_, grad_scale);
+            kernel::adam_optim(*params_[i], momentum_[i], velocity_[i], lr, beta1_, beta2_, decay_);
     }
 
   private:

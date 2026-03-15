@@ -16,13 +16,11 @@ __device__ void adam_update(
     const float beta2,
     const float decay,
     const float min_val,
-    const float max_val,
-    const float grad_scale
+    const float max_val
 ) {
-    const float g = grad * grad_scale;
     val *= decay;
-    mom = beta1 * mom + (1.0f - beta1) * g;
-    vel = beta2 * vel + (1.0f - beta2) * g * g;
+    mom = beta1 * mom + (1.0f - beta1) * grad;
+    vel = beta2 * vel + (1.0f - beta2) * grad * grad;
     val -= lr * mom / (sqrtf(vel) + epsilon);
     val = clamp(val, min_val, max_val);
 }
@@ -38,7 +36,6 @@ __global__ void adam_kernel(
     const float decay,
     const float min_val,
     const float max_val,
-    const float grad_scale,
     const int size
 ) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -53,7 +50,7 @@ __global__ void adam_kernel(
         const float4 grad = as_vec<const float4>(grads)[idx];
 
         const auto update = [&](float& v, float& m, float& ve, float g) {
-            adam_update(v, m, ve, g, lr, beta1, beta2, decay, min_val, max_val, grad_scale);
+            adam_update(v, m, ve, g, lr, beta1, beta2, decay, min_val, max_val);
         };
 
         update(val.x, mom.x, vel.x, grad.x);
@@ -66,7 +63,7 @@ __global__ void adam_kernel(
         as_vec<float4>(vels)[idx] = vel;
     } else {
         for (int i = vec_idx; i < size; i++)
-            adam_update(vals[i], moms[i], vels[i], grads[i], lr, beta1, beta2, decay, min_val, max_val, grad_scale);
+            adam_update(vals[i], moms[i], vels[i], grads[i], lr, beta1, beta2, decay, min_val, max_val);
     }
 }
 
@@ -77,8 +74,7 @@ void adam_optim(
     const float lr,
     const float beta1,
     const float beta2,
-    const float decay,
-    const float grad_scale
+    const float decay
 ) {
     const float min_val = param.lower_bound();
     const float max_val = param.upper_bound();
@@ -107,7 +103,6 @@ void adam_optim(
         1.0f - lr * decay,
         min_val,
         max_val,
-        grad_scale,
         data.size()
     );
 
