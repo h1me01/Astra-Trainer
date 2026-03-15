@@ -9,96 +9,94 @@ namespace nn::op {
 class SparseAffineBase : public Operation {
   public:
     SparseAffineBase(std::string op_name, SPtr<Param> param, Input* input, int out_dim_divisor = 1)
-        : param(param),
-          input(input) {
+        : param_(param),
+          input_(input) {
 
         CHECK(param && input);
-        name = op_name;
+        name_ = op_name;
 
-        input_dim = param->get_input_dim();
-        output_dim = param->get_output_dim() / out_dim_divisor;
+        input_dim_ = param->get_input_dim();
+        output_dim_ = param->get_output_dim() / out_dim_divisor;
     }
 
     void init(int batch_size) override {
-        if (!concat)
+        if (!concat_)
             Operation::init(batch_size);
     }
 
     void fuse_with_concat(FusedConcat* c) {
-        concat = c;
-        out_offset = concat->fuse(this);
+        concat_ = c;
+        out_offset_ = concat_->fuse(this);
     }
 
-    Param* get_param() override { return param.get(); }
-    Input* get_input() const { return input; }
+    Param* get_param() override { return param_.get(); }
+    Input* get_input() const { return input_; }
 
   protected:
-    int out_offset = 0;
-    FusedConcat* concat = nullptr;
+    int out_offset_ = 0;
+    FusedConcat* concat_ = nullptr;
 
-    SPtr<Param> param;
-    Input* input;
+    SPtr<Param> param_;
+    Input* input_;
 
     DenseMatrix& effective_weights() {
-        return param->has_factorizer() ? param->get_factorizer().get_weights() : param->get_weights().get_data();
+        return param_->has_factorizer() ? param_->get_factorizer().get_weights() : param_->get_weights().get_data();
     }
 
-    Tensor& effective_output() { return concat ? concat->get_output() : output; }
+    Tensor& effective_output() { return concat_ ? concat_->get_output() : output_; }
 };
 
-class SparseAffine : public SparseAffineBase {
-  public:
+struct SparseAffine : public SparseAffineBase {
     SparseAffine(SPtr<Param> param, Input* input)
         : SparseAffineBase("sparse_affine", param, input) {}
 
     void forward() override {
         kernel::sparse_affine_fwd(
             effective_weights(),
-            param->get_biases().get_data(),
+            param_->get_biases().get_data(),
             effective_output().get_data(),
-            input->get_indices(),
-            out_offset,
-            act_type
+            input_->get_indices(),
+            out_offset_,
+            act_type_
         );
     }
 
     void backward() override {
         kernel::sparse_affine_bwd(
-            param->get_weights().get_grads(),
-            param->get_biases().get_grads(),
+            param_->get_weights().get_grads(),
+            param_->get_biases().get_grads(),
             effective_output(),
-            input->get_indices(),
-            out_offset,
-            act_type
+            input_->get_indices(),
+            out_offset_,
+            act_type_
         );
     }
 };
 
-class SparseAffinePairwiseMul : public SparseAffineBase {
-  public:
+struct SparseAffinePairwiseMul : public SparseAffineBase {
     SparseAffinePairwiseMul(SPtr<Param> param, Input* input)
         : SparseAffineBase("sparse_affine_pairwise_mul", param, input, 2) {}
 
     void forward() override {
         kernel::sparse_affine_pairwise_mul_fwd(
             effective_weights(),
-            param->get_biases().get_data(),
+            param_->get_biases().get_data(),
             effective_output().get_data(),
-            input->get_indices(),
-            out_offset,
-            act_type
+            input_->get_indices(),
+            out_offset_,
+            act_type_
         );
     }
 
     void backward() override {
         kernel::sparse_affine_pairwise_mul_bwd(
             effective_weights(),
-            param->get_weights().get_grads(),
-            param->get_biases(),
+            param_->get_weights().get_grads(),
+            param_->get_biases(),
             effective_output().get_grads(),
-            input->get_indices(),
-            out_offset,
-            act_type
+            input_->get_indices(),
+            out_offset_,
+            act_type_
         );
     }
 };

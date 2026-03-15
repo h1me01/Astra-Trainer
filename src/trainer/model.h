@@ -20,15 +20,15 @@ class Model {
 
     virtual ~Model() = default;
 
-    void set_graph(GraphBuilder fn) { graph_builder = std::move(fn); }
-    void set_input_filler(InputFiller fn) { input_filler = std::move(fn); }
+    void set_graph(GraphBuilder fn) { graph_builder_ = std::move(fn); }
+    void set_input_filler(InputFiller fn) { input_filler_ = std::move(fn); }
 
     void init(int batch_size) { network().init(batch_size); }
 
     Node build_graph() {
-        if (!graph_builder)
+        if (!graph_builder_)
             error("Model: no graph builder set (call set_graph or override build_graph)");
-        return graph_builder();
+        return graph_builder_();
     }
 
     void prepare_inputs(const std::vector<TrainingDataEntry>& batch) {
@@ -49,7 +49,7 @@ class Model {
             error("Model: File " + file + " does not exist!");
 
         try {
-            for (auto& p : net->get_params())
+            for (auto& p : net_->get_params())
                 p->load(f);
             fclose(f);
             std::cout << "Model: Loaded parameters from " << file << std::endl;
@@ -86,26 +86,26 @@ class Model {
     std::vector<nn::param::Param*> get_params() { return network().get_params(); }
 
   private:
-    GraphBuilder graph_builder;
-    InputFiller input_filler;
+    GraphBuilder graph_builder_;
+    InputFiller input_filler_;
 
-    Inputs inputs;
-    std::unique_ptr<nn::Network> net;
+    Inputs inputs_;
+    std::unique_ptr<nn::Network> net_;
 
     nn::Network& network() {
-        if (!net) {
-            net = std::make_unique<nn::Network>(build_graph());
-            inputs.ptrs.clear();
+        if (!net_) {
+            net_ = std::make_unique<nn::Network>(build_graph());
+            inputs_.ptrs.clear();
             for (auto* input : network().get_inputs())
-                inputs.ptrs.push_back(input);
+                inputs_.ptrs.push_back(input);
         }
-        return *net;
+        return *net_;
     }
 
     void fill_inputs(const std::vector<TrainingDataEntry>& batch) {
-        if (!input_filler)
+        if (!input_filler_)
             error("Model: no input filler set (call set_input_filler or override fill_inputs)");
-        input_filler(batch, inputs);
+        input_filler_(batch, inputs_);
     }
 
     void save_params_helper(const std::string& file, bool quantized) {
@@ -114,7 +114,7 @@ class Model {
             error("Model: Failed writing weights to " + file);
 
         try {
-            for (auto& p : net->get_params()) {
+            for (auto& p : net_->get_params()) {
                 if (quantized)
                     p->save_quantized(f);
                 else

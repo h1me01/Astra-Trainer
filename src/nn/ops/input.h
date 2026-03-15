@@ -9,30 +9,30 @@ class Input : public Operation {
     Input(int size) {
         if (size <= 0)
             error("Input: Size must be positive!");
-        output_dim = size;
-        name = "Input";
+        output_dim_ = size;
+        name_ = "Input";
     }
 
     void init(int batch_size) override {
-        indices = SparseMatrix(output_dim, batch_size);
-        indices.pinned();
+        indices_ = SparseMatrix(output_dim_, batch_size);
+        indices_.pinned();
     }
 
     void forward() override {}
     void backward() override {}
 
-    SparseMatrix& get_indices() { return indices; }
-    const SparseMatrix& get_indices() const { return indices; }
+    SparseMatrix& get_indices() { return indices_; }
+    const SparseMatrix& get_indices() const { return indices_; }
 
-    int& operator()(int r, int c) { return indices(r, c); }
+    int& operator()(int r, int c) { return indices_(r, c); }
 
     void reset() {
-        for (int i = 0; i < indices.size(); i++)
-            indices(i) = -1;
+        for (int i = 0; i < indices_.size(); i++)
+            indices_(i) = -1;
     }
 
   private:
-    SparseMatrix indices;
+    SparseMatrix indices_;
 };
 
 } // namespace nn::op

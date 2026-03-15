@@ -4,8 +4,7 @@
 
 namespace nn::lr_sched {
 
-class Constant : public LRScheduler {
-  public:
+struct Constant : public LRScheduler {
     Constant(float lr)
         : LRScheduler(lr) {
         if (lr <= 0.0f)
@@ -14,7 +13,7 @@ class Constant : public LRScheduler {
 
     void step([[maybe_unused]] int epoch) override {}
 
-    std::string get_info() const override { return "Constant(lr=" + format_number(lr) + ")"; }
+    std::string get_info() const override { return "Constant(lr=" + format_number(lr_) + ")"; }
 };
 
 } // namespace nn::lr_sched

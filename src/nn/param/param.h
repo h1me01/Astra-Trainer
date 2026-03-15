@@ -11,73 +11,73 @@ namespace nn::param {
 class Param {
   public:
     Param(int input_dim, int output_dim)
-        : weights(output_dim, input_dim),
-          biases(output_dim, 1) {
+        : weights_(output_dim, input_dim),
+          biases_(output_dim, 1) {
 
         if (input_dim <= 0 || output_dim <= 0)
             error("Param: Input and output dimensions must be positive!");
 
-        weights.he_init(input_dim);
-        biases.zero_init();
+        weights_.he_init(input_dim);
+        biases_.zero_init();
     }
 
-    void create_factorizer(int block_size) { factorizer = Factorizer(&weights, block_size); }
+    void create_factorizer(int block_size) { factorizer_ = Factorizer(&weights_, block_size); }
 
-    bool has_factorizer() const { return factorizer.has_value(); }
+    bool has_factorizer() const { return factorizer_.has_value(); }
 
     void save(FILE* f) {
         if (has_factorizer())
-            write_tensor(f, (*factorizer).get_base());
-        write_tensor(f, weights);
-        write_tensor(f, biases);
+            write_tensor(f, (*factorizer_).get_base());
+        write_tensor(f, weights_);
+        write_tensor(f, biases_);
     }
 
     void load(FILE* f) {
         if (has_factorizer())
-            load_tensor(f, (*factorizer).get_base());
-        load_tensor(f, weights);
-        load_tensor(f, biases);
+            load_tensor(f, (*factorizer_).get_base());
+        load_tensor(f, weights_);
+        load_tensor(f, biases_);
     }
 
     void save_quantized(FILE* f) {
-        save_tensor_quantized(f, weights, weights_save_format, has_factorizer());
-        save_tensor_quantized(f, biases, biases_save_format);
+        save_tensor_quantized(f, weights_, weights_save_format_, has_factorizer());
+        save_tensor_quantized(f, biases_, biases_save_format_);
     }
 
     void set_bounds(float min_val, float max_val) {
-        weights.set_bounds(min_val, max_val);
-        biases.set_bounds(min_val, max_val);
+        weights_.set_bounds(min_val, max_val);
+        biases_.set_bounds(min_val, max_val);
     }
 
-    int get_input_dim() const { return weights.get_data().cols(); }
-    int get_output_dim() const { return weights.get_data().rows(); }
+    int get_input_dim() const { return weights_.get_data().cols(); }
+    int get_output_dim() const { return weights_.get_data().rows(); }
 
-    SaveFormat& weights_format() { return weights_save_format; }
-    SaveFormat& biases_format() { return biases_save_format; }
+    SaveFormat& weights_format() { return weights_save_format_; }
+    SaveFormat& biases_format() { return biases_save_format_; }
 
-    const SaveFormat& weights_format() const { return weights_save_format; }
-    const SaveFormat& biases_format() const { return biases_save_format; }
+    const SaveFormat& weights_format() const { return weights_save_format_; }
+    const SaveFormat& biases_format() const { return biases_save_format_; }
 
-    Tensor& get_weights() { return weights; }
-    Tensor& get_biases() { return biases; }
-    Factorizer& get_factorizer() { return *factorizer; }
+    Tensor& get_weights() { return weights_; }
+    Tensor& get_biases() { return biases_; }
+    Factorizer& get_factorizer() { return *factorizer_; }
 
-    const Tensor& get_weights() const { return weights; }
-    const Tensor& get_biases() const { return biases; }
-    const Factorizer& get_factorizer() const { return *factorizer; }
+    const Tensor& get_weights() const { return weights_; }
+    const Tensor& get_biases() const { return biases_; }
+    const Factorizer& get_factorizer() const { return *factorizer_; }
 
     std::vector<Tensor*> get() {
         if (has_factorizer())
-            return {&(*factorizer).get_base(), &weights, &biases};
-        return {&weights, &biases};
+            return {&(*factorizer_).get_base(), &weights_, &biases_};
+        return {&weights_, &biases_};
     }
 
   private:
-    Tensor weights;
-    Tensor biases;
-    std::optional<Factorizer> factorizer;
-    SaveFormat weights_save_format;
-    SaveFormat biases_save_format;
+    Tensor weights_;
+    Tensor biases_;
+    std::optional<Factorizer> factorizer_;
+    SaveFormat weights_save_format_;
+    SaveFormat biases_save_format_;
 
     void load_tensor(FILE* f, Tensor& tensor) {
         auto& data = tensor.get_data();
@@ -100,7 +100,7 @@ class Param {
 
         DenseMatrix facto;
         if (add_factorizer) {
-            auto& facto_data = factorizer->get_base().get_data();
+            auto& facto_data = factorizer_->get_base().get_data();
             facto_data.dev_to_host();
             facto = facto_data.repeat(data.cols() / facto_data.cols());
         }

@@ -23,11 +23,11 @@ class Graph {
 
     void print() const {
         std::unordered_map<Node*, int> index;
-        for (int i = 0; i < (int)nodes.size(); i++)
-            index[nodes[i].get()] = i;
+        for (int i = 0; i < (int)nodes_.size(); i++)
+            index[nodes_[i].get()] = i;
 
-        for (int i = 0; i < (int)nodes.size(); i++) {
-            auto* n = nodes[i].get();
+        for (int i = 0; i < (int)nodes_.size(); i++) {
+            auto* n = nodes_[i].get();
 
             std::string inputs;
             for (auto& inp : n->get_inputs()) {
@@ -50,15 +50,15 @@ class Graph {
         }
     }
 
-    const std::vector<SPtr<Node>>& get_nodes() const { return nodes; }
-    const std::vector<SPtr<Param>>& get_params() const { return params; }
-    const std::vector<SPtr<SelectIndices>>& get_select_indices() const { return select_indices; }
+    const std::vector<SPtr<Node>>& get_nodes() const { return nodes_; }
+    const std::vector<SPtr<Param>>& get_params() const { return params_; }
+    const std::vector<SPtr<SelectIndices>>& get_select_indices() const { return select_indices_; }
 
   private:
-    std::vector<SPtr<Node>> nodes;
-    std::vector<SPtr<Param>> params;
-    std::vector<SPtr<SelectIndices>> select_indices;
-    std::unordered_map<Node*, std::vector<SPtr<Node>>> consumers;
+    std::vector<SPtr<Node>> nodes_;
+    std::vector<SPtr<Param>> params_;
+    std::vector<SPtr<SelectIndices>> select_indices_;
+    std::unordered_map<Node*, std::vector<SPtr<Node>>> consumers_;
 
     // Build
 
@@ -77,7 +77,7 @@ class Graph {
             in_stack.erase(node.get());
             visited.insert(node.get());
 
-            nodes.push_back(node);
+            nodes_.push_back(node);
         };
 
         dfs(output);
@@ -86,45 +86,45 @@ class Graph {
     template <typename NodeT, typename ItemT, typename Getter>
     void collect_unique(std::vector<SPtr<ItemT>>& out, Getter get) {
         std::unordered_set<ItemT*> seen;
-        for (auto& node : nodes)
+        for (auto& node : nodes_)
             if (auto* n = dynamic_cast<NodeT*>(node.get()))
                 if (auto item = get(n); seen.insert(item.get()).second)
                     out.push_back(item);
     }
 
     void init_params() {
-        collect_unique<SparseAffineNode, Param>(params, [](auto* n) { return n->get_param(); });
-        collect_unique<AffineNode, Param>(params, [](auto* n) { return n->get_param(); });
+        collect_unique<SparseAffineNode, Param>(params_, [](auto* n) { return n->get_param(); });
+        collect_unique<AffineNode, Param>(params_, [](auto* n) { return n->get_param(); });
     }
 
     void init_select_indices() {
-        collect_unique<SelectNode, SelectIndices>(select_indices, [](auto* n) { return n->get_indices(); });
+        collect_unique<SelectNode, SelectIndices>(select_indices_, [](auto* n) { return n->get_indices(); });
     }
 
     void build_consumer_map() {
-        consumers.clear();
-        for (auto& node : nodes) {
-            consumers.emplace(node.get(), std::vector<SPtr<Node>>{});
+        consumers_.clear();
+        for (auto& node : nodes_) {
+            consumers_.emplace(node.get(), std::vector<SPtr<Node>>{});
             for (auto& inp : node->get_inputs())
-                consumers[inp.get()].push_back(node);
+                consumers_[inp.get()].push_back(node);
         }
     }
 
     // Helpers
 
     SPtr<Node> sole_consumer(SPtr<Node> node) const {
-        auto it = consumers.find(node.get());
-        return (it != consumers.end() && it->second.size() == 1) ? it->second[0] : nullptr;
+        auto it = consumers_.find(node.get());
+        return (it != consumers_.end() && it->second.size() == 1) ? it->second[0] : nullptr;
     }
 
     void absorb_node(SPtr<Node> consumed, SPtr<Node> owner) {
-        for (auto& node : nodes)
+        for (auto& node : nodes_)
             if (node != consumed)
                 for (auto& inp : node->get_inputs())
                     if (inp == consumed)
                         inp = owner;
 
-        std::erase_if(nodes, [&](const auto& n) { return n == consumed; });
+        std::erase_if(nodes_, [&](const auto& n) { return n == consumed; });
 
         build_consumer_map();
     }
@@ -143,7 +143,7 @@ class Graph {
         bool changed = true;
         while (changed) {
             changed = false;
-            for (auto& node : nodes) {
+            for (auto& node : nodes_) {
                 if (!dynamic_cast<T*>(node.get()))
                     continue;
                 if (action(node)) {
@@ -202,7 +202,7 @@ class Graph {
 
     void fuse_concat() {
         // Pass 1: try fusing Concat + SparseAffine
-        for (auto& node : nodes) {
+        for (auto& node : nodes_) {
             auto* cn = dynamic_cast<ConcatNode*>(node.get());
             if (!cn || cn->is_fused())
                 continue;

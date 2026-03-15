@@ -70,47 +70,47 @@ inline std::vector<std::string> files_from_folder(std::string path) {
 class Logger {
   public:
     Logger() {}
-    Logger(std::string path) { file = std::ofstream(path, std::ios::app); }
+    Logger(std::string path) { file_ = std::ofstream(path, std::ios::app); }
 
     ~Logger() {
-        if (file.is_open())
-            file.close();
+        if (file_.is_open())
+            file_.close();
     }
 
     void open(std::string path, bool append = false) {
-        if (file.is_open())
-            file.close();
+        if (file_.is_open())
+            file_.close();
         if (append)
-            file = std::ofstream(path, std::ios::app);
+            file_ = std::ofstream(path, std::ios::app);
         else
-            file = std::ofstream(path);
+            file_ = std::ofstream(path);
     }
 
     void write(std::initializer_list<std::string> args) {
         for (auto i = args.begin(); i != args.end(); ++i) {
             if (i != args.begin())
-                file << ",";
-            file << *i;
+                file_ << ",";
+            file_ << *i;
         }
 
-        file << std::endl;
-        file.flush();
+        file_ << std::endl;
+        file_.flush();
     }
 
   private:
-    std::ofstream file;
+    std::ofstream file_;
 };
 
 class Timer {
   public:
-    Timer() { start_point = steady_clock::now(); }
+    Timer() { start_point_ = steady_clock::now(); }
 
     long long elapsed_time() const {
-        return std::chrono::duration_cast<format>(steady_clock::now() - start_point).count();
+        return std::chrono::duration_cast<format>(steady_clock::now() - start_point_).count();
     }
 
   private:
     using format = std::chrono::milliseconds;
     using steady_clock = std::chrono::steady_clock;
-    steady_clock::time_point start_point;
+    steady_clock::time_point start_point_;
 };

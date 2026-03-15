@@ -24,32 +24,32 @@ inline void reset_tensor_rng() {
 class Tensor {
   public:
     Tensor()
-        : data(),
-          grads() {}
+        : data_(),
+          grads_() {}
 
     Tensor(int r, int c)
-        : data(r, c),
-          grads(r, c) {
+        : data_(r, c),
+          grads_(r, c) {
         zero_init();
     }
 
     void zero_init() {
-        data.clear();
-        grads.clear();
+        data_.clear();
+        grads_.clear();
     }
 
     void uniform_init(float min_val, float max_val) {
-        for (int i = 0; i < data.size(); i++)
-            data(i) = std::uniform_real_distribution<float>(min_val, max_val)(rng::get_tensor_rng());
-        data.host_to_dev();
-        grads.clear();
+        for (int i = 0; i < data_.size(); i++)
+            data_(i) = std::uniform_real_distribution<float>(min_val, max_val)(rng::get_tensor_rng());
+        data_.host_to_dev();
+        grads_.clear();
     }
 
     void he_init(int input_size) {
-        for (int i = 0; i < data.size(); i++)
-            data(i) = std::normal_distribution<float>(0.0, std::sqrt(2.0 / input_size))(rng::get_tensor_rng());
-        data.host_to_dev();
-        grads.clear();
+        for (int i = 0; i < data_.size(); i++)
+            data_(i) = std::normal_distribution<float>(0.0, std::sqrt(2.0 / input_size))(rng::get_tensor_rng());
+        data_.host_to_dev();
+        grads_.clear();
     }
 
     void set_bounds(float min_val, float max_val) {
@@ -62,19 +62,19 @@ class Tensor {
     float lower_bound() const { return lower_bound_; }
     float upper_bound() const { return upper_bound_; }
 
-    DenseMatrix& get_data() { return data; }
-    const DenseMatrix& get_data() const { return data; }
+    DenseMatrix& get_data() { return data_; }
+    const DenseMatrix& get_data() const { return data_; }
 
-    DenseMatrix& get_grads() { return grads; }
-    const DenseMatrix& get_grads() const { return grads; }
+    DenseMatrix& get_grads() { return grads_; }
+    const DenseMatrix& get_grads() const { return grads_; }
 
-    int rows() const { return data.rows(); }
-    int cols() const { return data.cols(); }
-    int size() const { return data.size(); }
+    int rows() const { return data_.rows(); }
+    int cols() const { return data_.cols(); }
+    int size() const { return data_.size(); }
 
   private:
-    DenseMatrix data;
-    DenseMatrix grads;
+    DenseMatrix data_;
+    DenseMatrix grads_;
 
     float lower_bound_ = std::numeric_limits<float>::lowest();
     float upper_bound_ = std::numeric_limits<float>::max();

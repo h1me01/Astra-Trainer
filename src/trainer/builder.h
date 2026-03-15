@@ -29,68 +29,68 @@ inline int num_buckets(const std::array<int, 64>& bucket_map) {
 class NodeHandle {
   public:
     NodeHandle(SPtr<ng::Node> node)
-        : node(node) {}
+        : node_(node) {}
 
     NodeHandle relu() { return make_activation(ng::OpType::ReLU); }
     NodeHandle clipped_relu() { return make_activation(ng::OpType::ClippedReLU); }
     NodeHandle sqr_clipped_relu() { return make_activation(ng::OpType::SqrClippedReLU); }
     NodeHandle sigmoid() { return make_activation(ng::OpType::Sigmoid); }
-    NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node, indices)); }
-    NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node)); }
+    NodeHandle select(SelectIndices indices) { return NodeHandle(std::make_shared<ng::SelectNode>(node_, indices)); }
+    NodeHandle pairwise_mul() { return NodeHandle(std::make_shared<ng::PairwiseMulNode>(node_)); }
 
-    operator SPtr<ng::Node>() const { return node; }
-    SPtr<ng::Node> get() const { return node; }
+    operator SPtr<ng::Node>() const { return node_; }
+    SPtr<ng::Node> get() const { return node_; }
 
   private:
-    SPtr<ng::Node> node;
+    SPtr<ng::Node> node_;
 
     NodeHandle make_activation(ng::OpType op_type) {
-        return NodeHandle(std::make_shared<ng::ActivationNode>(op_type, node));
+        return NodeHandle(std::make_shared<ng::ActivationNode>(op_type, node_));
     }
 };
 
 class SparseAffineBuilder {
   public:
     SparseAffineBuilder(int input_dim, int output_dim)
-        : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
+        : param_(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
     SparseAffineBuilder& factorized(int block_size) {
-        if (param->has_factorizer())
+        if (param_->has_factorizer())
             error("SparseAffineBuilder: Factorizer already exists for this layer!");
 
-        param->create_factorizer(block_size);
+        param_->create_factorizer(block_size);
         return *this;
     }
 
     NodeHandle operator()(SPtr<ng::InputNode> a) {
-        return NodeHandle(std::make_shared<ng::SparseAffineNode>(param, a));
+        return NodeHandle(std::make_shared<ng::SparseAffineNode>(param_, a));
     }
 
-    Tensor& get_weights() { return param->get_weights(); }
-    Tensor& get_biases() { return param->get_biases(); }
+    Tensor& get_weights() { return param_->get_weights(); }
+    Tensor& get_biases() { return param_->get_biases(); }
 
-    np::SaveFormat& weights_format() { return param->weights_format(); }
-    np::SaveFormat& biases_format() { return param->biases_format(); }
+    np::SaveFormat& weights_format() { return param_->weights_format(); }
+    np::SaveFormat& biases_format() { return param_->biases_format(); }
 
   private:
-    SPtr<np::Param> param;
+    SPtr<np::Param> param_;
 };
 
 class AffineBuilder {
   public:
     AffineBuilder(int input_dim, int output_dim)
-        : param(std::make_shared<np::Param>(input_dim, output_dim)) {}
+        : param_(std::make_shared<np::Param>(input_dim, output_dim)) {}
 
-    NodeHandle operator()(SPtr<ng::Node> a) { return NodeHandle(std::make_shared<ng::AffineNode>(param, a)); }
+    NodeHandle operator()(SPtr<ng::Node> a) { return NodeHandle(std::make_shared<ng::AffineNode>(param_, a)); }
 
-    Tensor& get_weights() { return param->get_weights(); }
-    Tensor& get_biases() { return param->get_biases(); }
+    Tensor& get_weights() { return param_->get_weights(); }
+    Tensor& get_biases() { return param_->get_biases(); }
 
-    np::SaveFormat& weights_format() { return param->weights_format(); }
-    np::SaveFormat& biases_format() { return param->biases_format(); }
+    np::SaveFormat& weights_format() { return param_->weights_format(); }
+    np::SaveFormat& biases_format() { return param_->biases_format(); }
 
   private:
-    SPtr<np::Param> param;
+    SPtr<np::Param> param_;
 };
 
 namespace graph {

@@ -7,41 +7,41 @@ namespace nn::op {
 class Activation : public Operation {
   public:
     Activation(Operation* input, ActivationType type)
-        : input(input),
-          type(type) {
+        : input_(input),
+          type_(type) {
 
         CHECK(input);
 
         switch (type) {
         case ActivationType::ReLU:
-            name = "relu";
+            name_ = "relu";
             break;
         case ActivationType::ClippedReLU:
-            name = "clipped_relu";
+            name_ = "clipped_relu";
             break;
         case ActivationType::SqrClippedReLU:
-            name = "sqr_clipped_relu";
+            name_ = "sqr_clipped_relu";
             break;
         case ActivationType::Sigmoid:
-            name = "sigmoid";
+            name_ = "sigmoid";
             break;
         default:
             CHECK(false);
             break;
         }
 
-        input_dim = input->get_output_dim();
-        output_dim = input->get_output_dim();
+        input_dim_ = input->get_output_dim();
+        output_dim_ = input->get_output_dim();
     }
 
-    void forward() override { kernel::activation_fwd(input->get_data(), output.get_data(), type); }
-    void backward() override { kernel::activation_bwd(input->get_output(), output.get_grads(), type); }
+    void forward() override { kernel::activation_fwd(input_->get_data(), output_.get_data(), type_); }
+    void backward() override { kernel::activation_bwd(input_->get_output(), output_.get_grads(), type_); }
 
-    std::vector<Operation*> get_inputs() const override { return {input}; }
+    std::vector<Operation*> get_inputs() const override { return {input_}; }
 
   private:
-    ActivationType type;
-    Operation* input;
+    ActivationType type_;
+    Operation* input_;
 };
 
 } // namespace nn::op

@@ -24,9 +24,9 @@ class Trainer {
     WDLScheduler wdl_sched = nullptr;
     Dataloader dataloader = nullptr;
 
-    int current_epoch = 0;
-    Array<float> targets = {};
-    bool _initialized = false;
+    int current_epoch_ = 0;
+    Array<float> targets_ = {};
+    bool initialized_ = false;
 
     void set_device(int id) { CUDA_CHECK(cudaSetDevice(id)); }
 

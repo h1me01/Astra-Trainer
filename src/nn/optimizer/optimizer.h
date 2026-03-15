@@ -26,12 +26,12 @@ class Optimizer {
     void init(const std::vector<Param*>& params) {
         for (auto* l : params)
             for (auto& t : l->get())
-                this->params.push_back(t);
+                this->params_.push_back(t);
         init_buffers();
     }
 
     void zero_grads() {
-        for (auto* t : params)
+        for (auto* t : params_)
             t->get_grads().clear_dev();
     }
 
@@ -41,16 +41,16 @@ class Optimizer {
     virtual void step(float lr, int batch_size) = 0;
 
   protected:
-    std::vector<Tensor*> params{};
+    std::vector<Tensor*> params_{};
 
-    std::vector<Array<float>> momentum{};
-    std::vector<Array<float>> velocity{};
+    std::vector<Array<float>> momentum_{};
+    std::vector<Array<float>> velocity_{};
 
     virtual void init_buffers() {
-        for (const auto* t : params) {
+        for (const auto* t : params_) {
             int size = t->get_data().size();
-            momentum.emplace_back(size);
-            velocity.emplace_back(size);
+            momentum_.emplace_back(size);
+            velocity_.emplace_back(size);
         }
     }
 
@@ -114,8 +114,8 @@ inline void Optimizer::load(const std::string& path) {
     }
 
     try {
-        load_buffer(state_path / "momentum.bin", momentum, "momentum");
-        load_buffer(state_path / "velocity.bin", velocity, "velocity");
+        load_buffer(state_path / "momentum.bin", momentum_, "momentum");
+        load_buffer(state_path / "velocity.bin", velocity_, "velocity");
     } catch (const std::exception& e) {
         error("Optimizer: Failed to load state from " + state_path.string() + ": " + e.what());
     }
@@ -127,8 +127,8 @@ inline void Optimizer::save(const std::string& path) const {
     try {
         std::filesystem::create_directories(state_path);
 
-        save_buffer(state_path / "momentum.bin", const_cast<std::vector<Array<float>>&>(momentum));
-        save_buffer(state_path / "velocity.bin", const_cast<std::vector<Array<float>>&>(velocity));
+        save_buffer(state_path / "momentum.bin", const_cast<std::vector<Array<float>>&>(momentum_));
+        save_buffer(state_path / "velocity.bin", const_cast<std::vector<Array<float>>&>(velocity_));
     } catch (const std::exception& e) {
         error("Optimizer: Failed to save state to " + state_path.string() + ": " + e.what());
     }

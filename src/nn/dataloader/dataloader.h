@@ -14,21 +14,21 @@ class Dataloader {
         std::vector<std::string> filenames,
         std::function<bool(const TrainingDataEntry&)> skip_predicate = nullptr
     )
-        : thread_count(thread_count),
-          filenames(filenames) {
+        : thread_count_(thread_count),
+          filenames_(filenames) {
 
         utils::validate_files(filenames);
 
-        stream = std::make_unique<binpack::CompressedTrainingDataEntryParallelReader>(
-            std::max(1, thread_count / 2), filenames, std::ios::in | std::ios::binary, cyclic, skip_predicate
+        stream_ = std::make_unique<binpack::CompressedTrainingDataEntryParallelReader>(
+            std::max(1, thread_count / 2), filenames, std::ios::in | std::ios::binary, true, skip_predicate
         );
     }
 
     ~Dataloader() {
-        stop_flag.store(true);
-        batches_not_full.notify_all();
+        stop_flag_.store(true);
+        batches_not_full_.notify_all();
 
-        for (auto& worker : workers)
+        for (auto& worker : workers_)
             if (worker.joinable())
                 worker.join();
     }
@@ -37,30 +37,30 @@ class Dataloader {
     Dataloader& operator=(const Dataloader&) = delete;
 
     void init(int batch_size) {
-        this->batch_size = batch_size;
+        this->batch_size_ = batch_size;
 
-        stop_flag.store(false);
-        num_workers.store(0);
+        stop_flag_.store(false);
+        num_workers_.store(0);
 
-        const int num_feature_threads = std::max(1, thread_count - std::max(1, thread_count / 2));
+        const int num_feature_threads = std::max(1, thread_count_ - std::max(1, thread_count_ / 2));
         for (int i = 0; i < num_feature_threads; ++i) {
-            workers.emplace_back(&Dataloader::worker_loop, this);
-            num_workers.fetch_add(1);
+            workers_.emplace_back(&Dataloader::worker_loop, this);
+            num_workers_.fetch_add(1);
         }
     }
 
     std::vector<TrainingDataEntry> next() {
-        std::unique_lock lock(batch_mutex);
-        batches_any.wait(lock, [this]() { //
-            return !batches.empty() || num_workers.load() == 0;
+        std::unique_lock lock(batch_mutex_);
+        batches_any_.wait(lock, [this]() { //
+            return !batches_.empty() || num_workers_.load() == 0;
         });
 
-        if (!batches.empty()) {
-            auto batch = std::move(batches.front());
-            batches.pop_front();
+        if (!batches_.empty()) {
+            auto batch = std::move(batches_.front());
+            batches_.pop_front();
 
             lock.unlock();
-            batches_not_full.notify_one();
+            batches_not_full_.notify_one();
 
             return batch;
         }
@@ -68,59 +68,58 @@ class Dataloader {
         return {};
     }
 
-    std::vector<std::string> get_filenames() const { return filenames; }
+    std::vector<std::string> get_filenames() const { return filenames_; }
 
   private:
     void worker_loop() {
         std::vector<TrainingDataEntry> entries;
-        entries.reserve(batch_size);
+        entries.reserve(batch_size_);
 
-        while (!stop_flag.load()) {
+        while (!stop_flag_.load()) {
             entries.clear();
 
             {
-                std::unique_lock lock(stream_mutex);
-                stream->fill(entries, batch_size);
+                std::unique_lock lock(stream_mutex_);
+                stream_->fill(entries, batch_size_);
                 if (entries.empty())
                     break;
             }
 
             {
-                std::unique_lock lock(batch_mutex);
-                batches_not_full.wait(lock, [this]() {
-                    return batches.size() < static_cast<std::size_t>(thread_count + 1) || stop_flag.load();
+                std::unique_lock lock(batch_mutex_);
+                batches_not_full_.wait(lock, [this]() {
+                    return batches_.size() < static_cast<std::size_t>(thread_count_ + 1) || stop_flag_.load();
                 });
 
-                batches.emplace_back(std::move(entries));
+                batches_.emplace_back(std::move(entries));
 
                 lock.unlock();
-                batches_any.notify_one();
+                batches_any_.notify_one();
             }
         }
 
-        num_workers.fetch_sub(1);
-        batches_any.notify_one();
+        num_workers_.fetch_sub(1);
+        batches_any_.notify_one();
     }
 
   private:
-    int batch_size;
-    int thread_count;
-    bool cyclic = true;
-    std::vector<std::string> filenames;
+    int batch_size_;
+    int thread_count_;
+    std::vector<std::string> filenames_;
 
-    std::deque<std::vector<TrainingDataEntry>> batches;
+    std::deque<std::vector<TrainingDataEntry>> batches_;
 
-    std::mutex batch_mutex;
-    std::mutex stream_mutex;
+    std::mutex batch_mutex_;
+    std::mutex stream_mutex_;
 
-    std::condition_variable batches_not_full;
-    std::condition_variable batches_any;
+    std::condition_variable batches_not_full_;
+    std::condition_variable batches_any_;
 
-    std::atomic_bool stop_flag;
-    std::atomic_int num_workers;
+    std::atomic_bool stop_flag_;
+    std::atomic_int num_workers_;
 
-    std::vector<std::thread> workers;
-    std::unique_ptr<binpack::CompressedTrainingDataEntryParallelReader> stream;
+    std::vector<std::thread> workers_;
+    std::unique_ptr<binpack::CompressedTrainingDataEntryParallelReader> stream_;
 };
 
 } // namespace nn::dataloader

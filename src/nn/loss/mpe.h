@@ -8,14 +8,14 @@ class MPE : public Loss {
   public:
     MPE(float power, ActivationType act_type)
         : Loss(act_type),
-          power(power) {}
+          power_(power) {}
 
     void compute(Tensor& output, const Array<float>& targets) override {
-        kernel::mpe_loss(targets, loss, output, power, act_type);
+        kernel::mpe_loss(targets, loss_, output, power_, act_type_);
     }
 
   private:
-    float power;
+    float power_;
 };
 
 } // namespace nn::loss

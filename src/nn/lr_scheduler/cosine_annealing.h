@@ -9,9 +9,9 @@ class CosineAnnealing : public LRScheduler {
   public:
     CosineAnnealing(float start, float final, int max_epochs)
         : LRScheduler(start),
-          start(start),
-          final(final),
-          max_epochs(max_epochs - 1) {
+          start_(start),
+          final_(final),
+          max_epochs_(max_epochs - 1) {
 
         if (start <= 0)
             error("Cosine Annealing LR Scheduler: start lr must be positive!");
@@ -24,26 +24,24 @@ class CosineAnnealing : public LRScheduler {
     }
 
     void step(int epoch) override {
-        if (epoch > max_epochs)
+        if (epoch > max_epochs_)
             return;
 
-        float t = static_cast<float>(epoch) / max_epochs;
-        float lambda = 0.5f * (1.0f - std::cos(pi * t));
-        lr = start + lambda * (final - start);
+        float t = static_cast<float>(epoch) / max_epochs_;
+        float lambda = 0.5f * (1.0f - std::cos(std::numbers::pi_v<float> * t));
+        lr_ = start_ + lambda * (final_ - start_);
     }
 
     std::string get_info() const override {
-        return "CosineAnnealing(start=" + format_number(start) + //
-               ", final=" + format_number(final) +               //
-               ", max_epochs=" + std::to_string(max_epochs + 1) + ")";
+        return "CosineAnnealing(start=" + format_number(start_) + //
+               ", final=" + format_number(final_) +               //
+               ", max_epochs=" + std::to_string(max_epochs_ + 1) + ")";
     }
 
   private:
-    float start;
-    float final;
-    int max_epochs;
-
-    const float pi = std::numbers::pi_v<float>;
+    float start_;
+    float final_;
+    int max_epochs_;
 };
 
 } // namespace nn::lr_sched

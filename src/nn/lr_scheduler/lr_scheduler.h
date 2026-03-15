@@ -7,18 +7,18 @@ namespace nn::lr_sched {
 class LRScheduler {
   public:
     LRScheduler(float lr)
-        : lr(lr) {}
+        : lr_(lr) {}
 
     virtual ~LRScheduler() = default;
 
     virtual void step(int epoch) = 0;
 
-    float get() const { return lr; }
+    float get() const { return lr_; }
 
     virtual std::string get_info() const = 0;
 
   protected:
-    float lr;
+    float lr_;
 };
 
 } // namespace nn::lr_sched

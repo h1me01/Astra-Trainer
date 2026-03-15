@@ -50,18 +50,18 @@ int epoch_from_checkpoint(const std::string checkpoint) {
 // Trainer
 
 void Trainer::init() {
-    if (_initialized)
+    if (initialized_)
         return;
 
     if (!loss || !optimiser || !lr_sched || !wdl_sched || !dataloader)
         error("Trainer: All components must be non-null");
 
     model.init(config.batch_size);
-    targets = Array<float>(config.batch_size, true);
+    targets_ = Array<float>(config.batch_size, true);
     optimiser->init(model.get_params());
     dataloader->init(config.batch_size);
 
-    _initialized = true;
+    initialized_ = true;
 }
 
 void Trainer::load_checkpoint(const std::string& path) {
@@ -74,7 +74,7 @@ void Trainer::load_checkpoint(const std::string& path) {
         model.load_params(path + "/model.bin");
         optimiser->load(path);
 
-        current_epoch = epoch_from_checkpoint(path);
+        current_epoch_ = epoch_from_checkpoint(path);
 
         std::cout << "Trainer: Loaded checkpoint from " << path << std::endl;
     } catch (const std::exception& e) {
@@ -116,19 +116,19 @@ void Trainer::fit(const std::string output_path) {
     log.open(training_folder + "/log.txt", false);
     log.write({"epoch", "loss"});
 
-    print_info(current_epoch, training_folder);
+    print_info(current_epoch_, training_folder);
 
     std::cout << "\n================================= Training =================================\n\n";
 
-    for (; current_epoch < config.epochs; current_epoch++) {
+    for (; current_epoch_ < config.epochs; current_epoch_++) {
         Timer timer;
 
-        lr_sched->step(current_epoch);
-        wdl_sched->step(current_epoch);
+        lr_sched->step(current_epoch_);
+        wdl_sched->step(current_epoch_);
 
         loss->clear();
 
-        const int display_epoch = current_epoch + 1;
+        const int display_epoch = current_epoch_ + 1;
 
         for (int batch = 1; batch <= config.batches_per_epoch; batch++) {
             auto current_data = dataloader->next();
@@ -136,7 +136,7 @@ void Trainer::fit(const std::string output_path) {
 
             optimiser->zero_grads();
             model.forward(current_data);
-            loss->compute(model.get_output(), targets);
+            loss->compute(model.get_output(), targets_);
             model.backward();
             optimiser->step(lr_sched->get(), current_data.size());
 
@@ -171,11 +171,11 @@ void Trainer::prepare_batch(const std::vector<TrainingDataEntry>& batch) {
     for (size_t i = 0; i < batch.size(); i++) {
         float score_target = sigmoid(batch[i].score / config.eval_scale);
         float wdl_target = (batch[i].result + 1) / 2.0f;
-        targets(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
+        targets_(i) = wdl_sched->get() * wdl_target + (1.0f - wdl_sched->get()) * score_target;
     }
 
     model.inputs_to_dev();
-    targets.host_to_dev();
+    targets_.host_to_dev();
 }
 
 } // namespace trainer

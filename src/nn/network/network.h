@@ -27,46 +27,46 @@ class Network {
     ~Network() { kernel::cublas::destroy(); }
 
     void init(int batch_size) {
-        if (operations.empty())
+        if (operations_.empty())
             error("Network: No operations found!");
-        for (auto& op : operations)
+        for (auto& op : operations_)
             op->init(batch_size);
-        for (auto& idx : select_indices)
+        for (auto& idx : select_indices_)
             idx->init(batch_size);
     }
 
     void forward(const std::vector<TrainingDataEntry>& data_entries) {
-        for (auto& op : operations)
+        for (auto& op : operations_)
             op->zero_grads();
-        for (auto& idx : select_indices)
+        for (auto& idx : select_indices_)
             idx->step(data_entries);
 
-        for (auto& p : params)
+        for (auto& p : params_)
             if (p->has_factorizer())
                 p->get_factorizer().forward();
-        for (auto& op : operations)
+        for (auto& op : operations_)
             op->forward();
     }
 
     void backward() {
-        for (int i = (int)operations.size() - 1; i >= 0; i--)
-            operations[i]->backward();
-        for (auto& p : params)
+        for (int i = (int)operations_.size() - 1; i >= 0; i--)
+            operations_[i]->backward();
+        for (auto& p : params_)
             if (p->has_factorizer())
                 p->get_factorizer().backward();
     }
 
-    Tensor& get_output() { return operations.back()->get_output(); }
-    const Tensor& get_output() const { return operations.back()->get_output(); }
+    Tensor& get_output() { return operations_.back()->get_output(); }
+    const Tensor& get_output() const { return operations_.back()->get_output(); }
 
-    const std::vector<op::Input*>& get_inputs() const { return inputs; }
-    const std::vector<Param*>& get_params() const { return params; }
+    const std::vector<op::Input*>& get_inputs() const { return inputs_; }
+    const std::vector<Param*>& get_params() const { return params_; }
 
   private:
-    std::vector<UPtr<Operation>> operations;
-    std::vector<Param*> params;
-    std::vector<SelectIndices*> select_indices;
-    std::vector<op::Input*> inputs;
+    std::vector<UPtr<Operation>> operations_;
+    std::vector<Param*> params_;
+    std::vector<SelectIndices*> select_indices_;
+    std::vector<op::Input*> inputs_;
 
     void init_operations(const Graph& graph) {
         std::unordered_map<Node*, Operation*> op_map;
@@ -79,7 +79,7 @@ class Network {
             auto op = make_operation(node.get(), input_ops);
             op_map[node.get()] = op.get();
 
-            operations.push_back(std::move(op));
+            operations_.push_back(std::move(op));
         }
     }
 
@@ -88,16 +88,16 @@ class Network {
         std::unordered_set<Param*> seen_params;
         std::unordered_set<SelectIndices*> seen_select_indices;
 
-        for (auto& op : operations) {
+        for (auto& op : operations_) {
             if (auto* p = op->get_param())
                 if (seen_params.insert(p).second)
-                    params.push_back(p);
+                    params_.push_back(p);
             if (auto* sel = dynamic_cast<op::Select*>(op.get()))
                 if (seen_select_indices.insert(sel->get_indices()).second)
-                    select_indices.push_back(sel->get_indices());
+                    select_indices_.push_back(sel->get_indices());
             if (auto* inp = dynamic_cast<op::Input*>(op.get()))
                 if (seen_inputs.insert(inp).second)
-                    inputs.push_back(inp);
+                    inputs_.push_back(inp);
         }
     }
 

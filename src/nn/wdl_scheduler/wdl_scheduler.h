@@ -7,16 +7,16 @@ namespace nn::wdl_sched {
 class WDLScheduler {
   public:
     WDLScheduler(float val)
-        : val(val) {}
+        : val_(val) {}
 
     virtual void step(int epoch) {}
 
-    float get() const { return val; }
+    float get() const { return val_; }
 
     virtual std::string get_info() const = 0;
 
   protected:
-    float val;
+    float val_;
 };
 
 } // namespace nn::wdl_sched
